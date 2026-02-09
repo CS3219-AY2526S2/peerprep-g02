@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./peer2prep-backend
+    container_name: peer2prep-backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis
+      - mongo
+    volumes:
+      - ./peer2prep-backend:/app
+      - /app/node_modules
+  frontend:
+    build: ./peer2prep-frontend
+    container_name: peer2prep-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./peer2prep-frontend:/app
+      - /app/node_modules
+  redis:
+    image: redis:latest
+    container_name: redis-container
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server --appendonly yes
+      --user user on >password ~* +@all
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo-container
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+
+  mongo-init:
+    image: mongo:latest
+    container_name: mongo-init
+    depends_on:
+      - mongo
+    volumes:
+      - ./peer2prep-backend/scripts/mongo-init.sh:/mongo-init.sh
+    entrypoint: ["bash", "/mongo-init.sh"]
+
+volumes:
+  redis_data:
+  mongo_data:
