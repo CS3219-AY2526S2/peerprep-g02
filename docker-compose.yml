@@ -1,27 +1,81 @@
 version: "3.8"
 
 services:
-  backend:
-    build: ./peer2prep-backend
-    container_name: peer2prep-backend
+  user-service:
+    build: ./services/user
+    container_name: user-service
     ports:
-      - "3000:3000"
+      - "3001:3001"
     depends_on:
       - redis
       - mongo
     volumes:
-      - ./peer2prep-backend:/app
+      - ./services/user:/app
       - /app/node_modules
+
+  matching-service:
+    build: ./services/matching
+    container_name: matching-service
+    ports:
+      - "3002:3002"
+    depends_on:
+      - redis
+      - mongo
+    volumes:
+      - ./services/matching:/app
+      - /app/node_modules
+
+  questions-service:
+    build: ./services/questions
+    container_name: questions-service
+    ports:
+      - "3003:3003"
+    depends_on:
+      - redis
+      - mongo
+    volumes:
+      - ./services/questions:/app
+      - /app/node_modules
+
+  collaboration-service:
+    build: ./services/collaboration
+    container_name: collaboration-service
+    ports:
+      - "3004:3004"
+    depends_on:
+      - redis
+      - mongo
+    volumes:
+      - ./services/collaboration:/app
+      - /app/node_modules
+
+  attempts-service:
+    build: ./services/attempts
+    container_name: attempts-service
+    ports:
+      - "3005:3005"
+    depends_on:
+      - redis
+      - mongo
+    volumes:
+      - ./services/attempts:/app
+      - /app/node_modules
+
   frontend:
     build: ./peer2prep-frontend
     container_name: peer2prep-frontend
     ports:
       - "5173:5173"
     depends_on:
-      - backend
+      - user-service
+      - matching-service
+      - questions-service
+      - collaboration-service
+      - attempts-service
     volumes:
       - ./peer2prep-frontend:/app
       - /app/node_modules
+
   redis:
     image: redis:latest
     container_name: redis-container
@@ -32,7 +86,7 @@ services:
       - redis_data:/data
     command: >
       redis-server --appendonly yes
-      --user user on >password ~* +@all
+        --user user on >password ~* +@all
 
   mongo:
     image: mongo:latest
