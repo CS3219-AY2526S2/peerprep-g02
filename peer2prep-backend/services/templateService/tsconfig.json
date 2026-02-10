@@ -5,12 +5,12 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2020"],
 
-    "rootDir": "./src",
+    "rootDir": "services/src",
     "outDir": "./dist",
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["services/src/*"]
     },
 
     "strict": true,
@@ -32,6 +32,6 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*"],
+  "include": ["services/src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

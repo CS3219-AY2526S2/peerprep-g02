@@ -2,7 +2,7 @@ export const swaggerOptions = {
     definition: {
         openapi: "3.0.0",
         info: {
-            title: "Eduville Backend API Development",
+            title: "Peer2Prep Backend API Development",
             version: "1.0.0",
         },
         servers: [
