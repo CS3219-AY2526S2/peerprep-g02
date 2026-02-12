@@ -20,8 +20,10 @@ Describe what changes were made and what problems were solved (if any).
 - *User can edit and remove profile picture*
 - *Fixed broken name field validation*
 
-
 ## Checklist:
 - [ ] Tested the new lines written
 - [ ] Linted and formatted according to style guide
 - [ ] Comments on hard-to-understand areas
+
+> [!NOTE]
+> Don't have to strictly follow these instructions, delete sections you deem unnecessary
