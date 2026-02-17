@@ -1,33 +1,33 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "lib": ["ES2022"],
-    "skipLibCheck": true,
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "lib": ["ES2022"],
+        "skipLibCheck": true,
 
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["src/*"]
+        },
+
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+
+        "verbatimModuleSyntax": true,
+        "moduleDetection": "force",
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+
+        "sourceMap": true,
+        "declaration": true,
+        "declarationMap": true
     },
-
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
-    "esModuleInterop": true, 
-    "forceConsistentCasingInFileNames": true,
-
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+    "include": ["src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }
