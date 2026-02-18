@@ -3,8 +3,8 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { registerSocketHandlers } from "./managers/socketManager.js";
 import RedisManager from "./managers/redisManager.js";
+import 'dotenv/config';
 
-const PORT = 5000;
 const server = createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
@@ -13,8 +13,8 @@ const startServer = async () => {
         await RedisManager.connect();
         registerSocketHandlers(io);
 
-        server.listen(PORT, () => {
-            console.log(`Matching Service live at http://localhost:${PORT}`);
+        server.listen(process.env.MS_SERVER_PORT, () => {
+            console.log(`Matching Service live at http://localhost:${process.env.MS_SERVER_PORT}`);
         });
     } catch (error) {
         console.error("Failed to start Matching Service:", error);

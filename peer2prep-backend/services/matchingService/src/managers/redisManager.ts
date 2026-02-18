@@ -8,8 +8,13 @@ class RedisManager {
 
     public static getInstance(): RedisClientType {
         if (!this.instance) {
+            const redisUrl = process.env.MS_REDIS_URL;
+            if (!redisUrl) {
+                throw new Error(`Redis URL is undefined`);
+            }
+
             this.instance = createClient({
-                url: "redis://127.0.0.1:6379",
+                url: redisUrl,
             });
 
             this.instance.on("error", (err) => console.error("Redis Error:", err));
