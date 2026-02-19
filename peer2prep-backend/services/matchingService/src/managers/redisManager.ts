@@ -35,7 +35,7 @@ class RedisManager {
     }
 
     public static async disconnect(): Promise<void> {
-        if (this.isConnected) {
+        if (this.isConnected && this.instance) {
             await this.instance.close();
             this.isConnected = false;
             redisLogger.info("Redis connection closed");
