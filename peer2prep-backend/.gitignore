@@ -39,7 +39,3 @@ Thumbs.db
 /coverage
 
 terraform.tfvars
-
-# npm & Yarn lock files (only if using one package manager)
-# If you're using Yarn, keep `package-lock.json` ignored
-package-lock.json
