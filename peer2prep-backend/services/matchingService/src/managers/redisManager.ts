@@ -1,3 +1,4 @@
+import { redisLogger } from "@/utils/logger.js";
 import { createClient, type RedisClientType } from "redis";
 
 class RedisManager {
@@ -17,10 +18,10 @@ class RedisManager {
                 url: redisUrl,
             });
 
-            this.instance.on("error", (err) => console.error("Redis Error:", err));
+            this.instance.on("error", (err) => redisLogger.error("Redis Error:", err));
             this.instance.on("connect", () => {
                 this.isConnected = true;
-                console.log("Redis connected");
+                redisLogger.info("Redis connected");
             });
         }
         return this.instance;
@@ -36,7 +37,7 @@ class RedisManager {
         if (this.isConnected) {
             await this.instance.close();
             this.isConnected = false;
-            console.log("Redis connection closed");
+            redisLogger.info("Redis connection closed");
         }
     }
 }

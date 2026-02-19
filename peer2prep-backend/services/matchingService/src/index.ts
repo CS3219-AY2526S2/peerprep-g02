@@ -1,9 +1,10 @@
 import app from "@/app.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { registerSocketHandlers } from "./managers/socketManager.js";
-import RedisManager from "./managers/redisManager.js";
-import 'dotenv/config';
+import { registerSocketHandlers } from "@/managers/socketManager.js";
+import RedisManager from "@/managers/redisManager.js";
+import "dotenv/config";
+import { mainLogger } from "@/utils/logger.js";
 
 const server = createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -14,16 +15,18 @@ const startServer = async () => {
         registerSocketHandlers(io);
 
         server.listen(process.env.MS_SERVER_PORT, () => {
-            console.log(`Matching Service live at http://localhost:${process.env.MS_SERVER_PORT}`);
+            mainLogger.info(
+                `Matching Service live at http://localhost:${process.env.MS_SERVER_PORT}`,
+            );
         });
     } catch (error) {
-        console.error("Failed to start Matching Service:", error);
+        mainLogger.error(error, "Failed to start Matching Service");
         process.exit(1);
     }
 };
 
 process.on("SIGINT", async () => {
-    console.log("Shutting down...");
+    mainLogger.info("Shutting down...");
     await RedisManager.disconnect();
     process.exit(0);
 });
