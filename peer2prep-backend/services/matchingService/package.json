@@ -8,7 +8,8 @@
         "start": "node dist/index.js",
         "dev": "tsx --watch src/index.ts",
         "lint": "eslint .",
-        "lint:fix": "prettier --write . && eslint . --fix"
+        "lint:fix": "prettier --write . && eslint . --fix",
+        "test": "vitest"
     },
     "keywords": [],
     "author": "",
@@ -35,6 +36,7 @@
         "ts-node": "^10.9.2",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.56.0"
+        "typescript-eslint": "^8.56.0",
+        "vitest": "^4.0.18"
     }
 }
