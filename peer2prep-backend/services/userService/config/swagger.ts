@@ -13,10 +13,10 @@ export const swaggerOptions = {
         components: {
             securitySchemes: {
                 clerkAuth: {
-                    type: "apiKey",
-                    in: "header",
-                    name: "Authorization",
-                    description: "Bearer token from Clerk session.",
+                    type: "http",
+                    scheme: "bearer",
+                    bearerFormat: "JWT",
+                    description: "Clerk session JWT in Authorization header as Bearer <token>.",
                 },
             },
         },
