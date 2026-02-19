@@ -1,5 +1,6 @@
+import { type RedisClientType, createClient } from "redis";
+
 import { redisLogger } from "@/utils/logger.js";
-import { createClient, type RedisClientType } from "redis";
 
 class RedisManager {
     private static instance: RedisClientType;

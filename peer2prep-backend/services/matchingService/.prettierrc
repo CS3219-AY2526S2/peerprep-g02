@@ -8,5 +8,9 @@
     "bracketSpacing": true,
     "jsxBracketSameLine": false,
     "arrowParens": "always",
-    "proseWrap": "always"
+    "proseWrap": "always",
+    "plugins": ["@trivago/prettier-plugin-sort-imports"],
+    "importOrder": ["^dotenv/config$", "<THIRD_PARTY_MODULES>", "^@/(.*)$", "^[./]"],
+    "importOrderSeparation": true,
+    "importOrderSortSpecifiers": true
 }

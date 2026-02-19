@@ -1,5 +1,6 @@
-import pino, { type LoggerOptions } from "pino";
 import "dotenv/config";
+
+import pino, { type LoggerOptions } from "pino";
 
 const isDevelopment = process.env.MS_ENV === "development";
 

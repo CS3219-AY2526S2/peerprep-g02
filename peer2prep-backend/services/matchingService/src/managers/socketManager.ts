@@ -1,6 +1,7 @@
+import { Server } from "socket.io";
+
 import { findMatch } from "@/match/match.js";
 import { socketLogger } from "@/utils/logger.js";
-import { Server } from "socket.io";
 
 export const registerSocketHandlers = (io: Server) => {
     io.on("connection", (socket) => {

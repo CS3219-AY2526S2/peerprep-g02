@@ -1,9 +1,11 @@
-import app from "@/app.js";
+import "dotenv/config";
+
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { registerSocketHandlers } from "@/managers/socketManager.js";
+
+import app from "@/app.js";
 import RedisManager from "@/managers/redisManager.js";
-import "dotenv/config";
+import { registerSocketHandlers } from "@/managers/socketManager.js";
 import { mainLogger } from "@/utils/logger.js";
 
 const server = createServer(app);
