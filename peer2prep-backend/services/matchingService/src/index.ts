@@ -9,7 +9,13 @@ import { registerSocketHandlers } from "@/managers/socketManager.js";
 import { mainLogger } from "@/utils/logger.js";
 
 const server = createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, {
+    cors: {
+        origin: process.env.MS_FRONTEND_URL,
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
 
 const startServer = async () => {
     try {
