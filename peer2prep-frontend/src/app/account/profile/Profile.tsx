@@ -1,32 +1,11 @@
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 
-import Login from "./app/account/login/Login";
-import Profile from "./app/account/profile/Profile";
-import Register from "./app/account/register/Register";
-import "./App.css";
-
-function App() {
-    const pathname = window.location.pathname;
+export default function Profile() {
     const backendApiEndpoint = import.meta.env.VITE_BACKEND_API_ENDPOINT;
-
-    if (pathname.startsWith("/account/login")) {
-        return <Login />;
-    }
-
-    if (pathname.startsWith("/account/register")) {
-        return <Register />;
-    }
-
-    if (pathname === "/account/profile") {
-        return <Profile />;
-    }
-
     return (
         <main className="app-shell">
-            <h1>Peer2Prep</h1>
-            <p>Clerk testing</p>
-
             <SignedOut>
+                <p>You are signed out.</p>
                 <div className="link-row">
                     <a href="/account/login">Login</a>
                     <a href="/account/register">Register</a>
@@ -34,6 +13,7 @@ function App() {
             </SignedOut>
 
             <SignedIn>
+                <h1>Your Profile</h1>
                 <div className="signed-in-row">
                     <UserButton />
                     <a href={`${backendApiEndpoint}/users/auth/me`}>
@@ -44,5 +24,3 @@ function App() {
         </main>
     );
 }
-
-export default App;

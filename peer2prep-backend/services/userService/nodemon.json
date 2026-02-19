@@ -1,0 +1,14 @@
+{
+    "watch": ["."],
+    "ext": "ts,js,json",
+    "ignore": ["dist", "node_modules", "coverage"],
+    "exec": "tsx server.ts",
+    "verbose": true,
+    "restartable": "rs",
+    "legacyWatch": true,
+    "polling": true,
+    "delay": 1000,
+    "env": {
+        "NODE_ENV": "development"
+    }
+}
