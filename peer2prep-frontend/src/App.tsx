@@ -1,46 +1,10 @@
-import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
-
-import Login from "./app/account/login/Login";
-import Profile from "./app/account/profile/Profile";
-import Register from "./app/account/register/Register";
 import "./App.css";
+import UserView from "./components/user/UserView";
 
 function App() {
-    const pathname = window.location.pathname;
-    const backendApiEndpoint = import.meta.env.VITE_BACKEND_API_ENDPOINT;
-
-    if (pathname.startsWith("/account/login")) {
-        return <Login />;
-    }
-
-    if (pathname.startsWith("/account/register")) {
-        return <Register />;
-    }
-
-    if (pathname === "/account/profile") {
-        return <Profile />;
-    }
-
     return (
-        <main className="app-shell">
-            <h1>Peer2Prep</h1>
-            <p>Clerk testing</p>
-
-            <SignedOut>
-                <div className="link-row">
-                    <a href="/account/login">Login</a>
-                    <a href="/account/register">Register</a>
-                </div>
-            </SignedOut>
-
-            <SignedIn>
-                <div className="signed-in-row">
-                    <UserButton />
-                    <a href={`${backendApiEndpoint}/users/auth/me`}>
-                        Check backend profile details
-                    </a>
-                </div>
-            </SignedIn>
+        <main>
+            <UserView />
         </main>
     );
 }

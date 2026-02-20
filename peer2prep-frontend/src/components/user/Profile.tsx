@@ -2,8 +2,9 @@ import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 
 export default function Profile() {
     const backendApiEndpoint = import.meta.env.VITE_BACKEND_API_ENDPOINT;
+
     return (
-        <main className="app-shell">
+        <section className="app-shell">
             <SignedOut>
                 <p>You are signed out.</p>
                 <div className="link-row">
@@ -21,6 +22,6 @@ export default function Profile() {
                     </a>
                 </div>
             </SignedIn>
-        </main>
+        </section>
     );
 }
