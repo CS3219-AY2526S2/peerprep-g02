@@ -67,5 +67,5 @@ export function handleError(res: Response, error: unknown, action: string): void
 }
 
 export function badRequest(res: Response, message: string): void {
-    res.status(400).json({ error: message });
+    res.status(401).json({ error: message });
 }

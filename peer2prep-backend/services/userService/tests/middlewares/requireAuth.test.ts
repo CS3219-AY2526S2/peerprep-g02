@@ -113,6 +113,57 @@ describe("requireAuth", () => {
         expect(res.status).not.toHaveBeenCalled();
     });
 
+    // role mismatch
+    it("returns 403 when requiredRole is provided and role does not match", async () => {
+        getAuthMock.mockReturnValue({ userId: "user_123" } as ReturnType<typeof getAuth>);
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "user_123",
+            name: "Alice",
+            avatarUrl: null,
+            status: "active",
+            role: "user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+
+        const req = createMockRequest();
+        const res = createMockResponse();
+        const next = createMockNext();
+
+        await requireAuth({ requiredRole: "admin" })(req, res, next);
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(res.json).toHaveBeenCalledWith({ error: "Forbidden: admin role required." });
+        expect(next).not.toHaveBeenCalled();
+    });
+
+    // role match
+    it("calls next when requiredRole is provided and role matches", async () => {
+        getAuthMock.mockReturnValue({ userId: "user_123" } as ReturnType<typeof getAuth>);
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "user_123",
+            name: "Alice",
+            avatarUrl: null,
+            status: "active",
+            role: "admin",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+
+        const req = createMockRequest();
+        const res = createMockResponse();
+        const next = createMockNext();
+
+        await requireAuth({ requiredRole: "admin" })(req, res, next);
+
+        expect(next).toHaveBeenCalledOnce();
+        expect(res.status).not.toHaveBeenCalled();
+    });
+
     it("returns 500 when local user lookup throws", async () => {
         getAuthMock.mockReturnValue({ userId: "user_123" } as ReturnType<typeof getAuth>);
         vi.spyOn(userRepository, "findByClerkUserId").mockRejectedValue(new Error("db fail"));

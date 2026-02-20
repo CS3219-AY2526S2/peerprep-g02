@@ -1,10 +1,11 @@
 import { getAuth } from "@clerk/express";
 import { NextFunction, Request, Response } from "express";
-import { userRepository } from "../models/User.js";
+import { UserRole, userRepository } from "../models/User.js";
 import { logger } from "../utils/logger.js";
 
 type RequireAuthOptions = {
     allowMissingLocalUser?: boolean;
+    requiredRole?: UserRole;
 };
 
 // Middleware to check if user is authenticated and active.
@@ -21,9 +22,8 @@ export function requireAuth(options: RequireAuthOptions = {}) {
             }
 
             const user = await userRepository.findByClerkUserId(userId);
-
             if (!user) {
-                if (options.allowMissingLocalUser) {
+                if (options.allowMissingLocalUser && !options.requiredRole) {
                     next();
                     return;
                 }
@@ -32,8 +32,17 @@ export function requireAuth(options: RequireAuthOptions = {}) {
                 return;
             }
 
+            // inactive user
             if (user.status !== "active") {
                 res.status(403).json({ error: "Forbidden: account is not active." });
+                return;
+            }
+
+            // role check
+            if (options.requiredRole && user.role !== options.requiredRole) {
+                res.status(403).json({
+                    error: `Forbidden: ${options.requiredRole} role required.`,
+                });
                 return;
             }
 
