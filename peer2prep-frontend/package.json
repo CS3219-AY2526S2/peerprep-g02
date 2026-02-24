@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.22.11",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "tailwindcss-animate": "^1.0.7",
     "vite-plugin-svgr": "^4.5.0"
   },
   "devDependencies": {
