@@ -1,7 +1,8 @@
 import { Server, Socket } from "socket.io";
+
 import { findMatch } from "@/match/match.js";
-import { socketLogger } from "@/utils/logger.js";
 import { type MatchRequest } from "@/types/match.js";
+import { socketLogger } from "@/utils/logger.js";
 
 export const registerSocketHandlers = (io: Server) => {
     io.on("connection", (socket: Socket) => {
@@ -11,7 +12,7 @@ export const registerSocketHandlers = (io: Server) => {
                     socket.emit("match_error", { message: "Invalid request" });
                     return;
                 }
-                
+
                 socket.data.userId = req.userId;
                 socket.join(req.userId);
 

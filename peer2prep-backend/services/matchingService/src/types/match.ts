@@ -1,8 +1,7 @@
 export type Difficulty = "Easy" | "Medium" | "Hard";
 
-export const QUEUE_PREFIX = "mm:queue";
-export const USER_PREFIX = "mm:user";
-export const MATCH_PREFIX = "mm:match";
+export const QUEUE_PREFIX = "mm:q";
+export const USER_PREFIX = "mm:u";
 
 export interface MatchRequest {
     userId: string;
