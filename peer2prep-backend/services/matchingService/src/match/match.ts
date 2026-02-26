@@ -9,6 +9,7 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     const queueKeys = req.languages.map((lang) => buildQueueKey(req.topic, req.difficulty, lang));
     const seekerKey = buildUserKey(req.userId);
 
+    // run atomic matchmaking logic using a Lua script
     const [status, partnerId, matchedLanguage] = (await redis.eval(MATCHMAKING_LUA, {
         keys: [...queueKeys, seekerKey],
         arguments: [Date.now().toString(), queueKeys.length.toString(), JSON.stringify(queueKeys)],

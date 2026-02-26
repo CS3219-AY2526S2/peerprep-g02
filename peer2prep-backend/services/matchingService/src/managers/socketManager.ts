@@ -16,6 +16,14 @@ export const registerSocketHandlers = (io: Server) => {
                 socket.data.userId = req.userId;
                 socket.join(req.userId);
 
+                socketLogger.info(
+                    {
+                        topic: req.topic,
+                        difficulty: req.difficulty,
+                        languages: req.languages,
+                    },
+                    `User ${req.userId} joined matchmaking queue`
+                );
                 const result = await findMatch(req);
 
                 if (result.matchFound) {
@@ -27,6 +35,13 @@ export const registerSocketHandlers = (io: Server) => {
                         users: [req.userId, result.partnerId],
                     };
 
+                    socketLogger.info(
+                        {
+                            ...payload,
+                        },
+                        `Match found for ${req.userId} - ${result.partnerId}`
+                    );
+                    
                     io.to(req.userId).emit("match_success", payload);
                     io.to(result.partnerId).emit("match_success", payload);
                 } else {
