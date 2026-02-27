@@ -45,7 +45,6 @@ if (authz.data.role !== "admin") {
 
 TYPICAL RESPONSE FORMAT (JSON)
 {
-    "authorized": true,
     "data": {
         "clerkUserId": "user_3AF6zTXUjTaLyJWrXbE2PnfcVC6",
         "role": "user" / "admin",

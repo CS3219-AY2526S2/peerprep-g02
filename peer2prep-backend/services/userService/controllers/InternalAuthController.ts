@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { UserRecord } from "../models/User.js";
 
 type InternalAuthzContextResponse = {
-    authorized: true;
     data: {
         clerkUserId: string;
         role?: string;
@@ -13,7 +12,6 @@ type InternalAuthzContextResponse = {
 export class InternalAuthController {
     private static buildContextResponse(clerkUserId: string, user?: UserRecord): InternalAuthzContextResponse {
         return {
-            authorized: true,
             data: {
                 clerkUserId,
                 role: user?.role,

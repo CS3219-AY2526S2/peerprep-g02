@@ -31,7 +31,6 @@ describe("InternalAuthController", () => {
 
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith({
-            authorized: true,
             data: {
                 clerkUserId: "user_123",
                 role: "user",
