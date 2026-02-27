@@ -18,6 +18,12 @@ export const swaggerOptions = {
                     bearerFormat: "JWT",
                     description: "Clerk session JWT in Authorization header as Bearer <token>.",
                 },
+                internalServiceKey: {
+                    type: "apiKey",
+                    in: "header",
+                    name: "x-internal-service-key",
+                    description: "Shared key for internal service-to-service authorization checks.",
+                },
             },
         },
         security: [{ clerkAuth: [] }],

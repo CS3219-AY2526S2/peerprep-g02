@@ -60,6 +60,7 @@ describe("requireAuth", () => {
         await requireAuth({ allowMissingLocalUser: true })(req, res, next);
 
         expect(next).toHaveBeenCalledOnce();
+        expect(res.locals.clerkUserId).toBe("user_123");
     });
 
     // inactive user
@@ -111,6 +112,7 @@ describe("requireAuth", () => {
 
         expect(next).toHaveBeenCalledOnce();
         expect(res.status).not.toHaveBeenCalled();
+        expect(res.locals.clerkUserId).toBe("user_123");
     });
 
     // role mismatch

@@ -10,4 +10,5 @@ export const AppConstants = {
     FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
     MODE: process.env.MODE || "dev",
     LOG_LEVEL: process.env.LOG_LEVEL || "info",
+    INTERNAL_SERVICE_API_KEY: process.env.INTERNAL_SERVICE_API_KEY,
 };
