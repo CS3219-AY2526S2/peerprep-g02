@@ -1,25 +1,8 @@
 /*
 FRONTEND
-import { useAuth } from "@clerk/clerk-react";
-export function useApi() {
-  const { getToken } = useAuth();
-
-  const callBackend = async (url: string, init: RequestInit = {}) => {
-    const token = await getToken({ template: "jwt" });
-
-    return fetch(url, {
-      ...init,
-      headers: {
-        ...(init.headers || {}),
-        Authorization: token ? `Bearer ${token}` : "",
-        Accept: "application/json",
-      },
-      credentials: "include",
-    });
-  };
-
-  return { callBackend };
-}
+Use apiFetch everywhere:
+import { apiFetch } from "../../lib/apiClient";
+const res = await apiFetch("/users/auth/me", { method: "GET" });
 
 BACKEND
 const r = await fetch("http://localhost:3001/v1/api/users/internal/authz/context", {
@@ -33,12 +16,12 @@ if (!r.ok) return res.status(r.status).json(await r.json());
 
 const authz = await r.json();
 
-// Active user check
+// Active check
 if (authz.data.status !== "active") {
   return res.status(403).json({ error: "Forbidden: account is not active." });
 }
 
-// Admin check (active + admin)
+// Admin check
 if (authz.data.role !== "admin") {
   return res.status(403).json({ error: "Forbidden: admin role required." });
 }
