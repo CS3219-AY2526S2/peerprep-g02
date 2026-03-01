@@ -1,38 +1,37 @@
-import { SignedIn, SignedOut } from "@clerk/clerk-react";
-import { useState } from "react";
+import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
+import { useEffect, useRef } from "react";
 import { apiFetch } from "../../lib/apiClient";
 import AccountUserButton from "./AccountUserButton";
 
 export default function Profile() {
-    const [isLoading, setIsLoading] = useState(false);
-    const [responseMessage, setResponseMessage] = useState("");
+    const { isLoaded, isSignedIn, userId } = useAuth();
+    const lastSyncedUserIdRef = useRef<string | null>(null);
 
-    const fetchProfile = async () => {
-        setIsLoading(true);
-        setResponseMessage("");
+    useEffect(() => {
+        if (!isLoaded || !isSignedIn || !userId) {
+            return;
+        }
 
-        try {
-            const response = await apiFetch("/users/auth/me", {
-                method: "GET",
-            });
-            const payload = await response.json().catch(() => null);
+        if (lastSyncedUserIdRef.current === userId) {
+            return;
+        }
 
-            if (!response.ok) {
-                setResponseMessage(
-                    payload?.error || `Request failed with status ${response.status}.`,
-                );
+        lastSyncedUserIdRef.current = userId;
+
+        void apiFetch("/users/auth/me", { method: "GET" }).then(async (response) => {
+            if (response.ok) {
                 return;
             }
 
-            setResponseMessage(JSON.stringify(payload, null, 2));
-        } catch (error) {
-            setResponseMessage(
-                error instanceof Error ? error.message : "Failed to call backend profile endpoint.",
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    };
+            const payload = await response.json().catch(() => null);
+            const message = payload?.error || `Sync failed with status ${response.status}.`;
+            console.error(message);
+        }).catch((error) => {
+            const message =
+                error instanceof Error ? error.message : "Failed to auto-sync profile.";
+            console.error(message);
+        });
+    }, [isLoaded, isSignedIn, userId]);
 
     return (
         <section className="app-shell">
@@ -48,11 +47,7 @@ export default function Profile() {
                 <h1>Your Profile</h1>
                 <div className="signed-in-row">
                     <AccountUserButton />
-                    <button onClick={fetchProfile} disabled={isLoading} type="button">
-                        Check backend profile details
-                    </button>
                 </div>
-                {responseMessage ? <pre>{responseMessage}</pre> : null}
             </SignedIn>
         </section>
     );
