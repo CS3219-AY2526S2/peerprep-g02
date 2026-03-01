@@ -31,7 +31,6 @@ describe("ClerkWebhookService", () => {
                 last_name: "Tan",
                 image_url: "https://cdn.example.com/alice.png",
                 unsafe_metadata: { defaultLanguage: "Python" },
-                last_sign_in_at: 1771545600000,
             },
             event_attributes: { http_request: { client_ip: "127.0.0.1", user_agent: "test" } },
         } as unknown as WebhookEvent;
@@ -43,7 +42,6 @@ describe("ClerkWebhookService", () => {
             name: "Alice Tan",
             avatarUrl: "https://cdn.example.com/alice.png",
             preferredLanguage: "Python",
-            lastLoginAt: new Date(1771545600000),
         });
     });
 

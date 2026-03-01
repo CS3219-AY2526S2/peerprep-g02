@@ -15,7 +15,6 @@ type WebhookUserPayload = {
     primary_email_address_id?: string | null;
     email_addresses?: WebhookUserEmail[];
     unsafe_metadata?: Record<string, unknown> | null;
-    last_sign_in_at?: number | null;
 };
 
 function buildName(payload: WebhookUserPayload): string {
@@ -35,15 +34,6 @@ function buildName(payload: WebhookUserPayload): string {
     const fallbackEmail =
         primaryEmail?.email_address || payload.email_addresses?.[0]?.email_address;
     return fallbackEmail || "User";
-}
-
-function toOptionalDate(timestamp: number | null | undefined): Date | undefined {
-    if (typeof timestamp !== "number") {
-        return undefined;
-    }
-
-    const value = new Date(timestamp);
-    return Number.isNaN(value.getTime()) ? undefined : value;
 }
 
 function toPreferredLanguage(payload: WebhookUserPayload): string | null {
@@ -67,7 +57,6 @@ export class ClerkWebhookService {
                     name: buildName(payload),
                     avatarUrl: payload.image_url ?? null,
                     preferredLanguage: toPreferredLanguage(payload),
-                    lastLoginAt: toOptionalDate(payload.last_sign_in_at),
                 });
                 return;
             }
