@@ -1,6 +1,7 @@
-import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { useState } from "react";
 import { apiFetch } from "../../lib/apiClient";
+import AccountUserButton from "./AccountUserButton";
 
 export default function Profile() {
     const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +47,7 @@ export default function Profile() {
             <SignedIn>
                 <h1>Your Profile</h1>
                 <div className="signed-in-row">
-                    <UserButton />
+                    <AccountUserButton />
                     <button onClick={fetchProfile} disabled={isLoading} type="button">
                         Check backend profile details
                     </button>

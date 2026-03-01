@@ -1,4 +1,5 @@
-import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import AccountUserButton from "./AccountUserButton";
 import Login from "./Login";
 import Profile from "./Profile";
 import Register from "./Register";
@@ -32,7 +33,7 @@ export function UserLoginView() {
 
             <SignedIn>
                 <div className="signed-in-row">
-                    <UserButton />
+                    <AccountUserButton />
                 </div>
             </SignedIn>
         </section>
