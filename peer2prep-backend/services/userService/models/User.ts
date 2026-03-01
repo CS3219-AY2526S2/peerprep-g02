@@ -72,27 +72,62 @@ class UserRepository {
     async upsertFromClerk(input: {
         clerkUserId: string;
         name: string;
+        avatarUrl?: string | null;
+        preferredLanguage?: string | null;
         lastLoginAt?: Date;
     }): Promise<UserRecord> {
+        const hasAvatarUrl = input.avatarUrl !== undefined;
+        const hasPreferredLanguage = input.preferredLanguage !== undefined;
         const hasLastLoginAt = input.lastLoginAt instanceof Date;
+
         const result = await query<UserRow>(
             `
-                INSERT INTO users (clerk_user_id, name, role, last_login_at)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO users (clerk_user_id, name, avatar_url, role, preferred_language, last_login_at)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 ON CONFLICT (clerk_user_id)
                 DO UPDATE SET
                     name = EXCLUDED.name,
+                    avatar_url = CASE
+                        WHEN $7::boolean THEN EXCLUDED.avatar_url
+                        ELSE users.avatar_url
+                    END,
+                    preferred_language = CASE
+                        WHEN $8::boolean THEN EXCLUDED.preferred_language
+                        ELSE users.preferred_language
+                    END,
                     last_login_at = CASE
-                        WHEN $5::boolean THEN EXCLUDED.last_login_at
+                        WHEN $9::boolean THEN EXCLUDED.last_login_at
                         ELSE users.last_login_at
                     END,
                     updated_at = NOW()
                 RETURNING ${this.selectColumns}
             `,
-            [input.clerkUserId, input.name, "user", input.lastLoginAt || null, hasLastLoginAt],
+            [
+                input.clerkUserId,
+                input.name,
+                input.avatarUrl ?? null,
+                "user",
+                input.preferredLanguage ?? null,
+                input.lastLoginAt || null,
+                hasAvatarUrl,
+                hasPreferredLanguage,
+                hasLastLoginAt,
+            ],
         );
 
         return mapUserRow(result.rows[0]);
+    }
+
+    async markDeletedByClerkUserId(clerkUserId: string): Promise<void> {
+        await query(
+            `
+                UPDATE users
+                SET status = 'deleted',
+                    updated_at = NOW()
+                WHERE clerk_user_id = $1
+            `,
+            [clerkUserId],
+        );
     }
 }
 

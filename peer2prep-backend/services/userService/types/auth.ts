@@ -7,4 +7,7 @@ export type ClerkUserSummary = {
     clerkUserId: string;
     email: string;
     name: string;
+    avatarUrl: string | null;
+    preferredLanguage: string | null;
+    lastSignInAt: Date | null;
 };

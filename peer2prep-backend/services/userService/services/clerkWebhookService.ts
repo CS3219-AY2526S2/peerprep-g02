@@ -1,0 +1,89 @@
+import type { WebhookEvent } from "@clerk/express/webhooks";
+import { userRepository } from "../models/User.js";
+
+type WebhookUserEmail = {
+    id?: string;
+    email_address?: string;
+};
+
+type WebhookUserPayload = {
+    id?: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    username?: string | null;
+    image_url?: string | null;
+    primary_email_address_id?: string | null;
+    email_addresses?: WebhookUserEmail[];
+    unsafe_metadata?: Record<string, unknown> | null;
+    last_sign_in_at?: number | null;
+};
+
+function buildName(payload: WebhookUserPayload): string {
+    const fullName = `${payload.first_name || ""} ${payload.last_name || ""}`.trim();
+    if (fullName) {
+        return fullName;
+    }
+
+    if (payload.username) {
+        return payload.username;
+    }
+
+    const primaryEmailId = payload.primary_email_address_id;
+    const primaryEmail = (payload.email_addresses || []).find(
+        (entry) => entry.id === primaryEmailId,
+    );
+    const fallbackEmail =
+        primaryEmail?.email_address || payload.email_addresses?.[0]?.email_address;
+    return fallbackEmail || "User";
+}
+
+function toOptionalDate(timestamp: number | null | undefined): Date | undefined {
+    if (typeof timestamp !== "number") {
+        return undefined;
+    }
+
+    const value = new Date(timestamp);
+    return Number.isNaN(value.getTime()) ? undefined : value;
+}
+
+function toPreferredLanguage(payload: WebhookUserPayload): string | null {
+    const value = payload.unsafe_metadata?.defaultLanguage;
+    return typeof value === "string" ? value : null;
+}
+
+// process + write to DB
+export class ClerkWebhookService {
+    async process(event: WebhookEvent): Promise<void> {
+        switch (event.type) {
+            case "user.created":
+            case "user.updated": {
+                const payload = event.data as WebhookUserPayload;
+                if (!payload.id) {
+                    return;
+                }
+
+                await userRepository.upsertFromClerk({
+                    clerkUserId: payload.id,
+                    name: buildName(payload),
+                    avatarUrl: payload.image_url ?? null,
+                    preferredLanguage: toPreferredLanguage(payload),
+                    lastLoginAt: toOptionalDate(payload.last_sign_in_at),
+                });
+                return;
+            }
+
+            case "user.deleted": {
+                const payload = event.data as { id?: string };
+                if (!payload.id) {
+                    return;
+                }
+
+                await userRepository.markDeletedByClerkUserId(payload.id);
+                return;
+            }
+
+            default:
+                return;
+        }
+    }
+}

@@ -7,6 +7,7 @@ import { swaggerOptions } from "./config/swagger.js";
 import { clerkMiddleware } from "@clerk/express";
 import authRoutes from "./routes/authRoutes.js";
 import internalAuthRoutes from "./routes/internalAuthRoutes.js";
+import clerkWebhookRoutes from "./routes/clerkWebhookRoutes.js";
 import { AppConstants } from "./constants.js";
 import { httpLogger } from "./utils/logger.js";
 const app = express();
@@ -17,6 +18,7 @@ if (AppConstants.MODE === "dev") {
 }
 
 app.use(clerkMiddleware());
+app.use("/v1/api/users/webhooks/clerk", express.raw({ type: "application/json" }), clerkWebhookRoutes);
 app.use(express.json());
 app.use(
     cors({
