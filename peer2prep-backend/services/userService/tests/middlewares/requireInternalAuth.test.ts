@@ -9,6 +9,10 @@ function mockHeader(resolver: (name: string) => string | undefined): Request["he
 }
 
 describe("requireInternalAuth", () => {
+    beforeEach(() => {
+        AppConstants.INTERNAL_SERVICE_API_KEY = "test-internal-key";
+    });
+
     it("returns 401 when internal service key is missing", () => {
         const req = createMockRequest({
             header: mockHeader(() => undefined),
@@ -45,7 +49,7 @@ describe("requireInternalAuth", () => {
         const req = createMockRequest({
             header: mockHeader((name: string) =>
                 name === "x-internal-service-key"
-                    ? AppConstants.INTERNAL_SERVICE_API_KEY
+                    ? "test-internal-key"
                     : undefined,
             ),
         });

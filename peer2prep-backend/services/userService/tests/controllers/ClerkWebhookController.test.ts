@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebhookEvent } from "@clerk/express/webhooks";
 import { verifyWebhook } from "@clerk/express/webhooks";
 import { ClerkWebhookController } from "../../controllers/ClerkWebhookController.js";
+import { AppConstants } from "../../constants.js";
 import { ClerkWebhookService } from "../../services/clerkWebhookService.js";
+import * as responseHelpers from "../../utils/ResponseHelpers.js";
 import { createMockRequest, createMockResponse } from "../helpers/httpMocks.js";
 
 vi.mock("@clerk/express/webhooks", () => ({
@@ -11,9 +13,27 @@ vi.mock("@clerk/express/webhooks", () => ({
 
 describe("ClerkWebhookController", () => {
     const verifyWebhookMock = vi.mocked(verifyWebhook);
+    const originalSigningSecret = AppConstants.CLERK_WEBHOOK_SIGNING_SECRET;
 
     beforeEach(() => {
         vi.clearAllMocks();
+        AppConstants.CLERK_WEBHOOK_SIGNING_SECRET = originalSigningSecret;
+    });
+
+    // missing secret
+    it("returns 500 when webhook signing secret is missing", async () => {
+        AppConstants.CLERK_WEBHOOK_SIGNING_SECRET = undefined;
+
+        const controller = new ClerkWebhookController();
+        const req = createMockRequest({ body: {} });
+        const res = createMockResponse();
+
+        await controller.handle(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(500);
+        expect(res.json).toHaveBeenCalledWith({
+            error: "CLERK_WEBHOOK_SIGNING_SECRET is not configured.",
+        });
     });
 
     // wrong signature
@@ -51,5 +71,22 @@ describe("ClerkWebhookController", () => {
         expect(processSpy).toHaveBeenCalledTimes(1);
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith({ message: "Webhook processed." });
+    });
+
+    it("delegates non-signature errors to handleError", async () => {
+        verifyWebhookMock.mockRejectedValue(new Error("database down"));
+        const handleErrorSpy = vi.spyOn(responseHelpers, "handleError");
+
+        const controller = new ClerkWebhookController();
+        const req = createMockRequest({ body: {} });
+        const res = createMockResponse();
+
+        await controller.handle(req, res);
+
+        expect(handleErrorSpy).toHaveBeenCalledWith(
+            res,
+            expect.any(Error),
+            "process clerk webhook",
+        );
     });
 });

@@ -8,6 +8,7 @@ describe("ClerkWebhookService", () => {
         vi.clearAllMocks();
     });
 
+    // user.updated
     it("upserts user profile fields for user.updated events", async () => {
         const upsertSpy = vi.spyOn(userRepository, "upsertFromClerk").mockResolvedValue({
             clerkUserId: "user_123",
@@ -45,6 +46,43 @@ describe("ClerkWebhookService", () => {
         });
     });
 
+    // user.created
+    it("upserts user profile fields for user.created events", async () => {
+        const upsertSpy = vi.spyOn(userRepository, "upsertFromClerk").mockResolvedValue({
+            clerkUserId: "user_234",
+            name: "new_user",
+            avatarUrl: null,
+            status: "active",
+            role: "user",
+            preferredLanguage: "Java",
+            lastLoginAt: null,
+            createdAt: new Date("2026-02-20T00:00:00.000Z"),
+            updatedAt: new Date("2026-02-20T00:00:00.000Z"),
+        });
+
+        const service = new ClerkWebhookService();
+        const event = {
+            type: "user.created",
+            object: "event",
+            data: {
+                id: "user_234",
+                username: "new_user",
+                unsafe_metadata: { defaultLanguage: "Java" },
+            },
+            event_attributes: { http_request: { client_ip: "127.0.0.1", user_agent: "test" } },
+        } as unknown as WebhookEvent;
+
+        await service.process(event);
+
+        expect(upsertSpy).toHaveBeenCalledWith({
+            clerkUserId: "user_234",
+            name: "new_user",
+            avatarUrl: null,
+            preferredLanguage: "Java",
+        });
+    });
+
+    // user.deleted
     it("marks user as deleted for user.deleted events", async () => {
         const markDeletedSpy = vi
             .spyOn(userRepository, "markDeletedByClerkUserId")
