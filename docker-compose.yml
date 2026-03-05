@@ -53,10 +53,10 @@ services:
 
   # User Service
   user-service:
-    build: ./services/user
+    build: ./peer2prep-backend/services/userService
     container_name: user-service
     env_file:
-      - ./services/user/.env
+      - ./peer2prep-backend/services/userService/.env
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -66,7 +66,7 @@ services:
       - gateway-network
       - user-db-network
     volumes:
-      - ./services/user:/app
+      - ./peer2prep-backend/services/userService:/app
       - /app/node_modules
     restart: unless-stopped
 
@@ -81,10 +81,10 @@ services:
 
   # Matching Service
   matching-service:
-    build: ./services/matching
+    build: ./peer2prep-backend/services/matchingService
     container_name: matching-service
     env_file:
-      - ./services/matching/.env
+      - ./peer2prep-backend/services/matchingService/.env
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -94,7 +94,7 @@ services:
       - gateway-network
       - matching-db-network
     volumes:
-      - ./services/matching:/app
+      - ./peer2prep-backend/services/matchingService:/app
       - /app/node_modules
     restart: unless-stopped
 
@@ -109,10 +109,12 @@ services:
 
   # Questions Service
   questions-service:
-    build: ./services/questions
+    build: ./peer2prep-backend/services/questionService
     container_name: questions-service
     env_file:
-      - ./services/questions/.env
+      - ./peer2prep-backend/services/questionService/.env
+    ports:
+    - "3005:3005"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -122,25 +124,43 @@ services:
       - gateway-network
       - questions-db-network
     volumes:
-      - ./services/questions:/app
+      - ./peer2prep-backend/services/questionService:/app
       - /app/node_modules
     restart: unless-stopped
 
   questions-db:
-    image: mongo:latest
+    image: postgres
     container_name: questions-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=questions_db
     volumes:
-      - questions_data:/data/db
+      - questions_data:/var/lib/postgresql/data
     networks:
       - questions-db-network
     restart: unless-stopped
-
+  pgadmin:
+    container_name: container-pgadmin
+    image: dpage/pgadmin4
+    depends_on:
+      - questions-db
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    networks:
+      - questions-db-network
+    restart: unless-stopped
   # Collaboration Service
   collaboration-service:
-    build: ./services/collaboration
+    build: ./peer2prep-backend/services/collaborationService
     container_name: collaboration-service
     env_file:
-      - ./services/collaboration/.env
+      - ./peer2prep-backend/services/collaborationService/.env
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -150,7 +170,7 @@ services:
       - gateway-network
       - collaboration-db-network
     volumes:
-      - ./services/collaboration:/app
+      - ./peer2prep-backend/services/collaborationService:/app
       - /app/node_modules
     restart: unless-stopped
 
@@ -165,10 +185,10 @@ services:
 
   # Attempts Service
   attempts-service:
-    build: ./services/attempts
+    build: ./peer2prep-backend/services/attemptService
     container_name: attempts-service
     env_file:
-      - ./services/attempts/.env
+      - ./peer2prep-backend/services/attemptService/.env
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -178,7 +198,7 @@ services:
       - gateway-network
       - attempts-db-network
     volumes:
-      - ./services/attempts:/app
+      - ./peer2prep-backend/services/attemptService:/app
       - /app/node_modules
     restart: unless-stopped
 
