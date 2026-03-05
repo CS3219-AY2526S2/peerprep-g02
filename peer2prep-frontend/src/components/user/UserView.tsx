@@ -15,6 +15,7 @@ function HomeUserView() {
                 <div className="link-row">
                     <a href="/account/login">Login</a>
                     <a href="/account/register">Register</a>
+                    <a href="/collaboration">Open Collaboration Demo</a>
                 </div>
             </SignedOut>
 
@@ -24,6 +25,7 @@ function HomeUserView() {
                     <a href={`${backendApiEndpoint}/users/auth/me`}>
                         Check backend profile details
                     </a>
+                    <a href="/collaboration">Open Collaboration Demo</a>
                 </div>
             </SignedIn>
         </section>
