@@ -16,7 +16,31 @@ router.post("/sessions", (req, res) => {
         });
     }
 
-    const { session, created } = sessionStore.createOrGetSession(validationResult.value);
+    const payload = validationResult.value;
+    const result = sessionStore.createOrGetSession(payload);
+
+    if ("conflict" in result) {
+        logger.warn(
+            {
+                sessionId: result.existingSession.sessionId,
+                userAId: result.existingSession.userAId,
+                userBId: result.existingSession.userBId,
+                existingDifficulty: result.existingSession.difficulty,
+                existingLanguage: result.existingSession.language,
+                requestedDifficulty: payload.difficulty,
+                requestedLanguage: payload.language,
+            },
+            "Session conflict: active session exists with different parameters",
+        );
+        return res.status(409).json({
+            error: "SESSION_CONFLICT",
+            message:
+                "An active session already exists for this user pair with different difficulty or language.",
+            existingSession: result.existingSession,
+        });
+    }
+
+    const { session, created } = result;
     logger.info(
         {
             sessionId: session.sessionId,

@@ -7,18 +7,26 @@ function pairKey(userAId: string, userBId: string): string {
     return `${left}:${right}`;
 }
 
+export type CreateOrGetSessionResult =
+    | { created: true; session: CollaborationSession }
+    | { created: false; session: CollaborationSession }
+    | { conflict: true; existingSession: CollaborationSession };
+
 class SessionStore {
     private readonly sessionsByPair = new Map<string, CollaborationSession>();
 
-    createOrGetSession(payload: CreateSessionRequest): {
-        session: CollaborationSession;
-        created: boolean;
-    } {
+    createOrGetSession(payload: CreateSessionRequest): CreateOrGetSessionResult {
         const key = pairKey(payload.userAId, payload.userBId);
         const existingSession = this.sessionsByPair.get(key);
 
         if (existingSession && existingSession.status === "active") {
-            return { session: existingSession, created: false };
+            if (
+                existingSession.difficulty !== payload.difficulty ||
+                existingSession.language !== payload.language
+            ) {
+                return { conflict: true, existingSession };
+            }
+            return { created: false, session: existingSession };
         }
 
         const session: CollaborationSession = {
@@ -32,7 +40,7 @@ class SessionStore {
         };
 
         this.sessionsByPair.set(key, session);
-        return { session, created: true };
+        return { created: true, session };
     }
 }
 
