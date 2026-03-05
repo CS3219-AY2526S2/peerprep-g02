@@ -3,11 +3,13 @@ import type { CreateSessionRequest } from "@/types/session.js";
 const nonEmptyString = (value: unknown): value is string =>
     typeof value === "string" && value.trim().length > 0;
 
-export function validateCreateSessionPayload(payload: unknown): {
-    valid: boolean;
-    value?: CreateSessionRequest;
-    error?: string;
-} {
+type CreateSessionValidationResult =
+    | { valid: true; value: CreateSessionRequest }
+    | { valid: false; error: string };
+
+export function validateCreateSessionPayload(
+    payload: unknown,
+): CreateSessionValidationResult {
     if (!payload || typeof payload !== "object") {
         return {
             valid: false,
