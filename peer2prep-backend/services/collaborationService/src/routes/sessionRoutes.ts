@@ -16,7 +16,7 @@ router.post("/sessions", (req, res) => {
         });
     }
 
-    const { session, created } = sessionStore.createOrGetSession(validationResult.value);
+    const { session, created } = sessionStore.createOrGetSession(validationResult.value!);
     logger.info(
         {
             sessionId: session.sessionId,
