@@ -18,7 +18,9 @@ export class AuthService {
             const user = await userRepository.upsertFromClerk({
                 clerkUserId: clerkUser.clerkUserId,
                 name: clerkUser.name,
-                lastLoginAt: new Date(),
+                avatarUrl: clerkUser.avatarUrl,
+                preferredLanguage: clerkUser.preferredLanguage,
+                lastLoginAt: clerkUser.lastSignInAt || new Date(),
             });
 
             return {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { Request } from "express";
 import { AppConstants } from "../../constants.js";
 import { requireInternalAuth } from "../../middlewares/requireInternalAuth.js";
@@ -9,6 +9,10 @@ function mockHeader(resolver: (name: string) => string | undefined): Request["he
 }
 
 describe("requireInternalAuth", () => {
+    beforeEach(() => {
+        AppConstants.INTERNAL_SERVICE_API_KEY = "test-internal-key";
+    });
+
     it("returns 401 when internal service key is missing", () => {
         const req = createMockRequest({
             header: mockHeader(() => undefined),
@@ -44,9 +48,7 @@ describe("requireInternalAuth", () => {
     it("calls next when internal service key is valid", () => {
         const req = createMockRequest({
             header: mockHeader((name: string) =>
-                name === "x-internal-service-key"
-                    ? AppConstants.INTERNAL_SERVICE_API_KEY
-                    : undefined,
+                name === "x-internal-service-key" ? "test-internal-key" : undefined,
             ),
         });
         const res = createMockResponse();

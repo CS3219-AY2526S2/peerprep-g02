@@ -169,7 +169,6 @@ describe("requireAuth", () => {
     it("returns 500 when local user lookup throws", async () => {
         getAuthMock.mockReturnValue({ userId: "user_123" } as ReturnType<typeof getAuth>);
         vi.spyOn(userRepository, "findByClerkUserId").mockRejectedValue(new Error("db fail"));
-        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
         const req = createMockRequest();
         const res = createMockResponse();
@@ -180,6 +179,5 @@ describe("requireAuth", () => {
         expect(res.status).toHaveBeenCalledWith(500);
         expect(res.json).toHaveBeenCalledWith({ error: "Failed to authorize user." });
         expect(next).not.toHaveBeenCalled();
-        consoleSpy.mockRestore();
     });
 });

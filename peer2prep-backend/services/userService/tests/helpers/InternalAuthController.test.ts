@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { InternalAuthController } from "../../controllers/InternalAuthController.js";
-import { createMockRequest, createMockResponse } from "../helpers/httpMocks.js";
+import { createMockRequest, createMockResponse } from "./httpMocks.js";
 
 describe("InternalAuthController", () => {
+    // missing clerk user context
     it("returns 500 when clerk user context is missing for context authorization", () => {
         const controller = new InternalAuthController();
         const req = createMockRequest();
@@ -16,6 +17,7 @@ describe("InternalAuthController", () => {
         });
     });
 
+    // success case
     it("returns 200 and auth context for context authorization", () => {
         const controller = new InternalAuthController();
         const req = createMockRequest();
@@ -38,5 +40,4 @@ describe("InternalAuthController", () => {
             },
         });
     });
-
 });

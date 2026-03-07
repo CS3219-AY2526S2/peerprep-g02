@@ -12,11 +12,26 @@ type RawClerkUser = {
     firstName?: string | null;
     lastName?: string | null;
     username?: string | null;
+    imageUrl?: string | null;
+    lastSignInAt?: Date | number | string | null;
+    unsafeMetadata?: Record<string, unknown> | null;
     primaryEmailAddressId?: string | null;
     emailAddresses?: RawClerkEmailAddress[];
 };
 
-//
+function toDate(value: Date | number | string | null | undefined): Date | null {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    const normalized = new Date(value);
+    return Number.isNaN(normalized.getTime()) ? null : normalized;
+}
+
 function normalizeClerkUser(rawUser: RawClerkUser): ClerkUserSummary {
     const primaryEmailId = rawUser.primaryEmailAddressId;
     const primaryEmail = (rawUser.emailAddresses || []).find(
@@ -26,6 +41,11 @@ function normalizeClerkUser(rawUser: RawClerkUser): ClerkUserSummary {
     const email = primaryEmail?.emailAddress || rawUser.emailAddresses?.[0]?.emailAddress || "";
     const fullName = `${rawUser.firstName || ""} ${rawUser.lastName || ""}`.trim();
     const name = fullName || rawUser.username || email;
+    const avatarUrl = typeof rawUser.imageUrl === "string" ? rawUser.imageUrl : null;
+    const preferredLanguageValue = rawUser.unsafeMetadata?.defaultLanguage;
+    const preferredLanguage =
+        typeof preferredLanguageValue === "string" ? preferredLanguageValue : null;
+    const lastSignInAt = toDate(rawUser.lastSignInAt);
 
     if (!rawUser.id || !email) {
         throw new Error("Invalid Clerk user payload.");
@@ -35,6 +55,9 @@ function normalizeClerkUser(rawUser: RawClerkUser): ClerkUserSummary {
         clerkUserId: rawUser.id,
         email,
         name,
+        avatarUrl,
+        preferredLanguage,
+        lastSignInAt,
     };
 }
 

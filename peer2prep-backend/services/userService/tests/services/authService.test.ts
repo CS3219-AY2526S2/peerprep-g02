@@ -28,6 +28,9 @@ describe("AuthService", () => {
                 clerkUserId: "user_123",
                 email: "alice@example.com",
                 name: "Alice Tan",
+                avatarUrl: "https://cdn.example.com/alice.png",
+                preferredLanguage: "Python",
+                lastSignInAt: new Date("2026-01-01T00:00:00.000Z"),
             });
 
         const upsertSpy = vi.spyOn(userRepository, "upsertFromClerk").mockResolvedValue({
@@ -49,7 +52,9 @@ describe("AuthService", () => {
         expect(upsertSpy).toHaveBeenCalledWith({
             clerkUserId: "user_123",
             name: "Alice Tan",
-            lastLoginAt: expect.any(Date),
+            avatarUrl: "https://cdn.example.com/alice.png",
+            preferredLanguage: "Python",
+            lastLoginAt: new Date("2026-01-01T00:00:00.000Z"),
         });
 
         expect(result).toMatchObject({

@@ -80,7 +80,6 @@ describe("AuthController", () => {
         getAuthMock.mockReturnValue({ userId: "user_123" } as ReturnType<typeof getAuth>);
         vi.spyOn(AuthService.prototype, "me").mockRejectedValue(new Error("service failed"));
         const handleErrorSpy = vi.spyOn(responseHelpers, "handleError");
-        const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
         const controller = new AuthController();
         const req = createMockRequest();
@@ -89,6 +88,5 @@ describe("AuthController", () => {
         await controller.me(req, res);
         expect(handleErrorSpy).toHaveBeenCalledTimes(1);
         expect(handleErrorSpy).toHaveBeenCalledWith(res, expect.any(Error), "fetch me");
-        consoleSpy.mockRestore();
     });
 });
