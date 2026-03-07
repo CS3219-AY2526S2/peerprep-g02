@@ -52,12 +52,25 @@ export class ClerkWebhookService {
                     return;
                 }
 
-                await userRepository.upsertFromClerk({
+                const upsertInput: {
+                    clerkUserId: string;
+                    name: string;
+                    avatarUrl?: string | null;
+                    preferredLanguage?: string | null;
+                } = {
                     clerkUserId: payload.id,
                     name: buildName(payload),
-                    avatarUrl: payload.image_url ?? null,
-                    preferredLanguage: toPreferredLanguage(payload),
-                });
+                };
+
+                if ("image_url" in payload) {
+                    upsertInput.avatarUrl = payload.image_url ?? null;
+                }
+
+                if ("unsafe_metadata" in payload) {
+                    upsertInput.preferredLanguage = toPreferredLanguage(payload);
+                }
+
+                await userRepository.upsertFromClerk(upsertInput);
                 return;
             }
 

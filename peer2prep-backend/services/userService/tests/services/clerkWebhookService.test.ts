@@ -77,8 +77,39 @@ describe("ClerkWebhookService", () => {
         expect(upsertSpy).toHaveBeenCalledWith({
             clerkUserId: "user_234",
             name: "new_user",
-            avatarUrl: null,
             preferredLanguage: "Java",
+        });
+    });
+
+    it("does not overwrite avatar or preferredLanguage when fields are missing in payload", async () => {
+        const upsertSpy = vi.spyOn(userRepository, "upsertFromClerk").mockResolvedValue({
+            clerkUserId: "user_345",
+            name: "Alice",
+            avatarUrl: "https://cdn.example.com/alice.png",
+            status: "active",
+            role: "user",
+            preferredLanguage: "Python",
+            lastLoginAt: null,
+            createdAt: new Date("2026-02-20T00:00:00.000Z"),
+            updatedAt: new Date("2026-02-20T00:00:00.000Z"),
+        });
+
+        const service = new ClerkWebhookService();
+        const event = {
+            type: "user.updated",
+            object: "event",
+            data: {
+                id: "user_345",
+                first_name: "Alice",
+            },
+            event_attributes: { http_request: { client_ip: "127.0.0.1", user_agent: "test" } },
+        } as unknown as WebhookEvent;
+
+        await service.process(event);
+
+        expect(upsertSpy).toHaveBeenCalledWith({
+            clerkUserId: "user_345",
+            name: "Alice",
         });
     });
 
