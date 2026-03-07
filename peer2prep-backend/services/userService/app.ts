@@ -6,6 +6,7 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerOptions } from "./config/swagger.js";
 import { clerkMiddleware } from "@clerk/express";
 import authRoutes from "./routes/authRoutes.js";
+import internalAuthRoutes from "./routes/internalAuthRoutes.js";
 import { AppConstants } from "./constants.js";
 import { httpLogger } from "./utils/logger.js";
 const app = express();
@@ -29,6 +30,7 @@ app.use(httpLogger);
 
 // Mount controllers
 app.use("/v1/api/users/auth", authRoutes);
+app.use("/v1/api/users/internal/authz", internalAuthRoutes);
 app.get("/v1/api/health", (_req, res) => {
     res.status(200).json({ status: "ok", message: "API is running" });
 });

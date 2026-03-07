@@ -21,7 +21,9 @@ export function requireAuth(options: RequireAuthOptions = {}) {
                 return;
             }
 
+            res.locals.clerkUserId = userId;
             const user = await userRepository.findByClerkUserId(userId);
+
             if (!user) {
                 if (options.allowMissingLocalUser && !options.requiredRole) {
                     next();
@@ -46,6 +48,7 @@ export function requireAuth(options: RequireAuthOptions = {}) {
                 return;
             }
 
+            res.locals.authUser = user;
             next();
         } catch (error) {
             logger.error({ err: error }, "Error in requireAuth middleware");
