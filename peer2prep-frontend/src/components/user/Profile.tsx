@@ -1,4 +1,4 @@
-import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useRef } from "react";
 import { apiFetch } from "../../lib/apiClient";
 import AccountUserButton from "./AccountUserButton";
@@ -35,20 +35,10 @@ export default function Profile() {
 
     return (
         <section className="app-shell">
-            <SignedOut>
-                <p>You are signed out.</p>
-                <div className="link-row">
-                    <a href="/account/login">Login</a>
-                    <a href="/account/register">Register</a>
-                </div>
-            </SignedOut>
-
-            <SignedIn>
-                <h1>Your Profile</h1>
-                <div className="signed-in-row">
-                    <AccountUserButton />
-                </div>
-            </SignedIn>
+            <h1>Your Profile</h1>
+            <div className="signed-in-row">
+                <AccountUserButton />
+            </div>
         </section>
     );
 }
