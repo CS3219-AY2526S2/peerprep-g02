@@ -2,6 +2,7 @@ import { ATTEMPT_REJOIN_LUA_SCRIPT, CANCEL_MATCH_LUA_SCRIPT, DISCONNECT_LUA_SCRI
 import RedisManager from "@/managers/redisManager.js";
 import { type MatchRequest, type MatchResult } from "@/types/match.js";
 import { buildQueueKey, buildUserStatusKey } from "@/utils/match.js";
+import { v4 as uuidv4 } from "uuid";
 
 export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     const redis = RedisManager.getInstance();
@@ -18,7 +19,7 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     if (status === "matched") {
         return {
             matchFound: true,
-            matchId: "0000", // todo
+            matchId: uuidv4(),
             matchedTopic: req.topic,
             matchedDifficulty: req.difficulty,
             matchedLanguage,
