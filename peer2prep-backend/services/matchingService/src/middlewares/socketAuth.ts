@@ -1,5 +1,7 @@
-import { Socket } from "socket.io";
 import "dotenv/config";
+
+import { Socket } from "socket.io";
+
 import type { InternalAuthResponse } from "@/types/auth.js";
 import { socketLogger } from "@/utils/logger.js";
 
@@ -12,12 +14,12 @@ import { socketLogger } from "@/utils/logger.js";
 //         return next(new Error("Authentication failed: userId required"));
 //     }
 
-//     socket.data.userId = userId;    
+//     socket.data.userId = userId;
 //     next();
 // };
 
 export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) => void) => {
-    const authHeader = socket.handshake.headers['authorization'] || socket.handshake.auth?.token;
+    const authHeader = socket.handshake.headers["authorization"] || socket.handshake.auth?.token;
     const serviceKey = process.env.US_INTERNAL_SERVICE_API_KEY || "";
 
     if (!authHeader) {
@@ -25,15 +27,20 @@ export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) =
     }
 
     try {
-        const response = await fetch(`${process.env.US_INTERNAL_SERVICE_URL}/v1/api/users/internal/authz/context`, {
-            headers: {
-                "authorization": authHeader,
-                "x-internal-service-key": serviceKey,
+        const response = await fetch(
+            `${process.env.US_INTERNAL_SERVICE_URL}/v1/api/users/internal/authz/context`,
+            {
+                headers: {
+                    authorization: authHeader,
+                    "x-internal-service-key": serviceKey,
+                },
             },
-        });
+        );
 
         if (!response.ok) {
-            socketLogger.warn(`Authentication failed for socket ${socket.id}: ${response.statusText}`);
+            socketLogger.warn(
+                `Authentication failed for socket ${socket.id}: ${response.statusText}`,
+            );
             return next(new Error("Unauthorized"));
         }
 

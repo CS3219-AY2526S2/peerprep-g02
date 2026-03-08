@@ -123,7 +123,7 @@ if redis.call('EXISTS', seekerKey) == 1 then
     redis.call('HSET', seekerKey, 'status', 'DISCONNECTED', 'last_seen', now)
 end
 return { 'ok' }
-`
+`;
 
 export const CANCEL_MATCH_LUA_SCRIPT = `
 -- KEYS: 1: Seeker's metadata key (mm:us:userId)
@@ -141,4 +141,4 @@ if redis.call('EXISTS', seekerKey) == 1 then
     redis.call('DEL', seekerKey)
 end
 return { 'ok' }
-`
+`;

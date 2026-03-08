@@ -3,5 +3,5 @@ export interface InternalAuthResponse {
         clerkUserId: string;
         role: string;
         status: string;
-    }
+    };
 }

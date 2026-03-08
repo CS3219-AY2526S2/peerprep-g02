@@ -7,6 +7,7 @@ import app from "@/app.js";
 import RedisManager from "@/managers/redisManager.js";
 import { registerSocketHandlers } from "@/managers/socketManager.js";
 import { mainLogger } from "@/utils/logger.js";
+
 import { socketAuthMiddleware } from "./middlewares/socketAuth.js";
 
 const server = createServer(app);
@@ -36,12 +37,12 @@ const startServer = async () => {
 };
 
 process.on("unhandledRejection", (reason, promise) => {
-  mainLogger.error({ reason, promise }, "Unhandled Promise Rejection");
+    mainLogger.error({ reason, promise }, "Unhandled Promise Rejection");
 });
 
 process.on("uncaughtException", (error) => {
-  mainLogger.error(error, "Uncaught Exception");
-  process.exit(1);
+    mainLogger.error(error, "Uncaught Exception");
+    process.exit(1);
 });
 
 process.on("SIGINT", async () => {
