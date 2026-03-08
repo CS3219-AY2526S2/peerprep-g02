@@ -7,12 +7,13 @@ import app from "@/app.js";
 import RedisManager from "@/managers/redisManager.js";
 import { registerSocketHandlers } from "@/managers/socketManager.js";
 import { mainLogger } from "@/utils/logger.js";
+import { socketAuthMiddleware } from "./middlewares/socketAuth.js";
 
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
         origin: process.env.MS_FRONTEND_URL,
-        methods: ["GET", "POST"],
+        methods: ["GET"],
         credentials: true,
     },
 });
@@ -20,6 +21,7 @@ const io = new Server(server, {
 const startServer = async () => {
     try {
         await RedisManager.connect();
+        io.use(socketAuthMiddleware);
         registerSocketHandlers(io);
 
         server.listen(process.env.MS_SERVER_PORT, () => {

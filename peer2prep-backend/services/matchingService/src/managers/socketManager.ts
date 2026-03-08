@@ -1,57 +1,78 @@
 import { Server, Socket } from "socket.io";
-
-import { findMatch } from "@/match/match.js";
-import { type MatchRequest } from "@/types/match.js";
+import { 
+    attemptRejoin,
+    cancelMatch,
+    findMatch,
+    handleDisconnect,
+} from "@/match/match.js";
+import { MatchDetailsSchema, type MatchRequest } from "@/types/match.js";
 import { socketLogger } from "@/utils/logger.js";
 
 export const registerSocketHandlers = (io: Server) => {
     io.on("connection", (socket: Socket) => {
-        socket.on("join_queue", async (req: MatchRequest) => {
-            try {
-                if (!req || !req.userId) {
-                    socket.emit("match_error", { message: "Invalid request" });
-                    return;
-                }
+        const userId = socket.data.userId;
 
-                socket.data.userId = req.userId;
-                socket.join(req.userId);
+        if (!userId) {
+            socketLogger.error("Socket connected without a verified userId. Disconnecting.");
+            socket.disconnect(true);
+            return;
+        }
 
-                socketLogger.info(
-                    {
-                        topic: req.topic,
-                        difficulty: req.difficulty,
-                        languages: req.languages,
-                    },
-                    `User ${req.userId} joined matchmaking queue`
-                );
-                const result = await findMatch(req);
+        socket.join(userId);
+        socketLogger.info(`User ${userId} connected with socket ID ${socket.id}`);
 
-                if (result.matchFound) {
-                    const payload = {
-                        matchId: result.matchId,
-                        matchedTopic: req.topic,
-                        matchedDifficulty: req.difficulty,
-                        matchedLanguage: result.matchedLanguage,
-                        users: [req.userId, result.partnerId],
-                    };
+        socket.on("join_queue", async (req: any) => {
+            const matchDetails = MatchDetailsSchema.safeParse(req);
 
-                    socketLogger.info(
-                        {
-                            ...payload,
-                        },
-                        `Match found for ${req.userId} - ${result.partnerId}`
-                    );
-                    
-                    io.to(req.userId).emit("match_success", payload);
-                    io.to(result.partnerId).emit("match_success", payload);
-                } else {
-                    io.to(req.userId).emit("waiting_for_match", {
-                        message: "Waiting for partner...",
-                    });
-                }
-            } catch (err) {
-                socketLogger.error(err, "Error in join_queue");
-                socket.emit("match_error", { message: "Internal server error" });
+            if (!matchDetails.success) {
+                socketLogger.error(`Invalid join_queue request from user ${userId}: ${matchDetails.error}`);
+                socket.emit("match_error", { message: "Invalid request format" });
+                return;
+            }
+
+            const isSuccessfulRejoin = await attemptRejoin(userId);
+
+            if (isSuccessfulRejoin) {
+                socketLogger.info(`User ${userId} resumed queuing`);
+                socket.emit("match_waiting", { message: "Resumed search, waiting for a match..." });
+                return;
+            } 
+
+            socketLogger.info(`User ${userId} finding match`)
+            const matchRequest: MatchRequest = {
+                ...matchDetails.data,
+                userId,
+            };
+
+            const matchResult = await findMatch(matchRequest);
+
+            if (matchResult.matchFound) {
+                socketLogger.info(`Match Found: ${userId} & ${matchResult.partnerId}`);
+                io.to(userId).emit("match_success", matchResult);
+                io.to(matchResult.partnerId).emit("match_success", matchResult);
+            } else {
+                socketLogger.info(`User ${userId} added to queue for ${matchRequest.topic}.`);
+                socket.emit("match_waiting", { message: "Added to queue, waiting for a match..." });
+            }
+        });
+
+        socket.on("cancel_queue", async () => {
+            const isCancelled = await cancelMatch(userId);
+            if (isCancelled) {
+                socketLogger.info(`User ${userId} cancelled matchmaking.`);
+                socket.emit("match_cancelled", { message: "You have left the queue." });
+            } else {
+                socketLogger.error(`Failed to cancel matchmaking for user ${userId}.`);
+                socket.emit("match_error", { message: "Failed to leave the queue. Please try again." });
+            }
+        });
+
+        socket.on("disconnect", async () => {
+            // only the last disconnect matters, e.g. if multiple tabs are open
+            const sockets = await io.in(userId).fetchSockets();
+            if (sockets.length == 0) {
+                socketLogger.info(`User ${userId} disconnected.`);
+                await handleDisconnect(userId);
             }
         });
     });
