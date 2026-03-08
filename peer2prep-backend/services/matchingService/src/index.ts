@@ -35,6 +35,15 @@ const startServer = async () => {
     }
 };
 
+process.on("unhandledRejection", (reason, promise) => {
+  mainLogger.error({ reason, promise }, "Unhandled Promise Rejection");
+});
+
+process.on("uncaughtException", (error) => {
+  mainLogger.error(error, "Uncaught Exception");
+  process.exit(1);
+});
+
 process.on("SIGINT", async () => {
     mainLogger.info("Shutting down...");
     await RedisManager.disconnect();
