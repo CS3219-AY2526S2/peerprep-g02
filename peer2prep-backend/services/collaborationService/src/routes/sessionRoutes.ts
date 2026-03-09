@@ -16,7 +16,17 @@ router.post("/sessions", (req, res) => {
         });
     }
 
-    const { session, created } = sessionStore.createOrGetSession(validationResult.value!);
+    const { session, created, conflict } = sessionStore.createOrGetSession(validationResult.value!);
+
+    if (conflict) {
+        return res.status(409).json({
+            error: "ACTIVE_SESSION_CONFLICT",
+            message:
+                "An active session already exists for this user pair with different difficulty, language, or topic.",
+            session,
+        });
+    }
+
     logger.info(
         {
             sessionId: session.sessionId,
