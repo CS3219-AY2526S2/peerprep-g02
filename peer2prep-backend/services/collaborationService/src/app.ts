@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 
 import sessionRoutes from "@/routes/sessionRoutes.js";
+import { httpLogger } from "@/utils/logger.js";
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(
         credentials: true,
     }),
 );
+app.use(httpLogger);
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
