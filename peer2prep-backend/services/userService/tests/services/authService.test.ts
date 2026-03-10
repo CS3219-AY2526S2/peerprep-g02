@@ -171,4 +171,91 @@ describe("AuthService", () => {
         expect(markDeletedSpy).toHaveBeenCalledWith("admin_1");
         expect(result).toEqual({ message: "Account deleted successfully." });
     });
+
+    it("returns admin user list with emails from Clerk", async () => {
+        vi.spyOn(userRepository, "listByStatuses").mockResolvedValue([
+            {
+                clerkUserId: "user_1",
+                name: "Alice",
+                avatarUrl: null,
+                status: "active",
+                role: "user",
+                preferredLanguage: null,
+                lastLoginAt: null,
+                createdAt: new Date("2026-01-01T00:00:00.000Z"),
+                updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+            },
+        ]);
+        vi.spyOn(ClerkService.prototype, "getUsersByClerkUserIds").mockResolvedValue(
+            new Map([
+                [
+                    "user_1",
+                    {
+                        clerkUserId: "user_1",
+                        email: "alice@example.com",
+                        name: "Alice",
+                        avatarUrl: null,
+                        preferredLanguage: null,
+                        lastSignInAt: null,
+                    },
+                ],
+            ]),
+        );
+
+        const service = new AuthService();
+        const result = await service.listUsersForAdmin();
+
+        expect(result).toMatchObject({
+            message: "Users fetched successfully.",
+            data: {
+                users: [
+                    {
+                        clerkUserId: "user_1",
+                        name: "Alice",
+                        email: "alice@example.com",
+                        role: "user",
+                        status: "active",
+                    },
+                ],
+            },
+        });
+    });
+
+    it("updates user status for admin actions", async () => {
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "user_1",
+            name: "Alice",
+            avatarUrl: null,
+            status: "active",
+            role: "user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+        vi.spyOn(userRepository, "updateStatusByClerkUserId").mockResolvedValue({
+            clerkUserId: "user_1",
+            name: "Alice",
+            avatarUrl: null,
+            status: "suspended",
+            role: "user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+
+        const service = new AuthService();
+        const result = await service.updateUserStatusForAdmin("user_1", "suspended");
+
+        expect(result).toMatchObject({
+            message: "User status updated successfully.",
+            data: {
+                user: {
+                    clerkUserId: "user_1",
+                    status: "suspended",
+                },
+            },
+        });
+    });
 });

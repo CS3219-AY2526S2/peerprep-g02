@@ -1,5 +1,7 @@
 import { useAuth } from "@clerk/clerk-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "../../lib/apiClient";
+import AdminPage from "./admin/AdminPage";
 import Login from "./Login";
 import Profile from "./profile/Profile";
 import Register from "./Register";
@@ -7,11 +9,62 @@ import Register from "./Register";
 export function UserLoginView() {
     const pathname = window.location.pathname;
     const { isLoaded, isSignedIn } = useAuth();
+    const [adminRouteAllowed, setAdminRouteAllowed] = useState<boolean | null>(null);
 
     useEffect(() => {
         if (pathname === "/account/profile" && isLoaded && !isSignedIn) {
             window.location.replace("/account/login");
         }
+    }, [pathname, isLoaded, isSignedIn]);
+
+    // admin route guard
+    useEffect(() => {
+        if (pathname !== "/account/admin") {
+            setAdminRouteAllowed(null);
+            return;
+        }
+
+        if (!isLoaded || !isSignedIn) {
+            return;
+        }
+
+        let isCancelled = false;
+        setAdminRouteAllowed(null);
+
+        void apiFetch("/users/me", { method: "GET" })
+            .then(async (response) => {
+                if (isCancelled) {
+                    return;
+                }
+
+                if (!response.ok) {
+                    setAdminRouteAllowed(false);
+                    window.location.replace("/account/profile");
+                    return;
+                }
+
+                const payload = await response.json().catch(() => null);
+                const role = payload?.data?.user?.role;
+                if (role === "admin") {
+                    setAdminRouteAllowed(true);
+                    return;
+                }
+
+                setAdminRouteAllowed(false);
+                window.location.replace("/account/profile");
+            })
+            .catch(() => {
+                if (isCancelled) {
+                    return;
+                }
+
+                setAdminRouteAllowed(false);
+                window.location.replace("/account/profile");
+            });
+
+        return () => {
+            isCancelled = true;
+        };
     }, [pathname, isLoaded, isSignedIn]);
 
     if (pathname.startsWith("/account/login")) {
@@ -40,6 +93,30 @@ export function UserLoginView() {
         }
 
         return <Profile />;
+    }
+
+    if (pathname === "/account/admin") {
+        if (!isLoaded) {
+            return null;
+        }
+
+        if (!isSignedIn) {
+            return (
+                <section className="app-shell">
+                    <p>You are signed out.</p>
+                    <div className="link-row">
+                        <a href="/account/login">Login</a>
+                        <a href="/account/register">Register</a>
+                    </div>
+                </section>
+            );
+        }
+
+        if (adminRouteAllowed !== true) {
+            return null;
+        }
+
+        return <AdminPage />;
     }
 
     return (

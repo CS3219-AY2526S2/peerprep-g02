@@ -142,6 +142,64 @@ class UserRepository {
 
         return Number(result.rows[0]?.count || "0");
     }
+
+    async listByStatuses(statuses: UserStatus[]): Promise<UserRecord[]> {
+        const result = await query<UserRow>(
+            `
+                SELECT ${this.selectColumns}
+                FROM users
+                WHERE status = ANY($1::text[])
+                ORDER BY created_at DESC
+            `,
+            [statuses],
+        );
+
+        return result.rows.map(mapUserRow);
+    }
+
+    async updateRoleByClerkUserId(
+        clerkUserId: string,
+        role: UserRole,
+    ): Promise<UserRecord | null> {
+        const result = await query<UserRow>(
+            `
+                UPDATE users
+                SET role = $2,
+                    updated_at = NOW()
+                WHERE clerk_user_id = $1
+                RETURNING ${this.selectColumns}
+            `,
+            [clerkUserId, role],
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return mapUserRow(result.rows[0]);
+    }
+
+    async updateStatusByClerkUserId(
+        clerkUserId: string,
+        status: Exclude<UserStatus, "deleted">,
+    ): Promise<UserRecord | null> {
+        const result = await query<UserRow>(
+            `
+                UPDATE users
+                SET status = $2,
+                    updated_at = NOW()
+                WHERE clerk_user_id = $1
+                RETURNING ${this.selectColumns}
+            `,
+            [clerkUserId, status],
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return mapUserRow(result.rows[0]);
+    }
 }
 
 export const userRepository = new UserRepository();
