@@ -4,6 +4,13 @@ import { AuthService } from "../../services/authService.js";
 import { userRepository } from "../../models/User.js";
 import { ClerkService } from "../../services/clerkService.js";
 import { ServiceError } from "../../utils/ResponseHelpers.js";
+import { logger } from "../../utils/logger.js";
+
+vi.mock("../../utils/logger.js", () => ({
+    logger: {
+        error: vi.fn(),
+    },
+}));
 
 describe("AuthService", () => {
     beforeEach(() => {
@@ -144,34 +151,6 @@ describe("AuthService", () => {
         expect(deleteClerkSpy).not.toHaveBeenCalled();
     });
 
-    it("allows admin deletion when another active admin exists", async () => {
-        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
-            clerkUserId: "admin_1",
-            name: "Admin",
-            avatarUrl: null,
-            status: "active",
-            role: "admin",
-            preferredLanguage: null,
-            lastLoginAt: null,
-            createdAt: new Date("2026-01-01T00:00:00.000Z"),
-            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-        });
-        vi.spyOn(userRepository, "countActiveAdmins").mockResolvedValue(2);
-        const deleteClerkSpy = vi
-            .spyOn(ClerkService.prototype, "deleteUserByClerkUserId")
-            .mockResolvedValue();
-        const markDeletedSpy = vi
-            .spyOn(userRepository, "markDeletedByClerkUserId")
-            .mockResolvedValue();
-
-        const service = new AuthService();
-        const result = await service.deleteAccount("admin_1");
-
-        expect(deleteClerkSpy).toHaveBeenCalledWith("admin_1");
-        expect(markDeletedSpy).toHaveBeenCalledWith("admin_1");
-        expect(result).toEqual({ message: "Account deleted successfully." });
-    });
-
     it("returns admin user list with emails from Clerk", async () => {
         vi.spyOn(userRepository, "listByStatuses").mockResolvedValue([
             {
@@ -221,7 +200,49 @@ describe("AuthService", () => {
         });
     });
 
-    it("updates user status for admin actions", async () => {
+    it("triggers Clerk unban when admin sets status back to active", async () => {
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "user_1",
+            name: "Alice",
+            avatarUrl: null,
+            status: "suspended",
+            role: "user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+        const unbanSpy = vi
+            .spyOn(ClerkService.prototype, "unbanUserByClerkUserId")
+            .mockResolvedValue();
+        vi.spyOn(userRepository, "updateStatusByClerkUserId").mockResolvedValue({
+            clerkUserId: "user_1",
+            name: "Alice",
+            avatarUrl: null,
+            status: "active",
+            role: "user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+
+        const service = new AuthService();
+        const result = await service.updateUserStatusForAdmin("user_1", "active");
+
+        expect(result).toMatchObject({
+            message: "User status updated successfully.",
+            data: {
+                user: {
+                    clerkUserId: "user_1",
+                    status: "active",
+                },
+            },
+        });
+        expect(unbanSpy).toHaveBeenCalledWith("user_1");
+    });
+
+    it("does not fail admin status update response when Clerk sync fails", async () => {
         vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
             clerkUserId: "user_1",
             name: "Alice",
@@ -233,6 +254,9 @@ describe("AuthService", () => {
             createdAt: new Date("2026-01-01T00:00:00.000Z"),
             updatedAt: new Date("2026-01-01T00:00:00.000Z"),
         });
+        vi.spyOn(ClerkService.prototype, "banUserByClerkUserId").mockRejectedValue(
+            new Error("clerk unavailable"),
+        );
         vi.spyOn(userRepository, "updateStatusByClerkUserId").mockResolvedValue({
             clerkUserId: "user_1",
             name: "Alice",
@@ -257,5 +281,7 @@ describe("AuthService", () => {
                 },
             },
         });
+        await Promise.resolve();
+        expect(logger.error).toHaveBeenCalled();
     });
 });

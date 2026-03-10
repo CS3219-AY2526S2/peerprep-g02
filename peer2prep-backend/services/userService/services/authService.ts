@@ -2,9 +2,29 @@ import { AuthResponse } from "../types/auth.js";
 import { UserRole, userRepository } from "../models/User.js";
 import { ClerkService } from "./clerkService.js";
 import { ServiceError, toServiceError } from "../utils/ResponseHelpers.js";
+import { logger } from "../utils/logger.js";
 
 export class AuthService {
     private readonly clerkService = new ClerkService();
+
+    private syncClerkSuspensionState(clerkUserId: string, status: "active" | "suspended"): void {
+        void (async () => {
+            try {
+                if (status === "suspended") {
+                    await this.clerkService.banUserByClerkUserId(clerkUserId);
+                    await this.clerkService.revokeActiveSessionsByClerkUserId(clerkUserId);
+                    return;
+                }
+
+                await this.clerkService.unbanUserByClerkUserId(clerkUserId);
+            } catch (error) {
+                logger.error(
+                    { err: error, clerkUserId, status },
+                    "Failed to sync Clerk suspension state",
+                );
+            }
+        })();
+    }
 
     // fetch user profile and sync
     async me(clerkUserId: string): Promise<AuthResponse> {
@@ -206,6 +226,9 @@ export class AuthService {
             if (!updatedUser) {
                 throw new ServiceError(404, "User not found.");
             }
+
+            // Non-blocking identity-layer sync to avoid slowing the admin action response path.
+            this.syncClerkSuspensionState(targetClerkUserId, status);
 
             return {
                 message: "User status updated successfully.",

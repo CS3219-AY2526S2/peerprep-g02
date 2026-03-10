@@ -1,6 +1,7 @@
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/apiClient";
+import { pushToast } from "../../lib/toast";
 import AdminPage from "./admin/AdminPage";
 import Login from "./Login";
 import Profile from "./profile/Profile";
@@ -10,6 +11,27 @@ export function UserLoginView() {
     const pathname = window.location.pathname;
     const { isLoaded, isSignedIn } = useAuth();
     const [adminRouteAllowed, setAdminRouteAllowed] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        if (pathname !== "/account/profile") {
+            return;
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("unauthorized") !== "admin") {
+            return;
+        }
+
+        // Defer to next tick so ToastHost is mounted and subscribed.
+        window.setTimeout(() => {
+            pushToast({
+                tone: "error",
+                message: "This route is only for admins.",
+            });
+        }, 0);
+
+        window.history.replaceState({}, "", "/account/profile");
+    }, [pathname]);
 
     useEffect(() => {
         if (pathname === "/account/profile" && isLoaded && !isSignedIn) {
@@ -51,7 +73,7 @@ export function UserLoginView() {
                 }
 
                 setAdminRouteAllowed(false);
-                window.location.replace("/account/profile");
+                window.location.replace("/account/profile?unauthorized=admin");
             })
             .catch(() => {
                 if (isCancelled) {
