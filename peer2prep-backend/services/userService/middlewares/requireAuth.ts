@@ -8,7 +8,7 @@ type RequireAuthOptions = {
     requiredRole?: UserRole;
 };
 
-// Middleware to check if user is authenticated and active.
+// Middleware to check if user is authenticated, active and has the appropriate role
 // For bootstrap routes like /me, allow missing local user via options.
 export function requireAuth(options: RequireAuthOptions = {}) {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {

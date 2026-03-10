@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect } from "react";
 import Login from "./Login";
-import Profile from "./Profile";
+import Profile from "./profile/Profile";
 import Register from "./Register";
 
 export function UserLoginView() {
@@ -45,7 +45,6 @@ export function UserLoginView() {
     return (
         <section className="app-shell">
             <h1>PeerPrep</h1>
-            <p>Clerk testing</p>
 
             <div className="link-row">
                 <a href="/account/login">Login</a>

@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useRef } from "react";
-import { apiFetch } from "../../lib/apiClient";
+import { apiFetch } from "../../../lib/apiClient";
 import AccountUserButton from "./AccountUserButton";
 
 export default function Profile() {
@@ -18,19 +18,21 @@ export default function Profile() {
 
         lastSyncedUserIdRef.current = userId;
 
-        void apiFetch("/users/auth/me", { method: "GET" }).then(async (response) => {
-            if (response.ok) {
-                return;
-            }
+        void apiFetch("/users/me", { method: "GET" })
+            .then(async (response) => {
+                if (response.ok) {
+                    return;
+                }
 
-            const payload = await response.json().catch(() => null);
-            const message = payload?.error || `Sync failed with status ${response.status}.`;
-            console.error(message);
-        }).catch((error) => {
-            const message =
-                error instanceof Error ? error.message : "Failed to auto-sync profile.";
-            console.error(message);
-        });
+                const payload = await response.json().catch(() => null);
+                const message = payload?.error || `Sync failed with status ${response.status}.`;
+                console.error(message);
+            })
+            .catch((error) => {
+                const message =
+                    error instanceof Error ? error.message : "Failed to auto-sync profile.";
+                console.error(message);
+            });
     }, [isLoaded, isSignedIn, userId]);
 
     return (

@@ -129,6 +129,19 @@ class UserRepository {
             [clerkUserId],
         );
     }
+
+    async countActiveAdmins(): Promise<number> {
+        const result = await query<{ count: string }>(
+            `
+                SELECT COUNT(*)::text AS count
+                FROM users
+                WHERE role = 'admin'
+                  AND status = 'active'
+            `,
+        );
+
+        return Number(result.rows[0]?.count || "0");
+    }
 }
 
 export const userRepository = new UserRepository();

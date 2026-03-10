@@ -90,4 +90,85 @@ describe("AuthService", () => {
             });
         });
     });
+
+    it("deletes a normal user account successfully", async () => {
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "user_123",
+            name: "Alice Tan",
+            avatarUrl: null,
+            status: "active",
+            role: "user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+        const deleteClerkSpy = vi
+            .spyOn(ClerkService.prototype, "deleteUserByClerkUserId")
+            .mockResolvedValue();
+        const markDeletedSpy = vi
+            .spyOn(userRepository, "markDeletedByClerkUserId")
+            .mockResolvedValue();
+
+        const service = new AuthService();
+        const result = await service.deleteAccount("user_123");
+
+        expect(deleteClerkSpy).toHaveBeenCalledWith("user_123");
+        expect(markDeletedSpy).toHaveBeenCalledWith("user_123");
+        expect(result).toEqual({ message: "Account deleted successfully." });
+    });
+
+    it("rejects deleting the last active admin", async () => {
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "admin_1",
+            name: "Admin",
+            avatarUrl: null,
+            status: "active",
+            role: "admin",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+        vi.spyOn(userRepository, "countActiveAdmins").mockResolvedValue(1);
+        const deleteClerkSpy = vi
+            .spyOn(ClerkService.prototype, "deleteUserByClerkUserId")
+            .mockResolvedValue();
+
+        const service = new AuthService();
+        await expect(service.deleteAccount("admin_1")).rejects.toMatchObject({
+            statusCode: 409,
+            message: "Cannot delete account: at least one active admin must remain.",
+        });
+
+        expect(deleteClerkSpy).not.toHaveBeenCalled();
+    });
+
+    it("allows admin deletion when another active admin exists", async () => {
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "admin_1",
+            name: "Admin",
+            avatarUrl: null,
+            status: "active",
+            role: "admin",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+        vi.spyOn(userRepository, "countActiveAdmins").mockResolvedValue(2);
+        const deleteClerkSpy = vi
+            .spyOn(ClerkService.prototype, "deleteUserByClerkUserId")
+            .mockResolvedValue();
+        const markDeletedSpy = vi
+            .spyOn(userRepository, "markDeletedByClerkUserId")
+            .mockResolvedValue();
+
+        const service = new AuthService();
+        const result = await service.deleteAccount("admin_1");
+
+        expect(deleteClerkSpy).toHaveBeenCalledWith("admin_1");
+        expect(markDeletedSpy).toHaveBeenCalledWith("admin_1");
+        expect(result).toEqual({ message: "Account deleted successfully." });
+    });
 });

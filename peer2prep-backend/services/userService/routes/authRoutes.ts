@@ -10,5 +10,6 @@ const authRoutes = Router();
 authRoutes.get("/me", requireAuth({ allowMissingLocalUser: true }), (req, res) =>
     authController.me(req, res),
 );
+authRoutes.delete("/me", requireAuth(), (req, res) => authController.deleteAccount(req, res));
 
 export default authRoutes;
