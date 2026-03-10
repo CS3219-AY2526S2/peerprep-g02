@@ -66,4 +66,8 @@ export class ClerkService {
         const rawUser = (await clerkClient.users.getUser(clerkUserId)) as RawClerkUser;
         return normalizeClerkUser(rawUser);
     }
+
+    async deleteUserByClerkUserId(clerkUserId: string): Promise<void> {
+        await clerkClient.users.deleteUser(clerkUserId);
+    }
 }

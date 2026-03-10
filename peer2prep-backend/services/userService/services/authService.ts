@@ -42,4 +42,44 @@ export class AuthService {
             throw toServiceError(error, "Failed to fetch user profile.");
         }
     }
+
+    async deleteAccount(clerkUserId: string): Promise<AuthResponse> {
+        if (!clerkUserId) {
+            throw new ServiceError(400, "clerkUserId is required.");
+        }
+
+        try {
+            const localUser = await userRepository.findByClerkUserId(clerkUserId);
+            if (!localUser) {
+                throw new ServiceError(403, "Forbidden: local user not found.");
+            }
+
+            if (localUser.status !== "active") {
+                throw new ServiceError(403, "Forbidden: account is not active.");
+            }
+
+            if (localUser.role === "admin") {
+                const activeAdminCount = await userRepository.countActiveAdmins();
+                if (activeAdminCount <= 1) {
+                    throw new ServiceError(
+                        409,
+                        "Cannot delete account: at least one active admin must remain.",
+                    );
+                }
+            }
+
+            await this.clerkService.deleteUserByClerkUserId(clerkUserId);
+            await userRepository.markDeletedByClerkUserId(clerkUserId);
+
+            return {
+                message: "Account deleted successfully.",
+            };
+        } catch (error) {
+            if (error instanceof ServiceError) {
+                throw error;
+            }
+
+            throw toServiceError(error, "Failed to delete account.");
+        }
+    }
 }
