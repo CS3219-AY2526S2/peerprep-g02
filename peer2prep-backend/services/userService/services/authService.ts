@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { AuthResponse } from "../types/auth.js";
 import { UserRole, userRepository } from "../models/User.js";
 import { ClerkService } from "./clerkService.js";
@@ -130,7 +131,15 @@ export class AuthService {
         }
     }
 
-    async updateUserRoleForAdmin(targetClerkUserId: string, role: UserRole): Promise<AuthResponse> {
+    async updateUserRoleForAdmin(
+        actorClerkUserId: string,
+        targetClerkUserId: string,
+        role: UserRole,
+    ): Promise<AuthResponse> {
+        if (!actorClerkUserId) {
+            throw new ServiceError(400, "actorClerkUserId is required.");
+        }
+
         if (!targetClerkUserId) {
             throw new ServiceError(400, "targetClerkUserId is required.");
         }
@@ -168,6 +177,19 @@ export class AuthService {
                 throw new ServiceError(404, "User not found.");
             }
 
+            if (existingUser.role !== role) {
+                await userRepository.insertAdminAuditLog({
+                    id: randomUUID(),
+                    actorUserId: actorClerkUserId,
+                    action: role === "admin" ? "PROMOTE_USER" : "DEMOTE_USER",
+                    targetUserId: targetClerkUserId,
+                    metadata: {
+                        oldRole: existingUser.role,
+                        newRole: role,
+                    },
+                });
+            }
+
             return {
                 message: "User role updated successfully.",
                 data: {
@@ -189,9 +211,14 @@ export class AuthService {
     }
 
     async updateUserStatusForAdmin(
+        actorClerkUserId: string,
         targetClerkUserId: string,
         status: "active" | "suspended",
     ): Promise<AuthResponse> {
+        if (!actorClerkUserId) {
+            throw new ServiceError(400, "actorClerkUserId is required.");
+        }
+
         if (!targetClerkUserId) {
             throw new ServiceError(400, "targetClerkUserId is required.");
         }
@@ -226,6 +253,19 @@ export class AuthService {
             );
             if (!updatedUser) {
                 throw new ServiceError(404, "User not found.");
+            }
+
+            if (existingUser.status !== status) {
+                await userRepository.insertAdminAuditLog({
+                    id: randomUUID(),
+                    actorUserId: actorClerkUserId,
+                    action: status === "suspended" ? "SUSPEND_USER" : "UNSUSPEND_USER",
+                    targetUserId: targetClerkUserId,
+                    metadata: {
+                        oldStatus: existingUser.status,
+                        newStatus: status,
+                    },
+                });
             }
 
             this.syncClerkSuspensionState(targetClerkUserId, status);

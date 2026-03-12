@@ -2,6 +2,11 @@ import { query } from "../utils/postgres.js";
 
 export type UserStatus = "active" | "suspended" | "deleted";
 export type UserRole = "user" | "admin";
+export type AdminAuditAction =
+    | "PROMOTE_USER"
+    | "DEMOTE_USER"
+    | "SUSPEND_USER"
+    | "UNSUSPEND_USER";
 
 type UserRow = {
     clerk_user_id: string;
@@ -127,6 +132,28 @@ class UserRepository {
                 WHERE clerk_user_id = $1
             `,
             [clerkUserId],
+        );
+    }
+
+    async insertAdminAuditLog(input: {
+        id: string;
+        actorUserId: string;
+        action: AdminAuditAction;
+        targetUserId: string;
+        metadata?: Record<string, unknown>;
+    }): Promise<void> {
+        await query(
+            `
+                INSERT INTO admin_audit_logs (id, actor_user_id, action, target_user_id, metadata)
+                VALUES ($1, $2, $3, $4, $5::jsonb)
+            `,
+            [
+                input.id,
+                input.actorUserId,
+                input.action,
+                input.targetUserId,
+                JSON.stringify(input.metadata ?? {}),
+            ],
         );
     }
 

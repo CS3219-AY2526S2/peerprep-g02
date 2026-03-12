@@ -94,7 +94,11 @@ export class AuthController {
         }
 
         try {
-            const result = await this.authService.updateUserRoleForAdmin(clerkUserId, role);
+            const result = await this.authService.updateUserRoleForAdmin(
+                userId,
+                clerkUserId,
+                role,
+            );
             return res.status(200).json(result);
         } catch (error) {
             handleError(res, error, "update user role");
@@ -125,7 +129,11 @@ export class AuthController {
         }
 
         try {
-            const result = await this.authService.updateUserStatusForAdmin(clerkUserId, status);
+            const result = await this.authService.updateUserStatusForAdmin(
+                userId,
+                clerkUserId,
+                status,
+            );
             return res.status(200).json(result);
         } catch (error) {
             handleError(res, error, "update user status");

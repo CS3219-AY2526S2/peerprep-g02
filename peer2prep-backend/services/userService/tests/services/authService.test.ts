@@ -226,9 +226,12 @@ describe("AuthService", () => {
             createdAt: new Date("2026-01-01T00:00:00.000Z"),
             updatedAt: new Date("2026-01-01T00:00:00.000Z"),
         });
+        const insertAuditSpy = vi
+            .spyOn(userRepository, "insertAdminAuditLog")
+            .mockResolvedValue();
 
         const service = new AuthService();
-        const result = await service.updateUserStatusForAdmin("user_1", "active");
+        const result = await service.updateUserStatusForAdmin("admin_1", "user_1", "active");
 
         expect(result).toMatchObject({
             message: "User status updated successfully.",
@@ -239,6 +242,17 @@ describe("AuthService", () => {
                 },
             },
         });
+        expect(insertAuditSpy).toHaveBeenCalledWith(
+            expect.objectContaining({
+                actorUserId: "admin_1",
+                action: "UNSUSPEND_USER",
+                targetUserId: "user_1",
+                metadata: {
+                    oldStatus: "suspended",
+                    newStatus: "active",
+                },
+            }),
+        );
         expect(unbanSpy).toHaveBeenCalledWith("user_1");
     });
 
@@ -268,9 +282,16 @@ describe("AuthService", () => {
             createdAt: new Date("2026-01-01T00:00:00.000Z"),
             updatedAt: new Date("2026-01-01T00:00:00.000Z"),
         });
+        const insertAuditSpy = vi
+            .spyOn(userRepository, "insertAdminAuditLog")
+            .mockResolvedValue();
 
         const service = new AuthService();
-        const result = await service.updateUserStatusForAdmin("user_1", "suspended");
+        const result = await service.updateUserStatusForAdmin(
+            "admin_1",
+            "user_1",
+            "suspended",
+        );
 
         expect(result).toMatchObject({
             message: "User status updated successfully.",
@@ -281,6 +302,17 @@ describe("AuthService", () => {
                 },
             },
         });
+        expect(insertAuditSpy).toHaveBeenCalledWith(
+            expect.objectContaining({
+                actorUserId: "admin_1",
+                action: "SUSPEND_USER",
+                targetUserId: "user_1",
+                metadata: {
+                    oldStatus: "active",
+                    newStatus: "suspended",
+                },
+            }),
+        );
         await Promise.resolve();
         expect(logger.error).toHaveBeenCalled();
     });
