@@ -11,14 +11,20 @@ authRoutes.get("/me", requireAuth({ allowMissingLocalUser: true }), (req, res) =
     authController.me(req, res),
 );
 authRoutes.delete("/me", requireAuth(), (req, res) => authController.deleteAccount(req, res));
+
+// Admin routes
 authRoutes.get("/admin/users", requireAuth({ requiredRole: "admin" }), (req, res) =>
     authController.listUsers(req, res),
 );
-authRoutes.patch("/admin/users/:clerkUserId/role", requireAuth({ requiredRole: "admin" }), (req, res) =>
-    authController.updateUserRole(req, res),
+authRoutes.patch(
+    "/admin/users/:clerkUserId/role",
+    requireAuth({ requiredRole: "admin" }),
+    (req, res) => authController.updateUserRole(req, res),
 );
-authRoutes.patch("/admin/users/:clerkUserId/status", requireAuth({ requiredRole: "admin" }), (req, res) =>
-    authController.updateUserStatus(req, res),
+authRoutes.patch(
+    "/admin/users/:clerkUserId/status",
+    requireAuth({ requiredRole: "admin" }),
+    (req, res) => authController.updateUserStatus(req, res),
 );
 
 export default authRoutes;

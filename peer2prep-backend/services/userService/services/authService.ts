@@ -26,7 +26,7 @@ export class AuthService {
         })();
     }
 
-    // fetch user profile and sync
+    // fetch user profile and sync (also handles new user creation)
     async me(clerkUserId: string): Promise<AuthResponse> {
         if (!clerkUserId) {
             throw new ServiceError(400, "clerkUserId is required.");
@@ -145,6 +145,7 @@ export class AuthService {
                 throw new ServiceError(400, "Cannot update role for a deleted user.");
             }
 
+            // keep in case API is called directly (even if this behavior is not possible in frontend)
             if (
                 existingUser.role === "admin" &&
                 role === "user" &&
@@ -227,7 +228,6 @@ export class AuthService {
                 throw new ServiceError(404, "User not found.");
             }
 
-            // Non-blocking identity-layer sync to avoid slowing the admin action response path.
             this.syncClerkSuspensionState(targetClerkUserId, status);
 
             return {
