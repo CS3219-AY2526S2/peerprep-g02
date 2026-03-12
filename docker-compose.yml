@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # Frontend
   frontend:
@@ -34,21 +32,6 @@ services:
       - attempts-service
     networks:
       - gateway-network
-    restart: unless-stopped
-
-  # Message Broker (RabbitMQ)
-  rabbitmq:
-    image: rabbitmq:latest
-    container_name: rabbitmq
-    hostname: rabbitmq
-    networks:
-      - gateway-network
-    healthcheck:
-      test: rabbitmq-diagnostics check_port_connectivity
-      interval: 30s
-      timeout: 30s
-      retries: 10
-      start_period: 30s
     restart: unless-stopped
 
   # User Service
@@ -86,26 +69,25 @@ services:
     env_file:
       - ./peer2prep-backend/services/matchingService/.env
     depends_on:
-      rabbitmq:
-        condition: service_healthy
-      matching-db:
+      matching-redis:
         condition: service_started
     networks:
       - gateway-network
-      - matching-db-network
-    volumes:
-      - ./peer2prep-backend/services/matchingService:/app
-      - /app/node_modules
+      - matching-redis-network
+    ports:
+      - "3007:5002"
+    environment:
+      - MS_SERVER_PORT=5002
+      - MS_ENV=development
+      - MS_REDIS_URL=redis://matching-redis:6379
     restart: unless-stopped
 
-  matching-db:
-    image: mongo:latest
-    container_name: matching-db
-    volumes:
-      - matching_data:/data/db
-    networks:
-      - matching-db-network
+  matching-redis:
+    image: redis:latest
+    container_name: matching-redis
     restart: unless-stopped
+    networks:
+      - matching-redis-network
 
   # Questions Service
   questions-service:
@@ -183,46 +165,33 @@ services:
       - collaboration-db-network
     restart: unless-stopped
 
-  # Attempts Service
-  attempts-service:
-    build: ./peer2prep-backend/services/attemptService
-    container_name: attempts-service
-    env_file:
-      - ./peer2prep-backend/services/attemptService/.env
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      attempts-db:
-        condition: service_started
-    networks:
-      - gateway-network
-      - attempts-db-network
-    volumes:
-      - ./peer2prep-backend/services/attemptService:/app
-      - /app/node_modules
-    restart: unless-stopped
+  # # Attempts Service
+  # attempts-service:
+  #   build: ./peer2prep-backend/services/attemptService
+  #   container_name: attempts-service
+  #   env_file:
+  #     - ./peer2prep-backend/services/attemptService/.env
+  #   depends_on:
+  #     rabbitmq:
+  #       condition: service_healthy
+  #     attempts-db:
+  #       condition: service_started
+  #   networks:
+  #     - gateway-network
+  #     - attempts-db-network
+  #   volumes:
+  #     - ./peer2prep-backend/services/attemptService:/app
+  #     - /app/node_modules
+  #   restart: unless-stopped
 
-  attempts-db:
-    image: mongo:latest
-    container_name: attempts-db
-    volumes:
-      - attempts_data:/data/db
-    networks:
-      - attempts-db-network
-    restart: unless-stopped
-
-  # Redis
-  redis:
-    image: redis:latest
-    container_name: redis-container
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-    networks:
-      - gateway-network
-    command: >
-      redis-server --appendonly yes
-        --user user on >password ~* +@all
+  # attempts-db:
+  #   image: mongo:latest
+  #   container_name: attempts-db
+  #   volumes:
+  #     - attempts_data:/data/db
+  #   networks:
+  #     - attempts-db-network
+  #   restart: unless-stopped
 
 volumes:
   user_data:
@@ -237,7 +206,7 @@ networks:
     driver: bridge
   user-db-network:
     driver: bridge
-  matching-db-network:
+  matching-redis-network:
     driver: bridge
   questions-db-network:
     driver: bridge
