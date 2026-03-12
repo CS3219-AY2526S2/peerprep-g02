@@ -1,3 +1,11 @@
-FROM node:18
+FROM node:25-alpine
+
 WORKDIR /app
-CMD ["sh"]
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+CMD ["npm", "run", "dev"]
