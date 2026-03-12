@@ -102,6 +102,14 @@ export default function AdminPage() {
                 tone: "success",
                 message: `Successfully updated ${targetUser.name}'s role to ${role}.`,
             });
+        } catch (error) {
+            pushToast({
+                tone: "error",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to update role due to a network error.",
+            });
         } finally {
             setUpdatingUserId(null);
         }
@@ -140,6 +148,14 @@ export default function AdminPage() {
             pushToast({
                 tone: "success",
                 message: `Successfully updated ${targetUser.name}'s status to ${status}.`,
+            });
+        } catch (error) {
+            pushToast({
+                tone: "error",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to update status due to a network error.",
             });
         } finally {
             setUpdatingUserId(null);
