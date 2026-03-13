@@ -62,6 +62,11 @@ async function ensureDatabaseExists(): Promise<void> {
 }
 
 async function runMigrations(): Promise<void> {
+    const superUserId = AppConstants.CLERK_SUPERUSER_ID?.trim();
+    if (!superUserId) {
+        throw new Error("CLERK_SUPERUSER_ID is required to run migrations.");
+    }
+
     await ensureDatabaseExists();
 
     const pool = new Pool({
@@ -104,6 +109,32 @@ async function runMigrations(): Promise<void> {
                 await client.query("ROLLBACK");
                 throw error;
             }
+        }
+
+        await client.query(
+            `
+                INSERT INTO users (clerk_user_id, name, status, role)
+                VALUES ($1, 'Super User', 'active', 'super_user')
+                ON CONFLICT (clerk_user_id)
+                DO UPDATE SET
+                    role = 'super_user',
+                    status = 'active',
+                    updated_at = NOW()
+            `,
+            [superUserId],
+        );
+        console.log("Ensured super user record exists.");
+
+        const superUserCountResult = await client.query<{ count: string }>(
+            `
+                SELECT COUNT(*)::text AS count
+                FROM users
+                WHERE role = 'super_user'
+            `,
+        );
+        const superUserCount = Number(superUserCountResult.rows[0]?.count ?? "0");
+        if (superUserCount !== 1) {
+            throw new Error("Database invariant violation: expected exactly 1 super_user row.");
         }
 
         console.log("Migrations completed successfully.");

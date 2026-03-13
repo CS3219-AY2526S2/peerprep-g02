@@ -79,14 +79,8 @@ export class AuthService {
                 throw new ServiceError(403, "Forbidden: account is not active.");
             }
 
-            if (localUser.role === "admin") {
-                const activeAdminCount = await userRepository.countActiveAdmins();
-                if (activeAdminCount <= 1) {
-                    throw new ServiceError(
-                        409,
-                        "Cannot delete account: at least one active admin must remain.",
-                    );
-                }
+            if (localUser.role === "super_user") {
+                throw new ServiceError(403, "Forbidden: super user account cannot be deleted.");
             }
 
             await this.clerkService.deleteUserByClerkUserId(clerkUserId);
@@ -134,7 +128,7 @@ export class AuthService {
     async updateUserRoleForAdmin(
         actorClerkUserId: string,
         targetClerkUserId: string,
-        role: UserRole,
+        role: Exclude<UserRole, "super_user">,
     ): Promise<AuthResponse> {
         if (!actorClerkUserId) {
             throw new ServiceError(400, "actorClerkUserId is required.");
@@ -142,6 +136,10 @@ export class AuthService {
 
         if (!targetClerkUserId) {
             throw new ServiceError(400, "targetClerkUserId is required.");
+        }
+
+        if (role !== "user" && role !== "admin") {
+            throw new ServiceError(400, "Invalid role update.");
         }
 
         try {
@@ -154,19 +152,8 @@ export class AuthService {
                 throw new ServiceError(400, "Cannot update role for a deleted user.");
             }
 
-            // keep in case API is called directly (even if this behavior is not possible in frontend)
-            if (
-                existingUser.role === "admin" &&
-                role === "user" &&
-                existingUser.status === "active"
-            ) {
-                const activeAdminCount = await userRepository.countActiveAdmins();
-                if (activeAdminCount <= 1) {
-                    throw new ServiceError(
-                        409,
-                        "Cannot demote user: at least one active admin must remain.",
-                    );
-                }
+            if (existingUser.role === "super_user") {
+                throw new ServiceError(403, "Forbidden: super user role cannot be changed.");
             }
 
             const updatedUser = await userRepository.updateRoleByClerkUserId(
@@ -233,18 +220,8 @@ export class AuthService {
                 throw new ServiceError(400, "Cannot update status for a deleted user.");
             }
 
-            if (
-                existingUser.role === "admin" &&
-                existingUser.status === "active" &&
-                status === "suspended"
-            ) {
-                const activeAdminCount = await userRepository.countActiveAdmins();
-                if (activeAdminCount <= 1) {
-                    throw new ServiceError(
-                        409,
-                        "Cannot suspend user: at least one active admin must remain.",
-                    );
-                }
+            if (existingUser.role === "super_user" && existingUser.status !== status) {
+                throw new ServiceError(403, "Forbidden: super user status cannot be changed.");
             }
 
             const updatedUser = await userRepository.updateStatusByClerkUserId(

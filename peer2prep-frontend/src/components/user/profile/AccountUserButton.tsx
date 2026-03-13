@@ -18,7 +18,11 @@ const TrashIcon = () => {
     );
 };
 
-export default function AccountUserButton() {
+type AccountUserButtonProps = {
+    role: string | null;
+};
+
+export default function AccountUserButton({ role }: AccountUserButtonProps) {
     return (
         <UserButton>
             <UserButton.UserProfilePage label="account" />
@@ -30,13 +34,15 @@ export default function AccountUserButton() {
             >
                 <DefaultLanguage />
             </UserButton.UserProfilePage>
-            <UserButton.UserProfilePage
-                label="Delete account"
-                labelIcon={<TrashIcon />}
-                url="delete-account"
-            >
-                <DeleteAccount />
-            </UserButton.UserProfilePage>
+            {role && role !== "super_user" ? (
+                <UserButton.UserProfilePage
+                    label="Delete account"
+                    labelIcon={<TrashIcon />}
+                    url="delete-account"
+                >
+                    <DeleteAccount />
+                </UserButton.UserProfilePage>
+            ) : null}
         </UserButton>
     );
 }

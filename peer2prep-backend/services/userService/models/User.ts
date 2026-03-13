@@ -1,7 +1,7 @@
 import { query } from "../utils/postgres.js";
 
 export type UserStatus = "active" | "suspended" | "deleted";
-export type UserRole = "user" | "admin";
+export type UserRole = "user" | "admin" | "super_user";
 export type AdminAuditAction =
     | "PROMOTE_USER"
     | "DEMOTE_USER"
@@ -155,19 +155,6 @@ class UserRepository {
                 JSON.stringify(input.metadata ?? {}),
             ],
         );
-    }
-
-    async countActiveAdmins(): Promise<number> {
-        const result = await query<{ count: string }>(
-            `
-                SELECT COUNT(*)::text AS count
-                FROM users
-                WHERE role = 'admin'
-                  AND status = 'active'
-            `,
-        );
-
-        return Number(result.rows[0]?.count || "0");
     }
 
     async listByStatuses(statuses: UserStatus[]): Promise<UserRecord[]> {

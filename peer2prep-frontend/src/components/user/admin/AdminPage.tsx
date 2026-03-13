@@ -7,7 +7,7 @@ type AdminUser = {
     clerkUserId: string;
     name: string;
     email: string;
-    role: "user" | "admin";
+    role: "user" | "admin" | "super_user";
     status: "active" | "suspended" | "deleted";
 };
 
@@ -254,7 +254,11 @@ export default function AdminPage() {
                                         </td>
                                         <td className="border-b border-gray-200 px-3 py-3 align-middle">
                                             <div className="flex flex-wrap gap-2">
-                                                {user.role === "user" ? (
+                                                {user.role === "super_user" ? (
+                                                    <span className="inline-flex min-w-[5.8rem] items-center justify-center rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-600">
+                                                        Protected
+                                                    </span>
+                                                ) : user.role === "user" ? (
                                                     <button
                                                         className={actionButtonClass}
                                                         type="button"
@@ -276,7 +280,7 @@ export default function AdminPage() {
                                                     </button>
                                                 )}
 
-                                                {user.status === "active" ? (
+                                                {user.role === "super_user" ? null : user.status === "active" ? (
                                                     <button
                                                         className={actionButtonClass}
                                                         type="button"

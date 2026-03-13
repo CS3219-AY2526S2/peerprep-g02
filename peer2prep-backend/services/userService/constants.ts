@@ -12,4 +12,5 @@ export const AppConstants = {
     LOG_LEVEL: process.env.LOG_LEVEL || "info",
     INTERNAL_SERVICE_API_KEY: process.env.INTERNAL_SERVICE_API_KEY,
     CLERK_WEBHOOK_SIGNING_SECRET: process.env.CLERK_WEBHOOK_SIGNING_SECRET,
+    CLERK_SUPERUSER_ID: process.env.CLERK_SUPERUSER_ID,
 };

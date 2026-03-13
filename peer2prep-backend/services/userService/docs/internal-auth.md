@@ -31,7 +31,7 @@ if (authz.data.status !== "active") {
     return res.status(403).json({ error: "Forbidden: account is not active." });
 }
 
-if (authz.data.role !== "admin") {
+if (authz.data.role !== "admin" && authz.data.role !== "super_user") {
     return res.status(403).json({ error: "Forbidden: admin role required." });
 }
 ```

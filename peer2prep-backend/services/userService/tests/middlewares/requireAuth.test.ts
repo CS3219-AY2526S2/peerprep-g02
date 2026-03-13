@@ -166,6 +166,30 @@ describe("requireAuth", () => {
         expect(res.status).not.toHaveBeenCalled();
     });
 
+    it("allows super_user when requiredRole is admin", async () => {
+        getAuthMock.mockReturnValue({ userId: "super_123" } as ReturnType<typeof getAuth>);
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "super_123",
+            name: "Super",
+            avatarUrl: null,
+            status: "active",
+            role: "super_user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+
+        const req = createMockRequest();
+        const res = createMockResponse();
+        const next = createMockNext();
+
+        await requireAuth({ requiredRole: "admin" })(req, res, next);
+
+        expect(next).toHaveBeenCalledOnce();
+        expect(res.status).not.toHaveBeenCalled();
+    });
+
     it("returns 500 when local user lookup throws", async () => {
         getAuthMock.mockReturnValue({ userId: "user_123" } as ReturnType<typeof getAuth>);
         vi.spyOn(userRepository, "findByClerkUserId").mockRejectedValue(new Error("db fail"));

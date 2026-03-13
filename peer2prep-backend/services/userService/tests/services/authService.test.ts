@@ -125,27 +125,26 @@ describe("AuthService", () => {
         expect(result).toEqual({ message: "Account deleted successfully." });
     });
 
-    it("rejects deleting the last active admin", async () => {
+    it("rejects deleting a super user account", async () => {
         vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
-            clerkUserId: "admin_1",
-            name: "Admin",
+            clerkUserId: "super_1",
+            name: "Super User",
             avatarUrl: null,
             status: "active",
-            role: "admin",
+            role: "super_user",
             preferredLanguage: null,
             lastLoginAt: null,
             createdAt: new Date("2026-01-01T00:00:00.000Z"),
             updatedAt: new Date("2026-01-01T00:00:00.000Z"),
         });
-        vi.spyOn(userRepository, "countActiveAdmins").mockResolvedValue(1);
         const deleteClerkSpy = vi
             .spyOn(ClerkService.prototype, "deleteUserByClerkUserId")
             .mockResolvedValue();
 
         const service = new AuthService();
-        await expect(service.deleteAccount("admin_1")).rejects.toMatchObject({
-            statusCode: 409,
-            message: "Cannot delete account: at least one active admin must remain.",
+        await expect(service.deleteAccount("super_1")).rejects.toMatchObject({
+            statusCode: 403,
+            message: "Forbidden: super user account cannot be deleted.",
         });
 
         expect(deleteClerkSpy).not.toHaveBeenCalled();
@@ -254,6 +253,56 @@ describe("AuthService", () => {
             }),
         );
         expect(unbanSpy).toHaveBeenCalledWith("user_1");
+    });
+
+    it("rejects changing role for super user", async () => {
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "super_1",
+            name: "Super User",
+            avatarUrl: null,
+            status: "active",
+            role: "super_user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+        const updateRoleSpy = vi.spyOn(userRepository, "updateRoleByClerkUserId");
+
+        const service = new AuthService();
+        await expect(
+            service.updateUserRoleForAdmin("admin_1", "super_1", "user"),
+        ).rejects.toMatchObject({
+            statusCode: 403,
+            message: "Forbidden: super user role cannot be changed.",
+        });
+
+        expect(updateRoleSpy).not.toHaveBeenCalled();
+    });
+
+    it("rejects changing status for super user", async () => {
+        vi.spyOn(userRepository, "findByClerkUserId").mockResolvedValue({
+            clerkUserId: "super_1",
+            name: "Super User",
+            avatarUrl: null,
+            status: "active",
+            role: "super_user",
+            preferredLanguage: null,
+            lastLoginAt: null,
+            createdAt: new Date("2026-01-01T00:00:00.000Z"),
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+        const updateStatusSpy = vi.spyOn(userRepository, "updateStatusByClerkUserId");
+
+        const service = new AuthService();
+        await expect(
+            service.updateUserStatusForAdmin("admin_1", "super_1", "suspended"),
+        ).rejects.toMatchObject({
+            statusCode: 403,
+            message: "Forbidden: super user status cannot be changed.",
+        });
+
+        expect(updateStatusSpy).not.toHaveBeenCalled();
     });
 
     it("does not fail admin status update response when Clerk sync fails", async () => {

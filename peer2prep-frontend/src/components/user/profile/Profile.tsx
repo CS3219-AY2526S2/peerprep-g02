@@ -44,10 +44,10 @@ export default function Profile() {
     return (
         <section className="app-shell relative">
             <div className="fixed right-4 top-4 z-50">
-                <AccountUserButton />
+                <AccountUserButton role={role} />
             </div>
             <h1>HOME PAGE</h1>
-            {role === "admin" ? (
+            {role === "admin" || role === "super_user" ? (
                 <div className="mb-3 mt-5 flex justify-center">
                     <a
                         href="/account/admin"

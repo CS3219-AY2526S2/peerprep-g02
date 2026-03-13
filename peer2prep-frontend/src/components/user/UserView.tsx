@@ -67,7 +67,7 @@ export function UserLoginView() {
 
                 const payload = await response.json().catch(() => null);
                 const role = payload?.data?.user?.role;
-                if (role === "admin") {
+                if (role === "admin" || role === "super_user") {
                     setAdminRouteAllowed(true);
                     return;
                 }
