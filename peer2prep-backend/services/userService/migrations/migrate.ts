@@ -26,7 +26,7 @@ function toMaintenanceConnectionString(connectionString: string): string {
 }
 
 function quoteIdentifier(identifier: string): string {
-    return `"${identifier.replace(/"/g, "\"\"")}"`;
+    return `"${identifier.replace(/"/g, '""')}"`;
 }
 
 async function ensureDatabaseExists(): Promise<void> {
@@ -83,7 +83,7 @@ async function runMigrations(): Promise<void> {
             try {
                 await client.query(sql);
                 await client.query("COMMIT");
-                console.log("Applied migration.");
+                console.log(`Applied migration: ${fileName}`);
             } catch (error) {
                 await client.query("ROLLBACK");
                 throw error;

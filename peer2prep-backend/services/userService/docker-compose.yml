@@ -1,17 +1,17 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: peer2prep-user-postgres
+    container_name: peerprep-user-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: peer2prep_user
+      POSTGRES_DB: peerprep_user
     ports:
       - "5433:5432"
     volumes:
       - user_service_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d peer2prep_user"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d peerprep_user"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -20,11 +20,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: peer2prep-user-service
+    container_name: peerprep-user-service
     env_file:
       - .env
     environment:
-      DATABASE_URI: postgresql://postgres:postgres@postgres:5432/peer2prep_user
+      DATABASE_URI: postgresql://postgres:postgres@postgres:5432/peerprep_user
       PORT: 3001
     depends_on:
       postgres:
