@@ -9,6 +9,7 @@
         "dev": "tsx --watch server.ts",
         "db:migrate": "tsx migrations/migrate.ts",
         "build": "tsc -p tsconfig.json",
+        "start:container": "npm run db:migrate && npm start",
         "start": "node dist/server.js",
         "test": "vitest run --config vitest.config.ts",
         "test:watch": "vitest --config vitest.config.ts",
