@@ -17,7 +17,7 @@ export default function AdminPage() {
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+    const [updatingUserIds, setUpdatingUserIds] = useState<string[]>([]);
 
     const loadUsers = async () => {
         setLoading(true);
@@ -73,7 +73,11 @@ export default function AdminPage() {
     }, [search, users]);
 
     const patchRole = async (targetUser: AdminUser, role: "user" | "admin") => {
-        setUpdatingUserId(targetUser.clerkUserId);
+        setUpdatingUserIds((current) =>
+            current.includes(targetUser.clerkUserId)
+                ? current
+                : [...current, targetUser.clerkUserId],
+        );
         try {
             const response = await apiFetch(`/users/admin/users/${targetUser.clerkUserId}/role`, {
                 method: "PATCH",
@@ -111,12 +115,18 @@ export default function AdminPage() {
                         : "Failed to update role due to a network error.",
             });
         } finally {
-            setUpdatingUserId(null);
+            setUpdatingUserIds((current) =>
+                current.filter((id) => id !== targetUser.clerkUserId),
+            );
         }
     };
 
     const patchStatus = async (targetUser: AdminUser, status: "active" | "suspended") => {
-        setUpdatingUserId(targetUser.clerkUserId);
+        setUpdatingUserIds((current) =>
+            current.includes(targetUser.clerkUserId)
+                ? current
+                : [...current, targetUser.clerkUserId],
+        );
         try {
             const response = await apiFetch(`/users/admin/users/${targetUser.clerkUserId}/status`, {
                 method: "PATCH",
@@ -158,7 +168,9 @@ export default function AdminPage() {
                         : "Failed to update status due to a network error.",
             });
         } finally {
-            setUpdatingUserId(null);
+            setUpdatingUserIds((current) =>
+                current.filter((id) => id !== targetUser.clerkUserId),
+            );
         }
     };
 
@@ -234,7 +246,7 @@ export default function AdminPage() {
                         </thead>
                         <tbody>
                             {filteredUsers.map((user, index) => {
-                                const isUpdating = updatingUserId === user.clerkUserId;
+                                const isUpdating = updatingUserIds.includes(user.clerkUserId);
                                 return (
                                     <tr
                                         key={user.clerkUserId}
