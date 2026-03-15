@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { subscribeToToast, Toast } from "../lib/toast";
 
 type ActiveToast = Toast;
@@ -16,15 +16,25 @@ function toneBackground(tone: Toast["tone"]): string {
 
 export default function ToastHost() {
     const [toasts, setToasts] = useState<ActiveToast[]>([]);
+    const timeoutIdsRef = useRef<number[]>([]);
 
     useEffect(() => {
-        return subscribeToToast((toast) => {
+        const unsubscribe = subscribeToToast((toast) => {
             setToasts((current) => [...current, toast]);
 
-            window.setTimeout(() => {
+            const timeoutId = window.setTimeout(() => {
                 setToasts((current) => current.filter((item) => item.id !== toast.id));
+                timeoutIdsRef.current = timeoutIdsRef.current.filter((id) => id !== timeoutId);
             }, toast.durationMs ?? 3500);
+
+            timeoutIdsRef.current.push(timeoutId);
         });
+
+        return () => {
+            unsubscribe();
+            timeoutIdsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+            timeoutIdsRef.current = [];
+        };
     }, []);
 
     const hasToasts = useMemo(() => toasts.length > 0, [toasts.length]);
