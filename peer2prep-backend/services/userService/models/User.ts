@@ -1,7 +1,12 @@
 import { query } from "../utils/postgres.js";
 
 export type UserStatus = "active" | "suspended" | "deleted";
-export type UserRole = "user" | "admin";
+export type UserRole = "user" | "admin" | "super_user";
+export type AdminAuditAction =
+    | "PROMOTE_USER"
+    | "DEMOTE_USER"
+    | "SUSPEND_USER"
+    | "UNSUSPEND_USER";
 
 type UserRow = {
     clerk_user_id: string;
@@ -128,6 +133,86 @@ class UserRepository {
             `,
             [clerkUserId],
         );
+    }
+
+    async insertAdminAuditLog(input: {
+        id: string;
+        actorUserId: string;
+        action: AdminAuditAction;
+        targetUserId: string;
+        metadata?: Record<string, unknown>;
+    }): Promise<void> {
+        await query(
+            `
+                INSERT INTO admin_audit_logs (id, actor_user_id, action, target_user_id, metadata)
+                VALUES ($1, $2, $3, $4, $5::jsonb)
+            `,
+            [
+                input.id,
+                input.actorUserId,
+                input.action,
+                input.targetUserId,
+                JSON.stringify(input.metadata ?? {}),
+            ],
+        );
+    }
+
+    async listByStatuses(statuses: UserStatus[]): Promise<UserRecord[]> {
+        const result = await query<UserRow>(
+            `
+                SELECT ${this.selectColumns}
+                FROM users
+                WHERE status = ANY($1::text[])
+                ORDER BY created_at DESC
+            `,
+            [statuses],
+        );
+
+        return result.rows.map(mapUserRow);
+    }
+
+    async updateRoleByClerkUserId(
+        clerkUserId: string,
+        role: UserRole,
+    ): Promise<UserRecord | null> {
+        const result = await query<UserRow>(
+            `
+                UPDATE users
+                SET role = $2,
+                    updated_at = NOW()
+                WHERE clerk_user_id = $1
+                RETURNING ${this.selectColumns}
+            `,
+            [clerkUserId, role],
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return mapUserRow(result.rows[0]);
+    }
+
+    async updateStatusByClerkUserId(
+        clerkUserId: string,
+        status: Exclude<UserStatus, "deleted">,
+    ): Promise<UserRecord | null> {
+        const result = await query<UserRow>(
+            `
+                UPDATE users
+                SET status = $2,
+                    updated_at = NOW()
+                WHERE clerk_user_id = $1
+                RETURNING ${this.selectColumns}
+            `,
+            [clerkUserId, status],
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return mapUserRow(result.rows[0]);
     }
 }
 

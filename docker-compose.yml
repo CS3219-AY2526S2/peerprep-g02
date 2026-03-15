@@ -1,10 +1,8 @@
-version: "3.8"
-
 services:
   # Frontend
   frontend:
     build: ./peer2prep-frontend
-    container_name: peer2prep-frontend
+    container_name: peerprep-frontend
     ports:
       - "5173:5173"
     env_file:
@@ -53,30 +51,43 @@ services:
 
   # User Service
   user-service:
-    build: ./peer2prep-backend/services/userService
-    container_name: user-service
+    build:
+      context: ./peer2prep-backend/services/userService
+      dockerfile: Dockerfile
+    container_name: peerprep-user-service
     env_file:
       - ./peer2prep-backend/services/userService/.env
+    environment:
+      DATABASE_URI: postgresql://postgres:postgres@user-db:5432/peerprep_user
+      PORT: 3001
     depends_on:
-      rabbitmq:
-        condition: service_healthy
       user-db:
-        condition: service_started
+        condition: service_healthy
     networks:
       - gateway-network
       - user-db-network
-    volumes:
-      - ./peer2prep-backend/services/userService:/app
-      - /app/node_modules
+    ports:
+      - "3001:3001"
     restart: unless-stopped
 
   user-db:
-    image: mongo:latest
-    container_name: user-db
+    image: postgres:16-alpine
+    container_name: peerprep-user-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: peerprep_user
+    ports:
+      - "5433:5432"
     volumes:
-      - user_data:/data/db
+      - user_data:/var/lib/postgresql/data
     networks:
       - user-db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d peerprep_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   # Matching Service

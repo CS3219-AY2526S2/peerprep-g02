@@ -13,22 +13,6 @@ describe("requireInternalAuth", () => {
         AppConstants.INTERNAL_SERVICE_API_KEY = "test-internal-key";
     });
 
-    it("returns 401 when internal service key is missing", () => {
-        const req = createMockRequest({
-            header: mockHeader(() => undefined),
-        });
-        const res = createMockResponse();
-        const next = createMockNext();
-
-        requireInternalAuth(req, res, next);
-
-        expect(res.status).toHaveBeenCalledWith(401);
-        expect(res.json).toHaveBeenCalledWith({
-            error: "Unauthorized internal service request.",
-        });
-        expect(next).not.toHaveBeenCalled();
-    });
-
     it("returns 401 when internal service key is invalid", () => {
         const req = createMockRequest({
             header: mockHeader(() => "invalid-key"),

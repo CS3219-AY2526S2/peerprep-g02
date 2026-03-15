@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT users_status_check CHECK (status IN ('active', 'suspended', 'deleted')),
-    CONSTRAINT users_role_check CHECK (role IN ('user', 'admin'))
+    CONSTRAINT users_role_check CHECK (role IN ('user', 'admin', 'super_user'))
 );
 
 CREATE TABLE IF NOT EXISTS admin_audit_logs (

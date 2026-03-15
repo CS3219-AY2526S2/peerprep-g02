@@ -1,18 +1,31 @@
-import { UserButton, useUser } from "@clerk/clerk-react";
+import { useUser } from "@clerk/clerk-react";
 import { useMemo, useState } from "react";
 
 const LANGUAGE_OPTIONS = ["Python", "Java", "C++", "JavaScript", "TypeScript", "Go", "Rust"];
 const CLERK_FONT_FAMILY = "var(--clerk-font-family, inherit)";
 
-const DotIcon = () => {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor">
-            <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512z" />
-        </svg>
-    );
-};
+function languageIcon(language: string): string {
+    switch (language) {
+        case "Python":
+            return "\u{1F40D}";
+        case "Java":
+            return "\u2615";
+        case "C++":
+            return "\u{1F4A0}";
+        case "JavaScript":
+            return "\u{1F7E8}";
+        case "TypeScript":
+            return "\u{1F7E6}";
+        case "Go":
+            return "\u{1F439}";
+        case "Rust":
+            return "\u{1F980}";
+        default:
+            return "\u{1F4BB}";
+    }
+}
 
-function DefaultLanguageSection() {
+export default function DefaultLanguage() {
     const { isLoaded, user } = useUser();
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -22,27 +35,6 @@ function DefaultLanguageSection() {
         const value = metadata.defaultLanguage;
         return typeof value === "string" ? value : "";
     }, [user]);
-
-    const languageIcon = (language: string) => {
-        switch (language) {
-            case "Python":
-                return "🐍";
-            case "Java":
-                return "☕";
-            case "C++":
-                return "💠";
-            case "JavaScript":
-                return "🟨";
-            case "TypeScript":
-                return "🟦";
-            case "Go":
-                return "🐹";
-            case "Rust":
-                return "🦀";
-            default:
-                return "💻";
-        }
-    };
 
     const saveDefaultLanguage = async (language: string) => {
         if (!isLoaded || !user || !language) {
@@ -60,7 +52,7 @@ function DefaultLanguageSection() {
             });
             setIsEditing(false);
         } catch {
-            // noop: keep UI unchanged on save failure
+            // keep UI unchanged on failure
         } finally {
             setIsSaving(false);
         }
@@ -147,21 +139,5 @@ function DefaultLanguageSection() {
                 </div>
             </div>
         </div>
-    );
-}
-
-export default function AccountUserButton() {
-    return (
-        <UserButton>
-            <UserButton.UserProfilePage label="account" />
-            <UserButton.UserProfilePage label="security" />
-            <UserButton.UserProfilePage
-                label="Default language"
-                labelIcon={<DotIcon />}
-                url="default-language"
-            >
-                <DefaultLanguageSection />
-            </UserButton.UserProfilePage>
-        </UserButton>
     );
 }
