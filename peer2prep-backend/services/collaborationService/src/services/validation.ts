@@ -2,16 +2,6 @@ import type { CreateSessionRequest } from "@/models/model.js";
 
 const nonEmptyString = (value: unknown): value is string =>
     typeof value === "string" && value.trim().length > 0;
-const allowedDifficulties = new Set<CreateSessionRequest["difficulty"]>([
-    "Easy",
-    "Medium",
-    "Hard",
-]);
-const isAllowedDifficulty = (
-    value: string,
-): value is CreateSessionRequest["difficulty"] =>
-    allowedDifficulties.has(value as CreateSessionRequest["difficulty"]);
-
 type CreateSessionValidationResult =
     | { valid: true; value: CreateSessionRequest }
     | { valid: false; error: string };
@@ -27,47 +17,16 @@ export function validateCreateSessionPayload(
     }
 
     const candidate = payload as Record<string, unknown>;
-    const { userAId, userBId, difficulty, language, topic } = candidate;
+    const { matchId } = candidate;
 
-    if (!nonEmptyString(userAId)) {
-        return { valid: false, error: "userAId is required." };
-    }
-
-    if (!nonEmptyString(userBId)) {
-        return { valid: false, error: "userBId is required." };
-    }
-
-    if (userAId === userBId) {
-        return { valid: false, error: "userAId and userBId must be different." };
-    }
-
-    if (!nonEmptyString(difficulty)) {
-        return { valid: false, error: "difficulty is required." };
-    }
-
-    if (!isAllowedDifficulty(difficulty)) {
-        return {
-            valid: false,
-            error: "difficulty must be one of: Easy, Medium, Hard.",
-        };
-    }
-
-    if (!nonEmptyString(language)) {
-        return { valid: false, error: "language is required." };
-    }
-
-    if (!nonEmptyString(topic)) {
-        return { valid: false, error: "topic is required." };
+    if (!nonEmptyString(matchId)) {
+        return { valid: false, error: "matchId is required." };
     }
 
     return {
         valid: true,
         value: {
-            userAId,
-            userBId,
-            difficulty,
-            language,
-            topic,
+            matchId,
         },
     };
 }

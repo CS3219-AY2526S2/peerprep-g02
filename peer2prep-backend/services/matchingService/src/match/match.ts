@@ -7,8 +7,39 @@ import {
     FIND_MATCH_LUA_SCRIPT,
 } from "@/luaScripts/matchmaking.js";
 import RedisManager from "@/managers/redisManager.js";
-import { type MatchRequest, type MatchResult } from "@/types/match.js";
+import { type MatchRequest, type MatchResult, type StoredMatchRecord } from "@/types/match.js";
 import { buildQueueKey, buildUserStatusKey } from "@/utils/match.js";
+import { matchLogger } from "@/utils/logger.js";
+
+const MATCH_RECORD_PREFIX = "mm:match";
+const MATCH_TTL_SECONDS = Number(process.env.MS_MATCH_TTL_SECONDS ?? "900");
+
+function buildMatchKey(matchId: string): string {
+    return `${MATCH_RECORD_PREFIX}:${matchId}`;
+}
+
+async function storeMatch(record: StoredMatchRecord): Promise<void> {
+    const redis = RedisManager.getInstance();
+    await redis.set(buildMatchKey(record.matchId), JSON.stringify(record), {
+        EX: MATCH_TTL_SECONDS,
+    });
+}
+
+export async function getStoredMatch(matchId: string): Promise<StoredMatchRecord | null> {
+    const redis = RedisManager.getInstance();
+    const record = await redis.get(buildMatchKey(matchId));
+
+    if (!record) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(record) as StoredMatchRecord;
+    } catch (error) {
+        matchLogger.error({ err: error, matchId }, "Failed to parse stored match record");
+        return null;
+    }
+}
 
 export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     const redis = RedisManager.getInstance();
@@ -23,14 +54,21 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     })) as [string, string, string];
 
     if (status === "matched") {
-        return {
-            matchFound: true,
+        const matchRecord: StoredMatchRecord = {
             matchId: uuidv4(),
             matchedTopic: req.topic,
             matchedDifficulty: req.difficulty,
             matchedLanguage,
             userId: req.userId,
             partnerId,
+            createdAt: new Date().toISOString(),
+        };
+
+        await storeMatch(matchRecord);
+
+        return {
+            matchFound: true,
+            ...matchRecord,
         };
     }
 

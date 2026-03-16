@@ -1,38 +1,26 @@
-import { randomUUID } from "node:crypto";
-
-import type { CollaborationSession, CreateSessionRequest } from "@/models/model.js";
-
-function pairKey(userAId: string, userBId: string): string {
-    const [left, right] = [userAId, userBId].sort();
-    return `${left}:${right}`;
-}
+import type { CollaborationSession, CreateSessionFromMatch } from "@/models/model.js";
 
 class SessionStore {
-    private readonly sessionsByPair = new Map<string, CollaborationSession>();
+    private readonly sessionsByMatch = new Map<string, CollaborationSession>();
 
-    createOrGetSession(payload: CreateSessionRequest): {
+    createOrGetSession(payload: CreateSessionFromMatch): {
         session: CollaborationSession;
         created: boolean;
         conflict: boolean;
     } {
-        const key = pairKey(payload.userAId, payload.userBId);
-        const existingSession = this.sessionsByPair.get(key);
+        const existingSession = this.sessionsByMatch.get(payload.matchId);
 
         if (existingSession && existingSession.status === "active") {
-            const hasConflict =
-                existingSession.difficulty !== payload.difficulty ||
-                existingSession.language !== payload.language ||
-                existingSession.topic !== payload.topic;
-
             return {
                 session: existingSession,
                 created: false,
-                conflict: hasConflict,
+                conflict: false,
             };
         }
 
         const session: CollaborationSession = {
-            sessionId: randomUUID(),
+            sessionId: payload.matchId,
+            matchId: payload.matchId,
             userAId: payload.userAId,
             userBId: payload.userBId,
             difficulty: payload.difficulty,
@@ -42,7 +30,7 @@ class SessionStore {
             createdAt: new Date().toISOString(),
         };
 
-        this.sessionsByPair.set(key, session);
+        this.sessionsByMatch.set(payload.matchId, session);
         return { session, created: true, conflict: false };
     }
 }

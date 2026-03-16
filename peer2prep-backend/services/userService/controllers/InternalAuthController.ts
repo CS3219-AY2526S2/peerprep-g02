@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { UserRecord } from "../models/User.js";
+import { UserRecord, userRepository } from "../models/User.js";
 
 type InternalAuthzContextResponse = {
     data: {
@@ -39,6 +39,32 @@ export class InternalAuthController {
         }
 
         return res.status(200).json(InternalAuthController.buildContextResponse(clerkUserId, user));
+    }
+
+    /**
+     * @swagger
+     * /v1/api/users/internal/authz/users/{userId}/status:
+     *   get:
+     *     summary: Get internal status for a user by Clerk user ID.
+     *     description: Requires the internal service key.
+     *     security:
+     *       - internalServiceKey: []
+     */
+    async getUserStatus(req: Request, res: Response): Promise<Response> {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ error: "userId is required." });
+        }
+
+        const user = await userRepository.findByClerkUserId(userId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found." });
+        }
+
+        return res.status(200).json(
+            InternalAuthController.buildContextResponse(user.clerkUserId, user),
+        );
     }
 
 }

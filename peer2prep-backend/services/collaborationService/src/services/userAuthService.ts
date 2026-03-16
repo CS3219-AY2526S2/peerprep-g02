@@ -3,18 +3,85 @@ import { authLogger } from "@/utils/logger.js";
 type UserAuthStatusResponse = {
     data?: {
         clerkUserId?: string;
-        authenticated?: boolean;
+        role?: string;
         status?: string;
     };
 };
+
+type UserContextResult =
+    | { ok: true; userId: string; role?: string }
+    | { ok: false; reason: "unauthenticated" }
+    | { ok: false; userId: string; reason: "dependency_error"; message: string };
+
+const userServiceBaseUrl = process.env.CS_USER_SERVICE_URL ?? "http://user-service:3001";
+const internalServiceApiKey = process.env.INTERNAL_SERVICE_API_KEY ?? "";
+
+type UserStatusLookupResponse = {
+    data?: {
+        clerkUserId?: string;
+        role?: string;
+        status?: string;
+    };
+};
+
+export async function fetchAuthenticatedUserContext(
+    authHeader: string | undefined,
+): Promise<UserContextResult> {
+    if (!authHeader) {
+        return { ok: false, reason: "unauthenticated" };
+    }
+
+    try {
+        const response = await fetch(`${userServiceBaseUrl}/v1/api/users/internal/authz/context`, {
+            method: "GET",
+            headers: {
+                authorization: authHeader,
+                "x-internal-service-key": internalServiceApiKey,
+            },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            return { ok: false, reason: "unauthenticated" };
+        }
+
+        if (!response.ok) {
+            authLogger.error(
+                { statusCode: response.status },
+                "Authenticated user context lookup failed due to user service error response",
+            );
+            return {
+                ok: false,
+                userId: "unknown",
+                reason: "dependency_error",
+                message: `User service returned ${response.status}.`,
+            };
+        }
+
+        const payload = (await response.json()) as UserAuthStatusResponse;
+        if (!payload.data?.clerkUserId || payload.data.status !== "active") {
+            return { ok: false, reason: "unauthenticated" };
+        }
+
+        return {
+            ok: true,
+            userId: payload.data.clerkUserId,
+            role: payload.data.role,
+        };
+    } catch (error) {
+        authLogger.error({ err: error }, "Authenticated user context lookup failed due to dependency error");
+        return {
+            ok: false,
+            userId: "unknown",
+            reason: "dependency_error",
+            message: error instanceof Error ? error.message : "Unknown dependency error.",
+        };
+    }
+}
 
 type AuthStatusResult =
     | { ok: true; userId: string }
     | { ok: false; userId: string; reason: "unauthenticated" }
     | { ok: false; userId: string; reason: "dependency_error"; message: string };
-
-const userServiceBaseUrl = process.env.CS_USER_SERVICE_URL ?? "http://user-service:3001";
-const internalServiceApiKey = process.env.INTERNAL_SERVICE_API_KEY ?? "";
 
 async function fetchUserAuthStatus(userId: string): Promise<AuthStatusResult> {
     try {
@@ -45,8 +112,8 @@ async function fetchUserAuthStatus(userId: string): Promise<AuthStatusResult> {
             };
         }
 
-        const payload = (await response.json()) as UserAuthStatusResponse;
-        if (payload.data?.clerkUserId !== userId || payload.data?.authenticated !== true) {
+        const payload = (await response.json()) as UserStatusLookupResponse;
+        if (payload.data?.clerkUserId !== userId || payload.data?.status !== "active") {
             return { ok: false, userId, reason: "unauthenticated" };
         }
 

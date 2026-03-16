@@ -8,6 +8,9 @@ const internalAuthRoutes = Router();
 
 internalAuthRoutes.use(requireInternalAuth);
 
+internalAuthRoutes.get("/users/:userId/status", (req, res) =>
+    internalAuthController.getUserStatus(req, res),
+);
 internalAuthRoutes.get("/context", requireAuth(), (req, res) =>
     internalAuthController.authorizeContext(req, res),
 );

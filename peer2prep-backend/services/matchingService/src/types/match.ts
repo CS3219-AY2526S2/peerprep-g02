@@ -24,6 +24,16 @@ export interface MatchResultSuccess {
     partnerId: string;
 }
 
+export interface StoredMatchRecord {
+    matchId: string;
+    userId: string;
+    partnerId: string;
+    matchedTopic: string;
+    matchedDifficulty: Difficulty;
+    matchedLanguage: string;
+    createdAt: string;
+}
+
 export interface MatchResultWaiting {
     matchFound: false;
 }
