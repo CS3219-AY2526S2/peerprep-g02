@@ -1,12 +1,13 @@
 import { Server, Socket } from "socket.io";
 
+import type {
+    JoinSessionPayload,
+    SessionEventErrorPayload,
+} from "@/models/model.js";
+import { SESSION_ERROR } from "@/models/model.js";
 import { validateSessionAccess } from "@/services/sessionAccessService.js";
 import { sessionPresenceService } from "@/services/sessionPresenceService.js";
 import { socketLogger } from "@/utils/logger.js";
-
-type JoinSessionPayload = {
-    sessionId?: string;
-};
 
 type SocketWithSessionData = Socket & {
     data: Socket["data"] & {
@@ -60,18 +61,20 @@ export function registerCollaborationSocketHandlers(io: Server): void {
             const sessionId = payload.sessionId;
 
             if (!sessionId) {
-                socket.emit("session:error", {
-                    error: "INVALID_SESSION_ID",
+                const errorPayload: SessionEventErrorPayload = {
+                    error: SESSION_ERROR.INVALID_SESSION_REQUEST,
                     message: "sessionId is required to join a collaboration session.",
-                });
+                };
+                socket.emit("session:error", errorPayload);
                 return;
             }
 
             if (socket.data.sessionId && socket.data.sessionId !== sessionId) {
-                socket.emit("session:error", {
-                    error: "SESSION_ALREADY_JOINED",
+                const errorPayload: SessionEventErrorPayload = {
+                    error: SESSION_ERROR.INVALID_SESSION_REQUEST,
                     message: "Socket is already joined to another collaboration session.",
-                });
+                };
+                socket.emit("session:error", errorPayload);
                 return;
             }
 
@@ -88,10 +91,11 @@ export function registerCollaborationSocketHandlers(io: Server): void {
             const presenceResult = await sessionPresenceService.markConnected(sessionId, userId);
 
             if (!presenceResult.allowed) {
-                socket.emit("session:error", {
-                    error: "SESSION_CAPACITY_REACHED",
+                const errorPayload: SessionEventErrorPayload = {
+                    error: SESSION_ERROR.SESSION_CAPACITY_REACHED,
                     message: "No more than two users may be present in a collaboration session.",
-                });
+                };
+                socket.emit("session:error", errorPayload);
                 return;
             }
 

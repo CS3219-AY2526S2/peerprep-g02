@@ -1,7 +1,10 @@
+import type {
+    SessionParticipantStatus,
+    SessionParticipantStatuses,
+} from "@/models/model.js";
+import { SESSION_PARTICIPANT_STATUS } from "@/models/model.js";
 import { getRedisClient } from "@/utils/redis.js";
 import { redisLogger } from "@/utils/logger.js";
-
-export type SessionParticipantStatus = "connected" | "disconnected" | "left";
 
 type SessionStateMap = Map<string, SessionParticipantStatus>;
 type SocketCountMap = Map<string, number>;
@@ -84,20 +87,20 @@ class SessionPresenceService {
                 allowed: false,
                 participantCount: connectedParticipants,
                 statusChanged: false,
-                status: sessionState.get(userId) ?? "disconnected",
+                status: sessionState.get(userId) ?? SESSION_PARTICIPANT_STATUS.DISCONNECTED,
             };
         }
 
         socketCounts.set(userId, currentCount + 1);
         const previousStatus = sessionState.get(userId);
-        sessionState.set(userId, "connected");
-        await persistStatus(sessionId, userId, "connected");
+        sessionState.set(userId, SESSION_PARTICIPANT_STATUS.CONNECTED);
+        await persistStatus(sessionId, userId, SESSION_PARTICIPANT_STATUS.CONNECTED);
 
         return {
             allowed: true,
             participantCount: getConnectedParticipantCount(sessionId),
-            statusChanged: previousStatus !== "connected",
-            status: "connected",
+            statusChanged: previousStatus !== SESSION_PARTICIPANT_STATUS.CONNECTED,
+            status: SESSION_PARTICIPANT_STATUS.CONNECTED,
         };
     }
 
@@ -109,14 +112,14 @@ class SessionPresenceService {
         if (currentCount <= 1) {
             socketCounts.delete(userId);
             const previousStatus = sessionState.get(userId);
-            sessionState.set(userId, "disconnected");
-            await persistStatus(sessionId, userId, "disconnected");
+            sessionState.set(userId, SESSION_PARTICIPANT_STATUS.DISCONNECTED);
+            await persistStatus(sessionId, userId, SESSION_PARTICIPANT_STATUS.DISCONNECTED);
 
             return {
                 allowed: true,
                 participantCount: getConnectedParticipantCount(sessionId),
-                statusChanged: previousStatus !== "disconnected",
-                status: "disconnected",
+                statusChanged: previousStatus !== SESSION_PARTICIPANT_STATUS.DISCONNECTED,
+                status: SESSION_PARTICIPANT_STATUS.DISCONNECTED,
             };
         }
 
@@ -125,7 +128,7 @@ class SessionPresenceService {
             allowed: true,
             participantCount: getConnectedParticipantCount(sessionId),
             statusChanged: false,
-            status: "connected",
+            status: SESSION_PARTICIPANT_STATUS.CONNECTED,
         };
     }
 
@@ -137,14 +140,14 @@ class SessionPresenceService {
         if (currentCount <= 1) {
             socketCounts.delete(userId);
             const previousStatus = sessionState.get(userId);
-            sessionState.set(userId, "left");
-            await persistStatus(sessionId, userId, "left");
+            sessionState.set(userId, SESSION_PARTICIPANT_STATUS.LEFT);
+            await persistStatus(sessionId, userId, SESSION_PARTICIPANT_STATUS.LEFT);
 
             return {
                 allowed: true,
                 participantCount: getConnectedParticipantCount(sessionId),
-                statusChanged: previousStatus !== "left",
-                status: "left",
+                statusChanged: previousStatus !== SESSION_PARTICIPANT_STATUS.LEFT,
+                status: SESSION_PARTICIPANT_STATUS.LEFT,
             };
         }
 
@@ -153,11 +156,11 @@ class SessionPresenceService {
             allowed: true,
             participantCount: getConnectedParticipantCount(sessionId),
             statusChanged: false,
-            status: "connected",
+            status: SESSION_PARTICIPANT_STATUS.CONNECTED,
         };
     }
 
-    getStatuses(sessionId: string): Record<string, SessionParticipantStatus> {
+    getStatuses(sessionId: string): SessionParticipantStatuses {
         return Object.fromEntries(getSessionState(sessionId).entries());
     }
 

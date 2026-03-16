@@ -1,4 +1,9 @@
-import type { CollaborationSession, CreateSessionRequest } from "@/models/model.js";
+import type {
+    CollaborationSession,
+    CreateSessionRequest,
+    SessionErrorCode,
+} from "@/models/model.js";
+import { SESSION_ERROR } from "@/models/model.js";
 import { sessionRepository, buildPairKey } from "@/repositories/sessionRepository.js";
 import { fetchQuestionForSession } from "@/services/questionService.js";
 import { sessionCache } from "@/services/sessionCache.js";
@@ -16,14 +21,14 @@ type SessionCreationFailure =
     | {
           ok: false;
           statusCode: 403;
-          error: "MATCH_USERS_NOT_ACTIVE";
+          error: SessionErrorCode;
           message: string;
           failedUserIds: string[];
       }
     | {
           ok: false;
           statusCode: 502;
-          error: "USER_SERVICE_UNAVAILABLE" | "QUESTION_SERVICE_UNAVAILABLE";
+          error: SessionErrorCode;
           message: string;
       };
 
@@ -48,7 +53,7 @@ export async function createSession(
             return {
                 ok: false,
                 statusCode: 403,
-                error: "MATCH_USERS_NOT_ACTIVE",
+                error: SESSION_ERROR.MATCH_USERS_NOT_ACTIVE,
                 message: "One or more matched users are not active.",
                 failedUserIds: usersAuthResult.failedUserIds,
             };
@@ -57,7 +62,7 @@ export async function createSession(
         return {
             ok: false,
             statusCode: 502,
-            error: "USER_SERVICE_UNAVAILABLE",
+            error: SESSION_ERROR.USER_SERVICE_UNAVAILABLE,
             message: usersAuthResult.message,
         };
     }
@@ -80,7 +85,7 @@ export async function createSession(
         return {
             ok: false,
             statusCode: 502,
-            error: "QUESTION_SERVICE_UNAVAILABLE",
+            error: SESSION_ERROR.QUESTION_SERVICE_UNAVAILABLE,
             message: questionResult.message,
         };
     }
