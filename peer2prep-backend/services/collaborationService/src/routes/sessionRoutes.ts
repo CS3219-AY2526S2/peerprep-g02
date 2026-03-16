@@ -3,13 +3,13 @@ import { Router } from "express";
 import type { CreateSessionRequest } from "@/models/model.js";
 import { requireInternalAuth } from "@/middlewares/requireInternalAuth.js";
 import { createSession } from "@/services/sessionCreationService.js";
+import { joinSession } from "@/services/sessionJoinService.js";
 import { validateCreateSessionPayload } from "@/services/validation.js";
 import { logger } from "@/utils/logger.js";
 
 const router = Router();
-router.use(requireInternalAuth);
 
-router.post("/sessions", async (req, res) => {
+router.post("/sessions", requireInternalAuth, async (req, res) => {
     const validationResult = validateCreateSessionPayload(req.body);
 
     if (!validationResult.valid) {
@@ -50,6 +50,22 @@ router.post("/sessions", async (req, res) => {
         session: result.session,
         idempotentHit: !result.created,
         cacheStored: result.cacheStored,
+    });
+});
+
+router.post("/sessions/:sessionId/join", async (req, res) => {
+    const result = await joinSession(req.params.sessionId, req.header("authorization"));
+
+    if (!result.ok) {
+        return res.status(result.statusCode).json({
+            error: result.error,
+            message: result.message,
+        });
+    }
+
+    return res.status(200).json({
+        session: result.session,
+        participantCount: result.participantCount,
     });
 });
 

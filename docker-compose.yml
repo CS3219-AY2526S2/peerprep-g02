@@ -65,13 +65,23 @@ services:
     volumes:
       - ./peer2prep-backend/services/userService:/app
       - /app/node_modules
+    environment:
+      - PORT=3001
+      - API_BASE_URI=http://user-service
+      - DATABASE_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/peer2prep_user
     restart: unless-stopped
 
   user-db:
-    image: mongo:latest
+    image: postgres
     container_name: user-db
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=peer2prep_user
     volumes:
-      - user_data:/data/db
+      - user_data:/var/lib/postgresql/data
     networks:
       - user-db-network
     restart: unless-stopped
@@ -162,24 +172,42 @@ services:
         condition: service_healthy
       collaboration-db:
         condition: service_started
+      collaboration-redis:
+        condition: service_started
     networks:
       - gateway-network
       - collaboration-db-network
+      - collaboration-redis-network
     volumes:
       - ./peer2prep-backend/services/collaborationService:/app
       - /app/node_modules
     environment:
       - CS_SERVER_PORT=3004
+      - CS_DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@collaboration-db:5432/collaboration_db
+      - CS_REDIS_URL=redis://collaboration-redis:6379
     restart: unless-stopped
 
   collaboration-db:
-    image: mongo:latest
+    image: postgres
     container_name: collaboration-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=collaboration_db
     volumes:
-      - collaboration_data:/data/db
+      - collaboration_data:/var/lib/postgresql/data
     networks:
       - collaboration-db-network
     restart: unless-stopped
+
+  collaboration-redis:
+    image: redis:latest
+    container_name: collaboration-redis
+    restart: unless-stopped
+    networks:
+      - collaboration-redis-network
 
   # # Attempts Service
   # attempts-service:
@@ -227,6 +255,8 @@ networks:
   questions-db-network:
     driver: bridge
   collaboration-db-network:
+    driver: bridge
+  collaboration-redis-network:
     driver: bridge
   attempts-db-network:
     driver: bridge

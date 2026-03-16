@@ -87,6 +87,31 @@ class SessionRepository {
         return row ? mapSessionRow(row) : null;
     }
 
+    async findBySessionId(sessionId: string): Promise<CollaborationSession | null> {
+        const result = await query<SessionRow>(
+            `
+                SELECT
+                    session_id,
+                    pair_key,
+                    user_a_id,
+                    user_b_id,
+                    difficulty,
+                    language,
+                    topic,
+                    question_id,
+                    status,
+                    created_at
+                FROM collaboration_sessions
+                WHERE session_id = $1
+                LIMIT 1
+            `,
+            [sessionId],
+        );
+
+        const row = result.rows[0];
+        return row ? mapSessionRow(row) : null;
+    }
+
     async createActiveSession(
         request: CreateSessionRequest,
         questionId: string,
