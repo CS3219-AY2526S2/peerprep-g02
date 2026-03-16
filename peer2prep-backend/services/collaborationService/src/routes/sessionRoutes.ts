@@ -1,16 +1,13 @@
 import { Router } from "express";
 
 import type { CreateSessionRequest } from "@/models/model.js";
-import { verifyMatch } from "@/services/matchingService.js";
-import { sessionStore } from "@/services/sessionStore.js";
-import {
-    fetchAuthenticatedUserContext,
-    verifyUsersAuthentication,
-} from "@/services/userAuthService.js";
+import { requireInternalAuth } from "@/middlewares/requireInternalAuth.js";
+import { createSession } from "@/services/sessionCreationService.js";
 import { validateCreateSessionPayload } from "@/services/validation.js";
 import { logger } from "@/utils/logger.js";
 
 const router = Router();
+router.use(requireInternalAuth);
 
 router.post("/sessions", async (req, res) => {
     const validationResult = validateCreateSessionPayload(req.body);
@@ -22,95 +19,37 @@ router.post("/sessions", async (req, res) => {
         });
     }
 
-    const authHeader = req.header("authorization");
-    const authContext = await fetchAuthenticatedUserContext(authHeader);
-
-    if (!authContext.ok) {
-        if (authContext.reason === "unauthenticated") {
-            return res.status(401).json({
-                error: "UNAUTHORIZED",
-                message: "A valid authenticated user is required to create a session.",
-            });
-        }
-
-        return res.status(502).json({
-            error: "USER_SERVICE_UNAVAILABLE",
-            message: authContext.message,
-        });
-    }
-
     const payload = validationResult.value as CreateSessionRequest;
-    const matchResult = await verifyMatch(payload.matchId);
+    const result = await createSession(payload);
 
-    if (!matchResult.valid) {
-        if (matchResult.errorType === "MATCH_NOT_FOUND") {
-            return res.status(404).json({
-                error: "MATCH_NOT_FOUND",
-                message: "No active match handoff was found for the provided matchId.",
-            });
+    if (!result.ok) {
+        const responseBody: Record<string, unknown> = {
+            error: result.error,
+            message: result.message,
+        };
+
+        if ("failedUserIds" in result) {
+            responseBody.failedUserIds = result.failedUserIds;
         }
 
-        return res.status(502).json({
-            error: "MATCHING_SERVICE_UNAVAILABLE",
-            message: matchResult.message,
-        });
-    }
-
-    const { match } = matchResult;
-    if (authContext.userId !== match.userId && authContext.userId !== match.partnerId) {
-        return res.status(403).json({
-            error: "FORBIDDEN_MATCH_ACCESS",
-            message: "Authenticated user is not part of the provided match.",
-        });
-    }
-
-    const usersAuthResult = await verifyUsersAuthentication([match.userId, match.partnerId]);
-    if (!usersAuthResult.valid) {
-        if (usersAuthResult.errorType === "AUTHENTICATION_FAILED") {
-            return res.status(403).json({
-                error: "MATCH_USERS_NOT_ACTIVE",
-                message: "One or more matched users are not active.",
-                failedUserIds: usersAuthResult.failedUserIds,
-            });
-        }
-
-        return res.status(502).json({
-            error: "USER_SERVICE_UNAVAILABLE",
-            message: usersAuthResult.message,
-        });
-    }
-
-    const { session, created, conflict } = sessionStore.createOrGetSession({
-        matchId: match.matchId,
-        userAId: match.userId,
-        userBId: match.partnerId,
-        difficulty: match.matchedDifficulty,
-        language: match.matchedLanguage,
-        topic: match.matchedTopic,
-    });
-
-    if (conflict) {
-        return res.status(409).json({
-            error: "ACTIVE_SESSION_CONFLICT",
-            message:
-                "An active session already exists for this user pair with different difficulty, language, or topic.",
-            session,
-        });
+        return res.status(result.statusCode).json(responseBody);
     }
 
     logger.info(
         {
-            sessionId: session.sessionId,
-            userAId: session.userAId,
-            userBId: session.userBId,
-            created,
+            sessionId: result.session.sessionId,
+            userAId: result.session.userAId,
+            userBId: result.session.userBId,
+            created: result.created,
+            cacheStored: result.cacheStored,
         },
         "Processed session creation request",
     );
 
-    return res.status(created ? 201 : 200).json({
-        session,
-        idempotentHit: !created,
+    return res.status(result.created ? 201 : 200).json({
+        session: result.session,
+        idempotentHit: !result.created,
+        cacheStored: result.cacheStored,
     });
 });
 
