@@ -11,7 +11,9 @@ const mockFetchAuthenticatedUserContext = jest.fn<
     >
 >();
 const mockPresenceJoin = jest.fn<
-    (...args: unknown[]) => Promise<{ allowed: true; participantCount: number } | { allowed: false; participantCount: number }>
+    (...args: unknown[]) => Promise<
+        { allowed: true; participantCount: number } | { allowed: false; participantCount: number }
+    >
 >();
 
 jest.unstable_mockModule("@/repositories/sessionRepository.js", () => ({
@@ -30,7 +32,7 @@ jest.unstable_mockModule("@/services/sessionPresenceService.js", () => ({
     },
 }));
 
-const { joinSession } = await import("./sessionJoinService.js");
+const { joinSession } = await import("@/services/sessionJoinService.js");
 
 const activeSession: CollaborationSession = {
     sessionId: "session-123",

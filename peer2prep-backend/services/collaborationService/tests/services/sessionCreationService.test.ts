@@ -6,7 +6,9 @@ const mockFindActiveByPair = jest.fn<(...args: unknown[]) => Promise<Collaborati
 const mockCreateActiveSession = jest.fn<(...args: unknown[]) => Promise<CollaborationSession>>();
 const mockCacheSession = jest.fn<(...args: unknown[]) => Promise<boolean>>();
 const mockFetchQuestionForSession = jest.fn<
-    (...args: unknown[]) => Promise<{ ok: true; questionId: string } | { ok: false; errorType: string; message: string }>
+    (...args: unknown[]) => Promise<
+        { ok: true; questionId: string } | { ok: false; errorType: string; message: string }
+    >
 >();
 const mockVerifyUsersAuthentication = jest.fn<
     (...args: unknown[]) => Promise<
@@ -38,7 +40,7 @@ jest.unstable_mockModule("@/services/userAuthService.js", () => ({
     verifyUsersAuthentication: mockVerifyUsersAuthentication,
 }));
 
-const { createSession } = await import("./sessionCreationService.js");
+const { createSession } = await import("@/services/sessionCreationService.js");
 
 const existingSession: CollaborationSession = {
     sessionId: "session-existing",

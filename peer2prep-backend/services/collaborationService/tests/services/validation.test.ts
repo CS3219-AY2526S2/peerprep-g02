@@ -1,4 +1,4 @@
-import { validateCreateSessionPayload } from "./validation.js";
+import { validateCreateSessionPayload } from "@/services/validation.js";
 
 describe("validateCreateSessionPayload", () => {
     it("accepts a complete session creation request", () => {
