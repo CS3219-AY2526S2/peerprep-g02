@@ -3,10 +3,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client, Pool } from "pg";
 import { AppConstants } from "../constants.js";
+import { logger } from "../utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const migrationsDirectory = path.resolve(__dirname, "../migrations");
+const migrationLogger = logger.child({ scope: "migrations" });
 
 function parseDatabaseName(connectionString: string): string {
     const parsed = new URL(connectionString);
@@ -51,7 +53,7 @@ async function ensureDatabaseExists(): Promise<void> {
         }
 
         await maintenanceClient.query(`CREATE DATABASE ${quoteIdentifier(databaseName)}`);
-        console.log(`Created database '${databaseName}'.`);
+        migrationLogger.info({ databaseName }, "Created PostgreSQL database");
     } finally {
         await maintenanceClient.end();
     }
@@ -83,7 +85,7 @@ async function runMigrations(): Promise<void> {
             try {
                 await client.query(sql);
                 await client.query("COMMIT");
-                console.log(`Applied migration: ${fileName}`);
+                migrationLogger.info({ fileName }, "Applied migration");
             } catch (error) {
                 await client.query("ROLLBACK");
                 throw error;
@@ -107,7 +109,7 @@ async function runMigrations(): Promise<void> {
                 `,
                 [superUserId],
             );
-            console.log("Injected initial super user record.");
+            migrationLogger.info({ superUserId }, "Injected initial super user record");
             superUserCount = 1;
         }
 
@@ -115,7 +117,7 @@ async function runMigrations(): Promise<void> {
             throw new Error("Database invariant violation: expected exactly 1 super_user row.");
         }
 
-        console.log("Migrations completed successfully.");
+        migrationLogger.info("Migrations completed successfully");
     } finally {
         client.release();
         await pool.end();
@@ -123,6 +125,6 @@ async function runMigrations(): Promise<void> {
 }
 
 runMigrations().catch((error) => {
-    console.error("Migration failed:", error);
+    migrationLogger.error({ err: error }, "Migration failed");
     process.exit(1);
 });

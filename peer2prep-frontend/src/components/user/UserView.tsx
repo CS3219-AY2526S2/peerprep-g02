@@ -1,11 +1,11 @@
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
-import { apiFetch } from "../../lib/apiClient";
-import { pushToast } from "../../lib/toast";
-import AdminPage from "./admin/AdminPage";
-import Login from "./Login";
-import Profile from "./profile/Profile";
-import Register from "./Register";
+import { apiFetch } from "@/lib/apiClient";
+import { pushToast } from "@/lib/toast";
+import AdminPage from "@/components/user/admin/AdminPage";
+import Login from "@/components/user/Login";
+import Profile from "@/components/user/profile/Profile";
+import Register from "@/components/user/Register";
 
 export function UserLoginView() {
     const pathname = window.location.pathname;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { apiFetch } from "../../../lib/apiClient";
-import { pushToast } from "../../../lib/toast";
+import { apiFetch } from "@/lib/apiClient";
+import { pushToast } from "@/lib/toast";
 
 type AdminUser = {
     clerkUserId: string;

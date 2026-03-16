@@ -1,6 +1,6 @@
 import { UserButton } from "@clerk/clerk-react";
-import DefaultLanguage from "./DefaultLanguage";
-import DeleteAccount from "./DeleteAccount";
+import DefaultLanguage from "@/components/user/profile/DefaultLanguage";
+import DeleteAccount from "@/components/user/profile/DeleteAccount";
 
 const DotIcon = () => {
     return (

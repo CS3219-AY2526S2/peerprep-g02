@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/clerk-react";
 import React, { useEffect, useState } from "react";
 
-import { injectAuthInterceptor } from "../lib/apiClient";
+import { injectAuthInterceptor } from "@/lib/apiClient";
 
 type Props = {
     children: React.ReactNode;
@@ -37,4 +37,3 @@ export function AuthInterceptorProvider({ children }: Props) {
 
     return <>{children}</>;
 }
-

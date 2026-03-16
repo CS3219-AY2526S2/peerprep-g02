@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useRef, useState } from "react";
-import { apiFetch } from "../../../lib/apiClient";
-import AccountUserButton from "./AccountUserButton";
+import { apiFetch } from "@/lib/apiClient";
+import AccountUserButton from "@/components/user/profile/AccountUserButton";
 
 export default function Profile() {
     const { isLoaded, isSignedIn, userId } = useAuth();

@@ -1,7 +1,7 @@
 import { useClerk } from "@clerk/clerk-react";
 import { MouseEvent, PointerEvent, useState } from "react";
-import { apiFetch } from "../../../lib/apiClient";
-import { pushToast } from "../../../lib/toast";
+import { apiFetch } from "@/lib/apiClient";
+import { pushToast } from "@/lib/toast";
 
 const CLERK_FONT_FAMILY = "var(--clerk-font-family, inherit)";
 
