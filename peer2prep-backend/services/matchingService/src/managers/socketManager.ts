@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 
 import { attemptRejoin, cancelMatch, findMatch, handleDisconnect } from "@/match/match.js";
+import { createCollaborationSession } from "@/services/collaborationService.js";
 import { MatchDetailsSchema, type MatchRequest } from "@/types/match.js";
 import { socketLogger } from "@/utils/logger.js";
 
@@ -66,6 +67,7 @@ export const registerSocketHandlers = (io: Server) => {
                 const matchResult = await findMatch(matchRequest);
 
                 if (matchResult.matchFound) {
+                    await createCollaborationSession(matchResult);
                     socketLogger.info(`Match Found: ${userId} & ${matchResult.partnerId}`);
                     io.to(userId).emit("match_success", matchResult);
                     io.to(matchResult.partnerId).emit("match_success", matchResult);
