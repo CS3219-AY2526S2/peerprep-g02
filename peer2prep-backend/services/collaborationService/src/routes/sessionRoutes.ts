@@ -65,7 +65,6 @@ router.post("/sessions/:sessionId/join", async (req, res) => {
 
     return res.status(200).json({
         session: result.session,
-        participantCount: result.participantCount,
     });
 });
 

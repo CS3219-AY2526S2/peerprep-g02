@@ -10,26 +10,45 @@ const mockFetchAuthenticatedUserContext = jest.fn<
         | { ok: false; userId: string; reason: "dependency_error"; message: string }
     >
 >();
-const mockPresenceJoin = jest.fn<
-    (...args: unknown[]) => Promise<
-        { allowed: true; participantCount: number } | { allowed: false; participantCount: number }
-    >
->();
+jest.unstable_mockModule("@/services/sessionAccessService.js", () => ({
+    validateSessionAccess: jest.fn(async (sessionId: string, userId: string) => {
+        const session = await mockFindBySessionId(sessionId, userId);
+        if (!session) {
+            return {
+                ok: false,
+                statusCode: 404,
+                error: "SESSION_NOT_FOUND",
+                message: "No collaboration session was found for the provided sessionId.",
+            };
+        }
 
-jest.unstable_mockModule("@/repositories/sessionRepository.js", () => ({
-    sessionRepository: {
-        findBySessionId: mockFindBySessionId,
-    },
+        if (session.status !== "active") {
+            return {
+                ok: false,
+                statusCode: 409,
+                error: "SESSION_NOT_ACTIVE",
+                message: "Only active collaboration sessions may be joined.",
+            };
+        }
+
+        if (userId !== session.userAId && userId !== session.userBId) {
+            return {
+                ok: false,
+                statusCode: 403,
+                error: "FORBIDDEN_SESSION_ACCESS",
+                message: "Authenticated user is not assigned to this session.",
+            };
+        }
+
+        return {
+            ok: true,
+            session,
+        };
+    }),
 }));
 
 jest.unstable_mockModule("@/services/userAuthService.js", () => ({
     fetchAuthenticatedUserContext: mockFetchAuthenticatedUserContext,
-}));
-
-jest.unstable_mockModule("@/services/sessionPresenceService.js", () => ({
-    sessionPresenceService: {
-        join: mockPresenceJoin,
-    },
 }));
 
 const { joinSession } = await import("@/services/sessionJoinService.js");
@@ -130,40 +149,16 @@ describe("joinSession", () => {
         });
     });
 
-    it("rejects joins when the session already has two participants", async () => {
-        mockFetchAuthenticatedUserContext.mockResolvedValue({
-            ok: true,
-            userId: "user-a",
-        });
-        mockFindBySessionId.mockResolvedValue(activeSession);
-        mockPresenceJoin.mockResolvedValue({
-            allowed: false,
-            participantCount: 3,
-        });
-
-        await expect(joinSession("session-123", "Bearer token")).resolves.toEqual({
-            ok: false,
-            statusCode: 409,
-            error: "SESSION_CAPACITY_REACHED",
-            message: "No more than two users may be present in a collaboration session.",
-        });
-    });
-
     it("allows assigned users to join active sessions", async () => {
         mockFetchAuthenticatedUserContext.mockResolvedValue({
             ok: true,
             userId: "user-b",
         });
         mockFindBySessionId.mockResolvedValue(activeSession);
-        mockPresenceJoin.mockResolvedValue({
-            allowed: true,
-            participantCount: 2,
-        });
 
         await expect(joinSession("session-123", "Bearer token")).resolves.toEqual({
             ok: true,
             session: activeSession,
-            participantCount: 2,
         });
     });
 });
