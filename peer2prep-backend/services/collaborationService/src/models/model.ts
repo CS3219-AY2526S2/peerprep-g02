@@ -2,11 +2,6 @@ export type SessionStatus = "active" | "inactive";
 export type SessionDifficulty = "Easy" | "Medium" | "Hard";
 
 export type CreateSessionRequest = {
-    matchId: string;
-};
-
-export type CreateSessionFromMatch = {
-    matchId: string;
     userAId: string;
     userBId: string;
     difficulty: SessionDifficulty;
@@ -16,12 +11,13 @@ export type CreateSessionFromMatch = {
 
 export type CollaborationSession = {
     sessionId: string;
-    matchId: string;
+    pairKey: string;
     userAId: string;
     userBId: string;
     difficulty: SessionDifficulty;
     language: string;
     topic: string;
+    questionId: string;
     status: SessionStatus;
     createdAt: string;
 };
