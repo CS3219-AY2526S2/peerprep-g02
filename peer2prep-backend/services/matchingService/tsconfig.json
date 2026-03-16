@@ -23,6 +23,7 @@
         "moduleDetection": "force",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
+        "types": ["node"],
 
         "sourceMap": true,
         "declaration": true,
