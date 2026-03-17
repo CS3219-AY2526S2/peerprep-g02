@@ -2,12 +2,13 @@ import cors from "cors";
 import express from "express";
 
 import sessionRoutes from "@/routes/sessionRoutes.js";
+import { collaborationConfig } from "@/services/config.js";
 
 const app = express();
 
 app.use(
     cors({
-        origin: process.env.CS_FRONTEND_URL ?? "http://localhost:5173",
+        origin: collaborationConfig.frontendUrl,
         credentials: true,
     }),
 );

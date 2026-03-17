@@ -73,6 +73,23 @@ class UserRepository {
         return mapUserRow(result.rows[0]);
     }
 
+    async findByClerkUserIds(clerkUserIds: string[]): Promise<UserRecord[]> {
+        if (clerkUserIds.length === 0) {
+            return [];
+        }
+
+        const result = await query<UserRow>(
+            `
+                SELECT ${this.selectColumns}
+                FROM users
+                WHERE clerk_user_id = ANY($1::text[])
+            `,
+            [clerkUserIds],
+        );
+
+        return result.rows.map(mapUserRow);
+    }
+
     // update and insert from clerk to user DB
     async upsertFromClerk(input: {
         clerkUserId: string;
