@@ -1,10 +1,12 @@
 import { Router } from "express";
 import {GetQuestion, EditQuestion, CreateQuestion, DeleteQuestion, GetQuestions, GetPopularQuestions} from "../services/questionDatabase"
 import express from 'express';
+import { requireAdminAuth } from "../middlewares/requireAdminAuth";
 
 
 const router = Router();
 
+router.use(requireAdminAuth);
 
 //Get question
 router.get("/questions", async (req, res) => {
