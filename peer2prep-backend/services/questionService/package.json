@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "predev": "npm run db:init",
+    "prestart": "npm run db:init",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:init": "ts-node src/initDb.ts",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",

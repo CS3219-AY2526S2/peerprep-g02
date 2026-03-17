@@ -6,13 +6,13 @@ import { Client } from "pg";
 
 dotenv.config();
 
-const sqlFilePath = path.resolve(process.cwd(), "QUDB.sql");
+const sqlFilePath = path.resolve(__dirname, "../QUDB.sql");
 
 const DB_HOST = process.env.DB_HOST || "localhost";
 const DB_PORT = Number(process.env.DB_PORT) || 5432;
 const DB_USER = process.env.DB_USER || "postgres";
 const DB_PASSWORD = process.env.DB_PASSWORD || "postgres";
-const TARGET_DB = "peerprep_question";
+const TARGET_DB = process.env.DB_NAME || "peerprep_question";
 
 function quoteIdentifier(identifier: string): string {
     return `"${identifier.replace(/"/g, '""')}"`;
