@@ -1,4 +1,4 @@
-import { AuthenticatedUser } from "@/models/models.js";
+import { AuthenticatedUser, UserAuthorizationContext } from "@/models/models.js";
 import { collaborationConfig } from "@/services/config.js";
 import {
     DependencyUnavailableError,
@@ -11,6 +11,14 @@ type UserAuthGatewayResponse = {
             clerkUserId?: string;
             status?: string;
         }>;
+    };
+};
+
+type UserContextGatewayResponse = {
+    data?: {
+        clerkUserId?: string;
+        role?: string;
+        status?: string;
     };
 };
 
@@ -62,5 +70,44 @@ export class UserGatewayClient {
                 status,
             };
         });
+    }
+
+    async validateAuthorizationContext(
+        authorizationHeader: string,
+    ): Promise<UserAuthorizationContext | null> {
+        const response = await gatewayFetch(collaborationConfig.userAuthContextPath, {
+            method: "GET",
+            headers: {
+                authorization: authorizationHeader,
+                "x-internal-service-key": collaborationConfig.internalServiceApiKey,
+            },
+        });
+
+        if (response.status >= 500) {
+            throw new DependencyUnavailableError(
+                `User Service returned ${response.status}.`,
+            );
+        }
+
+        if (response.status === 401 || response.status === 403) {
+            return null;
+        }
+
+        if (!response.ok) {
+            throw new DependencyUnavailableError(
+                `User Service returned ${response.status}.`,
+            );
+        }
+
+        const payload = (await response.json()) as UserContextGatewayResponse;
+        if (!payload.data?.clerkUserId) {
+            return null;
+        }
+
+        return {
+            clerkUserId: payload.data.clerkUserId,
+            role: payload.data.role,
+            status: payload.data.status,
+        };
     }
 }
