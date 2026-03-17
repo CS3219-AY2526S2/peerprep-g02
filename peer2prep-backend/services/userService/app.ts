@@ -31,7 +31,7 @@ app.use(helmet());
 app.use(httpLogger);
 
 // Mount controllers
-app.use("/v1/api/users/auth", authRoutes);
+app.use("/v1/api/users", authRoutes);
 app.use("/v1/api/users/internal/authz", internalAuthRoutes);
 app.get("/v1/api/health", (_req, res) => {
     res.status(200).json({ status: "ok", message: "API is running" });

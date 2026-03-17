@@ -52,6 +52,7 @@ export class ClerkWebhookService {
                     return;
                 }
 
+                // preferredLanguage = unsafe_metadata in Clerk
                 const upsertInput: {
                     clerkUserId: string;
                     name: string;
