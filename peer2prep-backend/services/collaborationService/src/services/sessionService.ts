@@ -1,3 +1,4 @@
+/** Coordinates session creation, downstream validation, persistence, caching, and rehydration. */
 import { randomUUID } from "node:crypto";
 
 import {

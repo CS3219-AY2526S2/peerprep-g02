@@ -1,3 +1,4 @@
+/** Retrieves question selection data from Question Service through the API gateway. */
 import {
     QuestionSummary,
     SessionDifficulty,

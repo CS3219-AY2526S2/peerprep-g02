@@ -1,3 +1,4 @@
+/** Orchestrates session join authorization, membership checks, and join response assembly. */
 import {
     CollaborationSession,
     JoinSessionErrorCode,

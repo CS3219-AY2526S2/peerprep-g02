@@ -1,3 +1,4 @@
+/** Defines typed domain errors used to map service failures to API responses. */
 import { CreateSessionErrorCode } from "@/models/models.js";
 import { JoinSessionErrorCode } from "@/models/models.js";
 

@@ -1,3 +1,4 @@
+/** Tracks per-session participant presence states across realtime socket connections. */
 import {
     CollaborationSession,
     SessionParticipantPresence,
