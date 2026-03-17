@@ -34,14 +34,7 @@ interface AdminProp {
 }
 
 function Admin(props: AdminProp) {
-    const [questions, setQuestions] = useState<QuestionInfo[]>([
-        {
-            quid: "5ddf750c-5777-4b24-b283-5930647f529e",
-            title: "",
-            topics: ["Algorithms"],
-            difficulty: "Easy"
-        }
-    ])
+    const [questions, setQuestions] = useState<QuestionInfo[]>([])
     const [loading, setLoading] = useState(true);
 
     const[popularQuestions, setPopularQuestions] = useState<String[]>([])
