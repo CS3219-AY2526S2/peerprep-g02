@@ -86,9 +86,21 @@ function Admin(props: AdminProp) {
                     <h1 style={{display: "inline", marginLeft: "5px", alignSelf: "center",fontWeight: "bold", margin:"0"}}>Peer2Prep</h1>
                 </div>
                 <div style={{display: "flex"}}>
-                    {/* <p>notif</p>
-                    <p>Alex</p>
-                    <p>logout</p> */}
+                    <a
+                        href="/account/profile"
+                        style={{
+                            alignSelf: "center",
+                            background: "#5046E6",
+                            padding: "0.5rem 1.1rem",
+                            color: "white",
+                            borderRadius: "1rem",
+                            fontWeight: "500",
+                            margin: "10px",
+                            textDecoration: "none",
+                        }}
+                    >
+                        Back to profile
+                    </a>
                 </div>
             </header>
             <div style={{backgroundColor: "#F9FAFB", flexGrow: "1"}}>

@@ -89,7 +89,7 @@ export default function AdminPage() {
             if (!response.ok) {
                 pushToast({
                     tone: "error",
-                    message: payload?.error || `Failed to update role (status ${response.status}).`,
+                    message: payload?.error || `Failed to update role (status ${response.status})`,
                 });
                 return;
             }
@@ -104,7 +104,7 @@ export default function AdminPage() {
             );
             pushToast({
                 tone: "success",
-                message: `Successfully updated ${targetUser.name}'s role to ${role}.`,
+                message: `Successfully updated ${targetUser.name}'s role to ${role}`,
             });
         } catch (error) {
             pushToast({
@@ -112,12 +112,10 @@ export default function AdminPage() {
                 message:
                     error instanceof Error
                         ? error.message
-                        : "Failed to update role due to a network error.",
+                        : "Failed to update role due to a network error",
             });
         } finally {
-            setUpdatingUserIds((current) =>
-                current.filter((id) => id !== targetUser.clerkUserId),
-            );
+            setUpdatingUserIds((current) => current.filter((id) => id !== targetUser.clerkUserId));
         }
     };
 
@@ -139,7 +137,7 @@ export default function AdminPage() {
                 pushToast({
                     tone: "error",
                     message:
-                        payload?.error || `Failed to update status (status ${response.status}).`,
+                        payload?.error || `Failed to update status (status ${response.status})`,
                 });
                 return;
             }
@@ -157,7 +155,7 @@ export default function AdminPage() {
             );
             pushToast({
                 tone: "success",
-                message: `Successfully updated ${targetUser.name}'s status to ${status}.`,
+                message: `Successfully updated ${targetUser.name}'s status to ${status}`,
             });
         } catch (error) {
             pushToast({
@@ -165,12 +163,10 @@ export default function AdminPage() {
                 message:
                     error instanceof Error
                         ? error.message
-                        : "Failed to update status due to a network error.",
+                        : "Failed to update status due to a network error",
             });
         } finally {
-            setUpdatingUserIds((current) =>
-                current.filter((id) => id !== targetUser.clerkUserId),
-            );
+            setUpdatingUserIds((current) => current.filter((id) => id !== targetUser.clerkUserId));
         }
     };
 
@@ -292,7 +288,8 @@ export default function AdminPage() {
                                                     </button>
                                                 )}
 
-                                                {user.role === "super_user" ? null : user.status === "active" ? (
+                                                {user.role === "super_user" ? null : user.status ===
+                                                  "active" ? (
                                                     <button
                                                         className={actionButtonClass}
                                                         type="button"
