@@ -1,3 +1,4 @@
+/** Wraps gateway HTTP calls with timeout handling and dependency failure normalization. */
 import { collaborationConfig } from "@/services/config.js";
 
 export class DependencyUnavailableError extends Error {

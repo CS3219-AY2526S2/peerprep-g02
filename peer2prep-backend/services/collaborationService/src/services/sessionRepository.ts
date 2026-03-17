@@ -1,3 +1,4 @@
+/** Maintains active collaboration sessions in memory for fast lookup by pair and session id. */
 import { CollaborationSession, SessionStatus } from "@/models/models.js";
 
 function pairKey(userAId: string, userBId: string): string {

@@ -1,3 +1,4 @@
+/** Calls User Service through the API gateway for auth context and matched-user validation. */
 import { AuthenticatedUser, UserAuthorizationContext } from "@/models/models.js";
 import { collaborationConfig } from "@/services/config.js";
 import {

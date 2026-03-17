@@ -1,3 +1,4 @@
+/** Configures the Express application, middleware, health check, and API routes. */
 import cors from "cors";
 import express from "express";
 

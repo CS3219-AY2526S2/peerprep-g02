@@ -1,3 +1,4 @@
+/** Hosts Socket.IO realtime session events for join, disconnect, and leave notifications. */
 import { createServer, type Server as HttpServer } from "node:http";
 
 import type { Server as SocketIOServerType, Socket } from "socket.io";

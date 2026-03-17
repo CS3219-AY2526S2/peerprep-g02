@@ -1,3 +1,4 @@
+/** Exposes REST endpoints for creating and joining collaboration sessions. */
 import { Router } from "express";
 
 import { CreateSessionErrorCode, JoinSessionErrorCode } from "@/models/models.js";
@@ -12,6 +13,50 @@ import {
 
 const router = Router();
 
+/**
+ * @swagger
+ * /v1/api/sessions:
+ *   post:
+ *     summary: Create or reuse a collaboration session for a matched user pair.
+ *     description: Validates the request, verifies both users through User Service, fetches a question, and creates an active session.
+ *     tags:
+ *       - Collaboration Sessions
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userAId
+ *               - userBId
+ *               - difficulty
+ *               - language
+ *               - topic
+ *             properties:
+ *               userAId:
+ *                 type: string
+ *               userBId:
+ *                 type: string
+ *               difficulty:
+ *                 type: string
+ *                 enum: [Easy, Medium, Hard]
+ *               language:
+ *                 type: string
+ *               topic:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Session created successfully.
+ *       200:
+ *         description: Existing active session returned due to idempotent request.
+ *       400:
+ *         description: Invalid request payload.
+ *       403:
+ *         description: One or both matched users are not authorized for session creation.
+ *       424:
+ *         description: A required downstream service is unavailable.
+ */
 router.post("/sessions", async (req, res) => {
     const validationResult = validateCreateSessionPayload(req.body);
 
@@ -52,6 +97,36 @@ router.post("/sessions", async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /v1/api/sessions/{sessionId}/join:
+ *   post:
+ *     summary: Join an existing collaboration session.
+ *     description: Allows an authenticated assigned user to join an active session and returns current participant presence information.
+ *     tags:
+ *       - Collaboration Sessions
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     security:
+ *       - clerkAuth: []
+ *     responses:
+ *       200:
+ *         description: Session joined successfully.
+ *       400:
+ *         description: Invalid join request.
+ *       403:
+ *         description: User is not authenticated or not assigned to the session.
+ *       404:
+ *         description: Session not found.
+ *       409:
+ *         description: Session is not active.
+ *       424:
+ *         description: A required downstream service is unavailable.
+ */
 router.post("/sessions/:sessionId/join", async (req, res) => {
     const validationResult = validateJoinSessionRequest({
         sessionId: req.params.sessionId,

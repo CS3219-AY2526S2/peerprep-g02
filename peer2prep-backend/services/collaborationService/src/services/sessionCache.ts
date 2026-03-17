@@ -1,3 +1,4 @@
+/** Stores session snapshots in Redis with TTL so sessions can be revalidated and rejoined. */
 import { Redis } from "ioredis";
 
 import { CollaborationSession } from "@/models/models.js";

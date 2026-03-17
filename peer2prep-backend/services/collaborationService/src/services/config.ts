@@ -1,3 +1,4 @@
+/** Centralizes runtime configuration and environment variable parsing for the service. */
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
 
 export const collaborationConfig = {

@@ -1,3 +1,4 @@
+/** Boots the collaboration service HTTP and realtime servers. */
 import "dotenv/config";
 
 import { collaborationConfig } from "@/services/config.js";

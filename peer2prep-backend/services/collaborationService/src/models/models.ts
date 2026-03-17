@@ -1,3 +1,4 @@
+/** Defines shared enums and data models used across the collaboration service. */
 export enum SessionStatus {
     ACTIVE = "active",
     ENDED = "ended",

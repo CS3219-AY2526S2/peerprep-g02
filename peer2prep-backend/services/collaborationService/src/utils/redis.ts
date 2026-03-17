@@ -1,3 +1,4 @@
+/** Creates the collaboration service Redis client used for session cache persistence. */
 import { Redis } from "ioredis";
 
 import { collaborationConfig } from "@/services/config.js";

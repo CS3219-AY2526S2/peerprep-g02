@@ -1,3 +1,4 @@
+/** Validates inbound REST payloads for session creation and join requests. */
 import {
     CreateSessionRequest,
     SessionDifficulty,

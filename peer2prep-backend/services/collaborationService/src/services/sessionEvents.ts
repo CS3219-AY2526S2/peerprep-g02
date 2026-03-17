@@ -1,3 +1,4 @@
+/** Publishes internal domain events for significant collaboration-session lifecycle actions. */
 import { EventEmitter } from "node:events";
 
 import {
