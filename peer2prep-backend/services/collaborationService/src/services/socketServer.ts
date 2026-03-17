@@ -11,7 +11,7 @@ import {
 import { SessionJoinError } from "@/services/errors.js";
 import { collaborationConfig } from "@/services/config.js";
 import { sessionJoinService } from "@/services/sessionJoinService.js";
-import { sessionPresenceManager } from "@/services/sessionPresenceManager.js";
+import { sessionPresenceManager } from "@/services/singletons.js";
 import app from "@/app.js";
 import { logger } from "@/utils/logger.js";
 
@@ -168,6 +168,14 @@ export function createRealtimeServer(): {
                 );
 
                 if (disconnectResult.becameDisconnected) {
+                    logger.info(
+                        {
+                            sessionId: joinedSession.sessionId,
+                            userId: joinedSession.userId,
+                            dropAt: disconnectResult.dropAt,
+                        },
+                        "User disconnected unexpectedly and entered grace period",
+                    );
                     socket.to(roomName(joinedSession.sessionId)).emit(
                         SessionRealtimeEvent.SESSION_PEER_DISCONNECTED,
                         {

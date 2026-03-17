@@ -58,4 +58,24 @@ describe("SessionPresenceManager", () => {
             SessionParticipantStatus.CONNECTED,
         );
     });
+
+    it("returns a drop deadline when the last socket disconnects", () => {
+        const manager = new SessionPresenceManager(15000);
+
+        manager.markConnected(session, "user-a", "socket-1");
+        const disconnected = manager.markDisconnected(session, "user-a", "socket-1");
+
+        expect(disconnected.becameDisconnected).toBe(true);
+        expect(disconnected.dropAt).not.toBeNull();
+    });
+
+    it("cancels the pending disconnect grace period when the user reconnects", () => {
+        const manager = new SessionPresenceManager(15000);
+
+        manager.markConnected(session, "user-a", "socket-1");
+        manager.markDisconnected(session, "user-a", "socket-1");
+        const reconnected = manager.markConnected(session, "user-a", "socket-2");
+
+        expect(reconnected.participants[0].status).toBe(SessionParticipantStatus.CONNECTED);
+    });
 });
