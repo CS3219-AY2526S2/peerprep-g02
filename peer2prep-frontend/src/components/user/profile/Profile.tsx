@@ -49,12 +49,20 @@ export default function Profile() {
             <h1>HOME PAGE</h1>
             {role === "admin" || role === "super_user" ? (
                 <div className="mb-3 mt-5 flex justify-center">
-                    <a
-                        href="/account/admin"
-                        className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                    >
-                        Open Admin Page
-                    </a>
+                    <div className="flex flex-wrap justify-center gap-3">
+                        <a
+                            href="/account/admin"
+                            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                        >
+                            Open Admin Page
+                        </a>
+                        <a
+                            href="/question-admin"
+                            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                        >
+                            Open Question Admin
+                        </a>
+                    </div>
                 </div>
             ) : null}
         </section>

@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "db:init": "ts-node src/initDb.ts",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "start": "ts-node src/app.ts"
   },
