@@ -1,0 +1,11 @@
+.sectionBorder{
+    margin: 2rem;
+    border: 5px solid #F8F9FA;
+    border-radius: 25px;
+    padding: 25px;
+    background-color: white;
+}
+
+select {
+    appearance: none;
+}
