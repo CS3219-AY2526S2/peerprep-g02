@@ -2,6 +2,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/apiClient";
 import { pushToast } from "@/lib/toast";
+import QuestionAdmin from "@/components/admin/QuestionAdmin";
 import AdminPage from "@/components/user/admin/AdminPage";
 import Login from "@/components/user/Login";
 import Profile from "@/components/user/profile/Profile";
@@ -11,6 +12,7 @@ export function UserLoginView() {
     const pathname = window.location.pathname;
     const { isLoaded, isSignedIn } = useAuth();
     const [adminRouteAllowed, setAdminRouteAllowed] = useState<boolean | null>(null);
+    const isAdminProtectedRoute = pathname === "/account/admin" || pathname === "/question-admin";
 
     useEffect(() => {
         if (pathname !== "/account/profile") {
@@ -39,9 +41,8 @@ export function UserLoginView() {
         }
     }, [pathname, isLoaded, isSignedIn]);
 
-    // admin route guard
     useEffect(() => {
-        if (pathname !== "/account/admin") {
+        if (!isAdminProtectedRoute) {
             setAdminRouteAllowed(null);
             return;
         }
@@ -87,7 +88,7 @@ export function UserLoginView() {
         return () => {
             isCancelled = true;
         };
-    }, [pathname, isLoaded, isSignedIn]);
+    }, [isAdminProtectedRoute, isLoaded, isSignedIn, pathname]);
 
     if (pathname.startsWith("/account/login")) {
         return <Login />;
@@ -139,6 +140,30 @@ export function UserLoginView() {
         }
 
         return <AdminPage />;
+    }
+
+    if (pathname === "/question-admin") {
+        if (!isLoaded) {
+            return null;
+        }
+
+        if (!isSignedIn) {
+            return (
+                <section className="app-shell">
+                    <p>You are signed out.</p>
+                    <div className="link-row">
+                        <a href="/account/login">Login</a>
+                        <a href="/account/register">Register</a>
+                    </div>
+                </section>
+            );
+        }
+
+        if (adminRouteAllowed !== true) {
+            return null;
+        }
+
+        return <QuestionAdmin />;
     }
 
     return (
