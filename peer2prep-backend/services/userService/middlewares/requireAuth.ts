@@ -8,7 +8,16 @@ type RequireAuthOptions = {
     requiredRole?: UserRole;
 };
 
-// Middleware to check if user is authenticated and active.
+function hasRequiredRole(userRole: UserRole, requiredRole: UserRole): boolean {
+    if (userRole === requiredRole) {
+        return true;
+    }
+
+    // super_user is treated as an admin for protected admin routes.
+    return requiredRole === "admin" && userRole === "super_user";
+}
+
+// Middleware to check if user is authenticated, active and has the appropriate role
 // For bootstrap routes like /me, allow missing local user via options.
 export function requireAuth(options: RequireAuthOptions = {}) {
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -41,7 +50,7 @@ export function requireAuth(options: RequireAuthOptions = {}) {
             }
 
             // role check
-            if (options.requiredRole && user.role !== options.requiredRole) {
+            if (options.requiredRole && !hasRequiredRole(user.role, options.requiredRole)) {
                 res.status(403).json({
                     error: `Forbidden: ${options.requiredRole} role required.`,
                 });

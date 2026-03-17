@@ -2,9 +2,9 @@ import { ClerkProvider } from "@clerk/clerk-react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import App from "./App";
+import App from "@/App";
 import "./index.css";
-import { AuthInterceptorProvider } from "./providers/AuthInterceptorProvider";
+import { AuthInterceptorProvider } from "@/providers/AuthInterceptorProvider";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
