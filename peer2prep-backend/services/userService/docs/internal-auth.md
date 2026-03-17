@@ -36,6 +36,42 @@ if (authz.data.role !== "admin" && authz.data.role !== "super_user") {
 }
 ```
 
+For batch validation of matched users, call the internal batch endpoint:
+
+```ts
+const r = await fetch("http://localhost:3001/v1/api/users/internal/authz/context/batch", {
+    method: "POST",
+    headers: {
+        "content-type": "application/json",
+        "x-internal-service-key": process.env.INTERNAL_SERVICE_API_KEY ?? "",
+    },
+    body: JSON.stringify({
+        userIds: ["user_a", "user_b"],
+    }),
+});
+```
+
+## Typical Batch Response
+
+```json
+{
+    "data": {
+        "users": [
+            {
+                "clerkUserId": "user_a",
+                "role": "user",
+                "status": "active"
+            },
+            {
+                "clerkUserId": "user_b",
+                "role": "user",
+                "status": "active"
+            }
+        ]
+    }
+}
+```
+
 ## Typical Response
 
 ```json

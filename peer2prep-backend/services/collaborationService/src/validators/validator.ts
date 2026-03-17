@@ -1,18 +1,14 @@
-import type { CreateSessionRequest } from "@/models/model.js";
+import {
+    CreateSessionRequest,
+    SessionDifficulty,
+} from "@/models/models.js";
 
 const nonEmptyString = (value: unknown): value is string =>
     typeof value === "string" && value.trim().length > 0;
-const allowedDifficulties = new Set<CreateSessionRequest["difficulty"]>([
-    "Easy",
-    "Medium",
-    "Hard",
-]);
-const isAllowedDifficulty = (
-    value: string,
-): value is CreateSessionRequest["difficulty"] =>
-    allowedDifficulties.has(value as CreateSessionRequest["difficulty"]);
 
-type CreateSessionValidationResult =
+const allowedDifficulties = new Set<string>(Object.values(SessionDifficulty));
+
+export type CreateSessionValidationResult =
     | { valid: true; value: CreateSessionRequest }
     | { valid: false; error: string };
 
@@ -37,7 +33,7 @@ export function validateCreateSessionPayload(
         return { valid: false, error: "userBId is required." };
     }
 
-    if (userAId === userBId) {
+    if (userAId.trim() === userBId.trim()) {
         return { valid: false, error: "userAId and userBId must be different." };
     }
 
@@ -45,10 +41,10 @@ export function validateCreateSessionPayload(
         return { valid: false, error: "difficulty is required." };
     }
 
-    if (!isAllowedDifficulty(difficulty)) {
+    if (!allowedDifficulties.has(difficulty)) {
         return {
             valid: false,
-            error: "difficulty must be one of: Easy, Medium, Hard.",
+            error: `difficulty must be one of: ${Object.values(SessionDifficulty).join(", ")}.`,
         };
     }
 
@@ -63,11 +59,11 @@ export function validateCreateSessionPayload(
     return {
         valid: true,
         value: {
-            userAId,
-            userBId,
-            difficulty,
-            language,
-            topic,
+            userAId: userAId.trim(),
+            userBId: userBId.trim(),
+            difficulty: difficulty as SessionDifficulty,
+            language: language.trim(),
+            topic: topic.trim(),
         },
     };
 }

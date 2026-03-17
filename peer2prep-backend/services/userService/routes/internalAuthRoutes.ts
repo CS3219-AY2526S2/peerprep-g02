@@ -11,4 +11,7 @@ internalAuthRoutes.use(requireInternalAuth);
 internalAuthRoutes.get("/context", requireAuth(), (req, res) =>
     internalAuthController.authorizeContext(req, res),
 );
+internalAuthRoutes.post("/context/batch", async (req, res) =>
+    internalAuthController.authorizeContextBatch(req, res),
+);
 export default internalAuthRoutes;
