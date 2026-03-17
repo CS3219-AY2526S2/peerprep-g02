@@ -7,10 +7,11 @@ import {
     GetQuestions,
     GetPopularQuestions,
 } from "../services/questionDatabase";
-import express from "express";
 import { requireAdminAuth } from "../middlewares/requireAdminAuth";
 
 const router = Router();
+
+router.use(requireAdminAuth);
 
 //Get question
 router.get("/questions", async (req, res) => {
@@ -28,8 +29,6 @@ router.get("/questions/popular", async (req, res) => {
         body: result,
     });
 });
-
-router.use(requireAdminAuth);
 
 //Save question
 router.post("/questions/get", async (req, res) => {
