@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Card } from "@/components/ui/card";
 import { subscribeToToast, Toast } from "@/lib/toast";
 
 type ActiveToast = Toast;
@@ -43,34 +44,15 @@ export default function ToastHost() {
     }
 
     return (
-        <div
-            style={{
-                position: "fixed",
-                top: "1rem",
-                right: "1rem",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-                zIndex: 9999,
-                pointerEvents: "none",
-            }}
-        >
+        <div className="pointer-events-none fixed right-4 top-4 z-[9999] flex flex-col gap-2">
             {toasts.map((toast) => (
-                <div
+                <Card
                     key={toast.id}
-                    style={{
-                        maxWidth: "22rem",
-                        background: toneBackground(toast.tone),
-                        color: "#fff",
-                        borderRadius: "0.5rem",
-                        padding: "0.6rem 0.8rem",
-                        boxShadow: "0 10px 20px rgba(0,0,0,0.25)",
-                        fontSize: "0.85rem",
-                        lineHeight: 1.3,
-                    }}
+                    className="max-w-sm border-0 px-4 py-3 text-sm leading-5 text-white shadow-2xl"
+                    style={{ background: toneBackground(toast.tone) }}
                 >
                     {toast.message}
-                </div>
+                </Card>
             ))}
         </div>
     );

@@ -1,5 +1,6 @@
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
+import SessionRoom from "@/components/collaboration/SessionRoom";
 import { apiFetch } from "@/lib/apiClient";
 import { pushToast } from "@/lib/toast";
 import AdminPage from "@/components/user/admin/AdminPage";
@@ -139,6 +140,10 @@ export function UserLoginView() {
         }
 
         return <AdminPage />;
+    }
+
+    if (pathname.startsWith("/collaboration/session/")) {
+        return <SessionRoom />;
     }
 
     return (
