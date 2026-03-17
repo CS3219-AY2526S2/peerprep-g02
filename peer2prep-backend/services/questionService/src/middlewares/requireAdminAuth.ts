@@ -34,6 +34,10 @@ export async function requireAdminAuth(
     }
 
     try {
+        console.log("[questionService] calling internal authz context endpoint", {
+            url: INTERNAL_AUTHZ_URL,
+        });
+
         const response = await fetch(INTERNAL_AUTHZ_URL, {
             headers: {
                 authorization,
@@ -41,9 +45,21 @@ export async function requireAdminAuth(
             },
         });
 
-        const payload = (await response.json().catch(() => null)) as
-            | InternalAuthContextResponse
-            | null;
+        const payload = (await response
+            .json()
+            .catch(() => null)) as InternalAuthContextResponse | null;
+
+        console.log("[questionService] internal authz response", {
+            ok: response.ok,
+            statusCode: response.status,
+            role: payload?.data?.role,
+            accountStatus: payload?.data?.status,
+            clerkUserId: payload?.data?.clerkUserId,
+            method: req.method,
+            path: req.originalUrl,
+            hasAuthorization: Boolean(authorization),
+            error: payload?.error,
+        });
 
         if (!response.ok) {
             res.status(response.status).json(payload ?? { error: "Failed to authorize user." });
