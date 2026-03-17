@@ -90,33 +90,32 @@ services:
       retries: 10
     restart: unless-stopped
 
-#   # Matching Service
-#   matching-service:
-#     build: ./peer2prep-backend/services/matchingService
-#     container_name: matching-service
-#     env_file:
-#       - ./peer2prep-backend/services/matchingService/.env
-#     depends_on:
-#       rabbitmq:
-#         condition: service_healthy
-#       matching-db:
-#         condition: service_started
-#     networks:
-#       - gateway-network
-#       - matching-db-network
-#     volumes:
-#       - ./peer2prep-backend/services/matchingService:/app
-#       - /app/node_modules
-#     restart: unless-stopped
+  # Matching Service
+  matching-service:
+    build: ./peer2prep-backend/services/matchingService
+    container_name: matching-service
+    env_file:
+      - ./peer2prep-backend/services/matchingService/.env
+    depends_on:
+      matching-redis:
+        condition: service_started
+    networks:
+      - gateway-network
+      - matching-redis-network
+    ports:
+      - "3007:5002"
+    environment:
+      - MS_SERVER_PORT=5002
+      - MS_ENV=development
+      - MS_REDIS_URL=redis://matching-redis:6379
+    restart: unless-stopped
 
-#   matching-db:
-#     image: mongo:latest
-#     container_name: matching-db
-#     volumes:
-#       - matching_data:/data/db
-#     networks:
-#       - matching-db-network
-#     restart: unless-stopped
+  matching-redis:
+    image: redis:latest
+    container_name: matching-redis
+    restart: unless-stopped
+    networks:
+      - matching-redis-network
 
 #   # Questions Service
 #   questions-service:
@@ -224,19 +223,6 @@ services:
 #       - attempts-db-network
 #     restart: unless-stopped
 
-#   # Redis
-#   redis:
-#     image: redis:latest
-#     container_name: redis-container
-#     restart: unless-stopped
-#     volumes:
-#       - redis_data:/data
-#     networks:
-#       - gateway-network
-#     command: >
-#       redis-server --appendonly yes
-#         --user user on >password ~* +@all
-
 volumes:
   user_data:
 #   matching_data:
@@ -250,8 +236,8 @@ networks:
     driver: bridge
   user-db-network:
     driver: bridge
-#   matching-db-network:
-#     driver: bridge
+  matching-redis-network:
+    driver: bridge
 #   questions-db-network:
 #     driver: bridge
 #   collaboration-db-network:
