@@ -67,3 +67,35 @@ export function validateCreateSessionPayload(
         },
     };
 }
+
+export type JoinSessionValidationResult =
+    | { valid: true; value: { sessionId: string } }
+    | { valid: false; error: string };
+
+export function validateJoinSessionRequest(
+    payload: unknown,
+): JoinSessionValidationResult {
+    if (!payload || typeof payload !== "object") {
+        return {
+            valid: false,
+            error: "Join request must be a JSON object.",
+        };
+    }
+
+    const candidate = payload as Record<string, unknown>;
+    const { sessionId } = candidate;
+
+    if (!nonEmptyString(sessionId)) {
+        return {
+            valid: false,
+            error: "sessionId is required.",
+        };
+    }
+
+    return {
+        valid: true,
+        value: {
+            sessionId: sessionId.trim(),
+        },
+    };
+}

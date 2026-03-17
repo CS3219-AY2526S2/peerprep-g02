@@ -1,4 +1,5 @@
 import { CreateSessionErrorCode } from "@/models/models.js";
+import { JoinSessionErrorCode } from "@/models/models.js";
 
 export class SessionCreationError extends Error {
     constructor(
@@ -8,5 +9,16 @@ export class SessionCreationError extends Error {
     ) {
         super(message);
         this.name = "SessionCreationError";
+    }
+}
+
+export class SessionJoinError extends Error {
+    constructor(
+        public readonly statusCode: number,
+        public readonly code: JoinSessionErrorCode,
+        message: string,
+    ) {
+        super(message);
+        this.name = "SessionJoinError";
     }
 }

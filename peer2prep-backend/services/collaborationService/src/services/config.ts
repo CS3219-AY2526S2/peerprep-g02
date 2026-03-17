@@ -14,6 +14,9 @@ export const collaborationConfig = {
         process.env.CS_API_GATEWAY_URL ?? "http://localhost:8080",
     ),
     internalServiceApiKey: process.env.CS_INTERNAL_SERVICE_API_KEY ?? "",
+    userAuthContextPath:
+        process.env.CS_USER_AUTH_CONTEXT_PATH ??
+        "/user-service/v1/api/users/internal/authz/context",
     userAuthBatchPath:
         process.env.CS_USER_AUTH_BATCH_PATH ??
         "/user-service/v1/api/users/internal/authz/context/batch",

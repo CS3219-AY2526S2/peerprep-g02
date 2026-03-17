@@ -108,6 +108,21 @@ export class SessionService {
             idempotentHit: false,
         };
     }
+
+    async getSessionById(sessionId: string): Promise<CollaborationSession | null> {
+        const existingSession = this.deps.sessionRepository.findById(sessionId);
+        if (existingSession) {
+            return existingSession;
+        }
+
+        const cachedSession = await sessionCache.get(sessionId);
+        if (!cachedSession) {
+            return null;
+        }
+
+        this.deps.sessionRepository.save(cachedSession);
+        return cachedSession;
+    }
 }
 
 export const sessionService = new SessionService({

@@ -1,10 +1,14 @@
 import { Router } from "express";
 
-import { CreateSessionErrorCode } from "@/models/models.js";
-import { SessionCreationError } from "@/services/errors.js";
+import { CreateSessionErrorCode, JoinSessionErrorCode } from "@/models/models.js";
+import { SessionCreationError, SessionJoinError } from "@/services/errors.js";
+import { sessionJoinService } from "@/services/sessionJoinService.js";
 import { sessionService } from "@/services/sessionService.js";
 import { logger } from "@/utils/logger.js";
-import { validateCreateSessionPayload } from "@/validators/validator.js";
+import {
+    validateCreateSessionPayload,
+    validateJoinSessionRequest,
+} from "@/validators/validator.js";
 
 const router = Router();
 
@@ -44,6 +48,41 @@ router.post("/sessions", async (req, res) => {
         return res.status(500).json({
             error: CreateSessionErrorCode.SERVICE_DEPENDENCY_ERROR,
             message: "Unexpected error while creating collaboration session.",
+        });
+    }
+});
+
+router.post("/sessions/:sessionId/join", async (req, res) => {
+    const validationResult = validateJoinSessionRequest({
+        sessionId: req.params.sessionId,
+    });
+
+    if (!validationResult.valid) {
+        return res.status(400).json({
+            error: JoinSessionErrorCode.INVALID_JOIN_REQUEST,
+            message: validationResult.error,
+        });
+    }
+
+    try {
+        const result = await sessionJoinService.joinSession(
+            validationResult.value.sessionId,
+            req.headers.authorization ?? "",
+        );
+
+        return res.status(200).json(result);
+    } catch (error) {
+        if (error instanceof SessionJoinError) {
+            return res.status(error.statusCode).json({
+                error: error.code,
+                message: error.message,
+            });
+        }
+
+        logger.error({ err: error }, "Unexpected error while joining session");
+        return res.status(500).json({
+            error: JoinSessionErrorCode.SERVICE_DEPENDENCY_ERROR,
+            message: "Unexpected error while joining collaboration session.",
         });
     }
 });

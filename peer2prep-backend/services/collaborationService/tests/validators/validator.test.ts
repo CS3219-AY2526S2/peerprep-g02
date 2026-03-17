@@ -1,7 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 
 import { SessionDifficulty } from "@/models/models.js";
-import { validateCreateSessionPayload } from "@/validators/validator.js";
+import {
+    validateCreateSessionPayload,
+    validateJoinSessionRequest,
+} from "@/validators/validator.js";
 
 describe("validateCreateSessionPayload", () => {
     it("accepts a well-formed session creation payload", () => {
@@ -35,5 +38,18 @@ describe("validateCreateSessionPayload", () => {
         });
 
         expect(result.valid).toBe(false);
+    });
+
+    it("validates join session request payloads", () => {
+        const result = validateJoinSessionRequest({
+            sessionId: " session-1 ",
+        });
+
+        expect(result).toEqual({
+            valid: true,
+            value: {
+                sessionId: "session-1",
+            },
+        });
     });
 });
