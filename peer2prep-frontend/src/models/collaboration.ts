@@ -14,6 +14,11 @@ export enum SessionSocketEventName {
     SESSION_ERROR = "session:error",
 }
 
+export enum SessionTabChannelEvent {
+    TAB_OPENED = "tab-opened",
+    TAB_CLOSED = "tab-closed",
+}
+
 export enum ActivityTone {
     PEER = "peer",
     YOU = "you",
@@ -57,4 +62,10 @@ export type ActivityMessage = {
     author: string;
     text: string;
     tone: ActivityTone;
+};
+
+export type SessionTabBroadcastMessage = {
+    type: SessionTabChannelEvent;
+    sessionId: string;
+    tabId: string;
 };

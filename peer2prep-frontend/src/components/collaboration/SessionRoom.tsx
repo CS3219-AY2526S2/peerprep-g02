@@ -22,6 +22,8 @@ import {
     SessionJoinResponse,
     SessionPeerPresenceEvent,
     SessionSocketEventName,
+    SessionTabBroadcastMessage,
+    SessionTabChannelEvent,
 } from "@/models/collaboration";
 
 const COLLABORATION_API_BASE =
@@ -113,6 +115,7 @@ function activityToneClasses(tone: ActivityTone): string {
 export default function SessionRoom() {
     const { getToken, isLoaded, isSignedIn } = useAuth();
     const socketRef = useRef<Socket | null>(null);
+    const tabIdRef = useRef(`tab-${Math.random().toString(16).slice(2)}`);
     const sessionId = useMemo(() => pathSessionId(), []);
     const [sessionData, setSessionData] = useState<SessionJoinResponse | null>(null);
     const [presence, setPresence] = useState<ParticipantPresence[]>([]);
@@ -122,6 +125,7 @@ export default function SessionRoom() {
     const [connectionLabel, setConnectionLabel] = useState("connecting");
     const [error, setError] = useState<string | null>(null);
     const [timerSeconds, setTimerSeconds] = useState(24 * 60 + 35);
+    const [showMultiTabPrompt, setShowMultiTabPrompt] = useState(false);
 
     useEffect(() => {
         const timer = window.setInterval(() => {
@@ -313,6 +317,46 @@ export default function SessionRoom() {
         };
     }, [getToken, isLoaded, isSignedIn, sessionId]);
 
+    useEffect(() => {
+        if (!sessionId || typeof BroadcastChannel === "undefined") {
+            return;
+        }
+
+        const channel = new BroadcastChannel("peerprep-collaboration-tabs");
+
+        const handleMessage = (event: MessageEvent<SessionTabBroadcastMessage>) => {
+            const payload = event.data;
+            if (
+                !payload ||
+                payload.sessionId !== sessionId ||
+                payload.tabId === tabIdRef.current
+            ) {
+                return;
+            }
+
+            if (payload.type === SessionTabChannelEvent.TAB_OPENED) {
+                setShowMultiTabPrompt(true);
+            }
+        };
+
+        channel.addEventListener("message", handleMessage);
+        channel.postMessage({
+            type: SessionTabChannelEvent.TAB_OPENED,
+            sessionId,
+            tabId: tabIdRef.current,
+        } satisfies SessionTabBroadcastMessage);
+
+        return () => {
+            channel.postMessage({
+                type: SessionTabChannelEvent.TAB_CLOSED,
+                sessionId,
+                tabId: tabIdRef.current,
+            } satisfies SessionTabBroadcastMessage);
+            channel.removeEventListener("message", handleMessage);
+            channel.close();
+        };
+    }, [sessionId]);
+
     const participantSummary = presence.map((participant) => ({
         ...participant,
         label:
@@ -379,6 +423,39 @@ export default function SessionRoom() {
 
     return (
         <section className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_22%),linear-gradient(180deg,#111827_0%,#0f172a_100%)] text-slate-100">
+            {showMultiTabPrompt ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+                    <Card className="w-full max-w-lg border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+                        <CardHeader>
+                            <CardTitle className="text-xl">
+                                Another Tab Detected
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <p className="text-base leading-7 text-slate-300">
+                                This session is also open in another tab. Do you want to stay here or leave?
+                            </p>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700 hover:text-slate-100"
+                                    onClick={() => setShowMultiTabPrompt(false)}
+                                >
+                                    Stay Here
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    onClick={handleExitSession}
+                                >
+                                    Leave
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            ) : null}
             <header className="flex flex-col gap-4 border-b border-slate-700/60 bg-slate-900/95 px-5 py-5 lg:flex-row lg:items-center lg:justify-between lg:px-7">
                 <div className="flex items-start gap-4 lg:items-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 text-lg font-bold shadow-lg">
