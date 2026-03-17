@@ -1,6 +1,7 @@
 type TokenGetter = (options?: { template?: string }) => Promise<string | null>;
 
 type ApiRequestInit = RequestInit & {
+    baseUrl?: string;
     tokenTemplate?: string;
     skipAuth?: boolean;
 };
@@ -11,8 +12,10 @@ export function injectAuthInterceptor(getToken?: TokenGetter): void {
     getTokenRef = getToken;
 }
 
-function resolveUrl(path: string): string {
-    const baseUrl = import.meta.env.VITE_BACKEND_API_ENDPOINT;
+function resolveUrl(
+    path: string,
+    baseUrl: string = import.meta.env.VITE_BACKEND_API_ENDPOINT,
+): string {
     if (path.startsWith("http://") || path.startsWith("https://")) {
         return path;
     }
@@ -22,9 +25,16 @@ function resolveUrl(path: string): string {
     return `${normalizedBase}${normalizedPath}`;
 }
 
+export function getOriginFromApiBase(
+    baseUrl: string = import.meta.env.VITE_BACKEND_API_ENDPOINT,
+): string {
+    return new URL(baseUrl).origin;
+}
+
 // automatically injects auth token from Clerk
 export async function apiFetch(path: string, init: ApiRequestInit = {}): Promise<Response> {
     const {
+        baseUrl,
         tokenTemplate = "jwt",
         skipAuth = false,
         headers: rawHeaders,
@@ -44,7 +54,7 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}): Promise
         }
     }
 
-    return fetch(resolveUrl(path), {
+    return fetch(resolveUrl(path, baseUrl), {
         ...rest,
         headers,
         credentials: credentials ?? "include",
