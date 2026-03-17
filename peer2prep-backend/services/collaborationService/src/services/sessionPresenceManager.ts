@@ -8,6 +8,8 @@ import {
 type PresenceEntry = {
     status: SessionParticipantStatus;
     connectionIds: Set<string>;
+    disconnectTimeout?: NodeJS.Timeout;
+    disconnectedAt?: number;
 };
 
 type SessionPresenceState = Map<string, PresenceEntry>;
@@ -21,6 +23,8 @@ function createDefaultEntry(): PresenceEntry {
 
 export class SessionPresenceManager {
     private readonly presenceBySession = new Map<string, SessionPresenceState>();
+
+    constructor(private readonly disconnectGraceMs: number = 30000) {}
 
     private ensureSessionState(session: CollaborationSession): SessionPresenceState {
         const existing = this.presenceBySession.get(session.sessionId);
@@ -58,6 +62,11 @@ export class SessionPresenceManager {
         }
 
         const firstConnection = entry.connectionIds.size === 0;
+        if (entry.disconnectTimeout) {
+            clearTimeout(entry.disconnectTimeout);
+            entry.disconnectTimeout = undefined;
+        }
+        entry.disconnectedAt = undefined;
         entry.connectionIds.add(connectionId);
         entry.status = SessionParticipantStatus.CONNECTED;
 
@@ -71,7 +80,11 @@ export class SessionPresenceManager {
         session: CollaborationSession,
         userId: string,
         connectionId: string,
-    ): { becameDisconnected: boolean; participants: SessionParticipantPresence[] } {
+    ): {
+        becameDisconnected: boolean;
+        participants: SessionParticipantPresence[];
+        dropAt: number | null;
+    } {
         const state = this.ensureSessionState(session);
         const entry = state.get(userId);
 
@@ -86,11 +99,22 @@ export class SessionPresenceManager {
 
         if (becameDisconnected) {
             entry.status = SessionParticipantStatus.DISCONNECTED;
+            entry.disconnectedAt = Date.now();
+            entry.disconnectTimeout = setTimeout(() => {
+                if (entry.status === SessionParticipantStatus.DISCONNECTED) {
+                    entry.disconnectTimeout = undefined;
+                }
+            }, this.disconnectGraceMs);
+            entry.disconnectTimeout.unref?.();
         }
 
         return {
             becameDisconnected,
             participants: this.getPresence(session),
+            dropAt:
+                becameDisconnected && entry.disconnectedAt
+                    ? entry.disconnectedAt + this.disconnectGraceMs
+                    : null,
         };
     }
 
@@ -108,7 +132,12 @@ export class SessionPresenceManager {
 
         entry.connectionIds.delete(connectionId);
         const becameLeft = entry.status !== SessionParticipantStatus.LEFT;
+        if (entry.disconnectTimeout) {
+            clearTimeout(entry.disconnectTimeout);
+            entry.disconnectTimeout = undefined;
+        }
         entry.connectionIds.clear();
+        entry.disconnectedAt = undefined;
         entry.status = SessionParticipantStatus.LEFT;
 
         return {
@@ -117,5 +146,3 @@ export class SessionPresenceManager {
         };
     }
 }
-
-export const sessionPresenceManager = new SessionPresenceManager();

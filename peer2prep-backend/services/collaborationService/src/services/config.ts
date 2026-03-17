@@ -25,4 +25,5 @@ export const collaborationConfig = {
         process.env.CS_QUESTION_SELECTION_PATH ??
         "/question-service/v1/api/questions/select",
     requestTimeoutMs: Number(process.env.CS_DEPENDENCY_TIMEOUT_MS ?? "5000"),
+    disconnectGraceMs: Number(process.env.CS_DISCONNECT_GRACE_MS ?? "30000"),
 };

@@ -5,10 +5,12 @@ import {
     JoinSessionResponse,
     SessionStatus,
 } from "@/models/models.js";
+import { collaborationConfig } from "@/services/config.js";
 import { SessionJoinError } from "@/services/errors.js";
 import { DependencyUnavailableError } from "@/services/httpClient.js";
-import { sessionPresenceManager } from "@/services/sessionPresenceManager.js";
+import { SessionPresenceManager } from "@/services/sessionPresenceManager.js";
 import { sessionService } from "@/services/sessionService.js";
+import { sessionPresenceManager } from "@/services/singletons.js";
 import { UserGatewayClient } from "@/services/userGatewayClient.js";
 
 type JoinSessionDependencies = {
@@ -16,7 +18,7 @@ type JoinSessionDependencies = {
         getSessionById: (sessionId: string) => Promise<CollaborationSession | null>;
     };
     userGatewayClient: UserGatewayClient;
-    presenceManager: typeof sessionPresenceManager;
+    presenceManager: SessionPresenceManager;
 };
 
 export class SessionJoinService {
