@@ -1,12 +1,12 @@
 import { JSX, useEffect, useState } from "react";
-import { Difficulty, FormData } from "./AdminType";
+import { Difficulty, FormData } from "../../models/question/questionType";
 import { UUID } from "node:crypto";
 import {
     createQuestion,
     deleteQuestion,
     editQuestion,
     getQuestion,
-} from "@/services/admin/adminService";
+} from "@/services/question/questionService";
 
 import "./QuestionPageStyle.css";
 
@@ -156,7 +156,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                 setDiscard(false);
                 return;
             }
-            deleteQuestion(props.useCase)
+            deleteQuestion(props.useCase);
             setDiscard(false);
             DelayedPageUpdate();
             return;
@@ -174,10 +174,10 @@ function QuestionForm(props: FormProp): JSX.Element {
                 ...formData,
             });
             console.log(data);
-            
+
             editQuestion(data);
         }
-        
+
         DelayedPageUpdate();
     }
 
@@ -320,7 +320,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                         <div style={{ margin: "1rem", flexGrow: "1" }}>
                             <label style={{ fontWeight: "bold", display: "block" }}>Input</label>
                             <select
-                                id="difficulty" 
+                                id="difficulty"
                                 className="difficultySelect"
                                 name="difficulty"
                                 style={{
@@ -366,7 +366,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                 <div
                     style={{
                         display: "flex",
-                        justifyContent: props.useCase == null? "right":"space-between",
+                        justifyContent: props.useCase == null ? "right" : "space-between",
                         marginBottom: "2em",
                         padding: "25px",
                     }}
@@ -378,7 +378,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                             color: "white",
                             borderRadius: "1rem",
                             fontWeight: "500",
-                            display: props.useCase == null? "none":"block"
+                            display: props.useCase == null ? "none" : "block",
                         }}
                         onClick={() => {
                             setDiscard(true);

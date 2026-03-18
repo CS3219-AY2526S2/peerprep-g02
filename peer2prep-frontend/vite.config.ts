@@ -5,30 +5,30 @@ import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    svgr({
-      svgrOptions: {
-        icon: true,
-      },
-    }),
-  ],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    plugins: [
+        react(),
+        svgr({
+            svgrOptions: {
+                icon: true,
+            },
+        }),
+    ],
+    resolve: {
+        alias: {
+            "@": path.resolve(__dirname, "./src"),
+        },
     },
-  },
-  server: {
-    host: "0.0.0.0",
-    port: 5173,
-    watch: {
-      usePolling: true,
+    server: {
+        host: "0.0.0.0",
+        port: 5173,
+        watch: {
+            usePolling: true,
+        },
+        proxy: {
+            "/api": {
+                target: "http://localhost:3000",
+                changeOrigin: true,
+            },
+        },
     },
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
-    },
-  },
 });

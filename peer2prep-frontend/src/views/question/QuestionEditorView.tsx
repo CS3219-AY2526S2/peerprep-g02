@@ -1,7 +1,7 @@
-import { getPopularQuestions, getQuestions } from "@/services/admin/adminService";
+import { getPopularQuestions, getQuestions } from "@/services/question/questionService";
 import { UUID } from "crypto";
 import { useState, useEffect } from "react";
-import { QuestionInfo } from "./AdminType";
+import { QuestionInfo } from "../../models/question/questionType";
 
 interface QuestionProp {
     toggler: React.Dispatch<React.SetStateAction<boolean>>;

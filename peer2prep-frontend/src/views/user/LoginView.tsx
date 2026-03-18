@@ -1,6 +1,7 @@
 import { SignIn } from "@clerk/clerk-react";
+import { ROUTES } from "@/constants/routes";
 
-export default function Login() {
+export default function LoginView() {
     return (
         <section className="mx-auto flex min-h-screen w-full max-w-md items-center justify-center px-4 py-8">
             <SignIn
@@ -10,9 +11,9 @@ export default function Login() {
                     },
                 }}
                 routing="path"
-                path="/account/login"
-                signUpUrl="/account/register"
-                forceRedirectUrl="/account/profile"
+                path={ROUTES.LOGIN}
+                signUpUrl={ROUTES.REGISTER}
+                forceRedirectUrl={ROUTES.PROFILE}
             />
         </section>
     );
