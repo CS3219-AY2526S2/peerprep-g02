@@ -76,8 +76,8 @@ export const getQuestion = async(id: UUID | null): Promise<QuestionData| null> =
         }
 
         const cases: TestCase[] = data.test_case.map((item: any) => ({
-            input: JSON.stringify(item.input),
-            output: JSON.stringify(item.output)
+            input: JSON.stringify(item.input).slice(1, -1),
+            output: JSON.stringify(item.output).slice(1, -1)
         }));
         const question = {
             quid: data.quid,
