@@ -366,7 +366,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                 <div
                     style={{
                         display: "flex",
-                        justifyContent: "space-between",
+                        justifyContent: props.useCase == null? "right":"space-between",
                         marginBottom: "2em",
                         padding: "25px",
                     }}
@@ -378,6 +378,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                             color: "white",
                             borderRadius: "1rem",
                             fontWeight: "500",
+                            display: props.useCase == null? "none":"block"
                         }}
                         onClick={() => {
                             setDiscard(true);
