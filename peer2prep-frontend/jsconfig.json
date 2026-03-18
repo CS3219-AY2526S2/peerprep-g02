@@ -1,13 +1,13 @@
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["./src/*"]
+        },
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx"
     },
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "jsx": "react-jsx"
-  },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+    "include": ["src"],
+    "exclude": ["node_modules", "dist"]
 }

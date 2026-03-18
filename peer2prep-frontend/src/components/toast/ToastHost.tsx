@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { subscribeToToast, Toast } from "@/lib/toast";
+import { subscribeToToast, Toast } from "@/utils/toast";
 
 type ActiveToast = Toast;
 

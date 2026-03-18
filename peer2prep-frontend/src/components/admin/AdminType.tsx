@@ -1,28 +1,28 @@
 import { UUID } from "node:crypto";
 
 export type QuestionInfo = {
-    quid: UUID,
-    title: string,
-    topics: string[],
-    difficulty: string
-}
+    quid: UUID;
+    title: string;
+    topics: string[];
+    difficulty: string;
+};
 
 export type QuestionData = {
-    quid: UUID,
-    title: string,
-    topics: string[],
-    difficulty: string,
-    testCase: TestCase[],
-    description: string
-}
+    quid: UUID;
+    title: string;
+    topics: string[];
+    difficulty: string;
+    testCase: TestCase[];
+    description: string;
+};
 
 export interface FormData {
-  qnTitle: string;
-  qnDesc: string;
-  testCase: TestCase[];
-  qnImage?: File | null;
-  difficulty: Difficulty;
-  qnTopics: string;  
+    qnTitle: string;
+    qnDesc: string;
+    testCase: TestCase[];
+    qnImage?: File | null;
+    difficulty: Difficulty;
+    qnTopics: string;
 }
 
 export interface TestCase {
@@ -31,6 +31,7 @@ export interface TestCase {
 }
 
 export enum Difficulty {
-    EASY = "Easy", 
-    MEDIUM = "Medium", 
-    HARD = "Hard"}
+    EASY = "Easy",
+    MEDIUM = "Medium",
+    HARD = "Hard",
+}
