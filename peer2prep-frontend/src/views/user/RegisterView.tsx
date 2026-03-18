@@ -1,4 +1,5 @@
 import { SignUp } from "@clerk/clerk-react";
+import { ROUTES } from "@/constants/routes";
 
 export default function RegisterView() {
     return (
@@ -10,9 +11,9 @@ export default function RegisterView() {
                     },
                 }}
                 routing="path"
-                path="/account/register"
-                signInUrl="/account/login"
-                forceRedirectUrl="/account/profile"
+                path={ROUTES.REGISTER}
+                signInUrl={ROUTES.LOGIN}
+                forceRedirectUrl={ROUTES.PROFILE}
             />
         </section>
     );
