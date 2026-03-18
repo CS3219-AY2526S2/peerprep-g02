@@ -2,32 +2,8 @@ import { QuestionData, QuestionInfo, TestCase } from "../../components/admin/Adm
 import { UUID } from "node:crypto";
 import { apiFetch } from "@/lib/apiClient";
 
-
-export const testLeetCode = async(): Promise<number> => {
-    try {
-        const res = await apiFetch("http://localhost:3005/v1/api/api/leetcode", {
-        method: "GET",
-        headers: {
-        "Content-Type": "application/json",
-        "cache-control": "no-cache"
-        
-        }
-        });
-        const data = await res.json();
-        console.log(data.body)
-        
-
-    } catch (e: any) {
-        
-        console.log(e);
-        return 0;
-    }
-    return 0;
-}
-
 export const getQuestions = async(): Promise<QuestionInfo[] | null> => {    
     try {
-        testLeetCode();
         const res = await apiFetch("http://localhost:3005/v1/api/questions", {
         method: "GET",
         headers: {

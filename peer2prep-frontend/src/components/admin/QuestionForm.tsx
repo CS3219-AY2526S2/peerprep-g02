@@ -122,6 +122,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                     qnTopics: newQuestions.topics.toString(),
                     testCase: newQuestions.testCase,
                 }));
+                DelayedDifficultyUpdate(newQuestions.difficulty);
             }
             setLoading(false);
         };
@@ -131,32 +132,53 @@ function QuestionForm(props: FormProp): JSX.Element {
         return <div></div>;
     }
 
-    async function handleSubmit() {
+    function DelayedDifficultyUpdate(difficulty: string) {
+        const timer = setTimeout(() => {
+            const selectDifficulty = document.getElementById("difficulty") as HTMLSelectElement;
+            selectDifficulty.value = difficulty;
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }
+
+    function DelayedPageUpdate() {
+        const timer = setTimeout(() => {
+            props.toggler(true);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }
+
+    function handleSubmit() {
         if (discard) {
+            //delete
             if (props.useCase == null) {
                 setDiscard(false);
-                props.toggler(true);
                 return;
             }
-
-            await deleteQuestion(props.useCase);
+            deleteQuestion(props.useCase)
             setDiscard(false);
-            props.toggler(true);
+            DelayedPageUpdate();
             return;
         }
 
         if (props.useCase == null) {
+            //create
             const data = JSON.stringify(formData);
+            console.log(data);
             createQuestion(data);
         } else {
+            //edit
             const data = JSON.stringify({
                 quid: props.useCase,
                 ...formData,
             });
+            console.log(data);
+            
             editQuestion(data);
         }
-
-        props.toggler(true);
+        
+        DelayedPageUpdate();
     }
 
     const handleInputChange = (
@@ -206,18 +228,6 @@ function QuestionForm(props: FormProp): JSX.Element {
                     }}
                 >
                     Back to questions
-                </button>
-                <button
-                    onClick={() => props.toggler(true)}
-                    style={{
-                        background: "#5046E6",
-                        padding: "0.5rem 1.1rem",
-                        color: "white",
-                        borderRadius: "1rem",
-                        fontWeight: "500",
-                    }}
-                >
-                    Publish question
                 </button>
             </header>
             <form action={handleSubmit} style={{ margin: "2rem" }}>
@@ -310,6 +320,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                         <div style={{ margin: "1rem", flexGrow: "1" }}>
                             <label style={{ fontWeight: "bold", display: "block" }}>Input</label>
                             <select
+                                id="difficulty" 
                                 className="difficultySelect"
                                 name="difficulty"
                                 style={{
