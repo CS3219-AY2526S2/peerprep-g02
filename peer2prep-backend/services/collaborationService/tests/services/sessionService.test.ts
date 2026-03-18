@@ -52,6 +52,7 @@ describe("SessionService", () => {
         });
 
         const result = await service.createSession({
+            matchId: "match-123",
             userAId: "user-a",
             userBId: "user-b",
             difficulty: SessionDifficulty.MEDIUM,
@@ -60,6 +61,7 @@ describe("SessionService", () => {
         });
 
         expect(result.idempotentHit).toBe(false);
+        expect(result.session.matchId).toBe("match-123");
         expect(result.session.questionId).toBe("question-123");
         expect(result.session.status).toBe(SessionStatus.ACTIVE);
         expect(cacheSession).toHaveBeenCalledWith(result.session);
@@ -70,6 +72,7 @@ describe("SessionService", () => {
         const sessionRepository = new SessionRepository();
         const existingSession = sessionRepository.save({
             sessionId: "session-1",
+            matchId: "match-existing",
             userAId: "user-a",
             userBId: "user-b",
             difficulty: SessionDifficulty.EASY,
@@ -93,6 +96,7 @@ describe("SessionService", () => {
         });
 
         const result = await service.createSession({
+            matchId: "match-next",
             userAId: "user-b",
             userBId: "user-a",
             difficulty: SessionDifficulty.HARD,
@@ -124,6 +128,7 @@ describe("SessionService", () => {
 
         await expect(
             service.createSession({
+                matchId: "match-unauthorized",
                 userAId: "user-a",
                 userBId: "user-b",
                 difficulty: SessionDifficulty.MEDIUM,
@@ -155,6 +160,7 @@ describe("SessionService", () => {
 
         await expect(
             service.createSession({
+                matchId: "match-dependency",
                 userAId: "user-a",
                 userBId: "user-b",
                 difficulty: SessionDifficulty.MEDIUM,
@@ -192,6 +198,7 @@ describe("SessionService", () => {
         });
 
         const result = await service.createSession({
+            matchId: "match-cache",
             userAId: "user-a",
             userBId: "user-b",
             difficulty: SessionDifficulty.MEDIUM,

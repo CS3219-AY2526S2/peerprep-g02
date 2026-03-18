@@ -9,6 +9,7 @@ import {
 describe("validateCreateSessionPayload", () => {
     it("accepts a well-formed session creation payload", () => {
         const result = validateCreateSessionPayload({
+            matchId: " match-1 ",
             userAId: " user-a ",
             userBId: "user-b",
             difficulty: SessionDifficulty.HARD,
@@ -19,6 +20,7 @@ describe("validateCreateSessionPayload", () => {
         expect(result).toEqual({
             valid: true,
             value: {
+                matchId: "match-1",
                 userAId: "user-a",
                 userBId: "user-b",
                 difficulty: SessionDifficulty.HARD,

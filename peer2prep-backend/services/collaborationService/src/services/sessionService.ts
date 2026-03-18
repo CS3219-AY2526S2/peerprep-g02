@@ -81,6 +81,7 @@ export class SessionService {
 
         const session: CollaborationSession = {
             sessionId: randomUUID(),
+            matchId: payload.matchId,
             userAId: payload.userAId,
             userBId: payload.userBId,
             difficulty: payload.difficulty,

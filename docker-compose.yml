@@ -14,6 +14,7 @@ services:
     volumes:
       - ./peer2prep-frontend:/app
       - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     restart: unless-stopped
 
   # API Gateway (nginx)
@@ -28,7 +29,7 @@ services:
       - user-service
       # - matching-service
       # - questions-service
-      # - collaboration-service
+      - collaboration-service
       # - attempts-service
     networks:
       - gateway-network
@@ -97,6 +98,8 @@ services:
     env_file:
       - ./peer2prep-backend/services/matchingService/.env
     depends_on:
+      gateway:
+        condition: service_started
       matching-redis:
         condition: service_started
     networks:
@@ -108,6 +111,10 @@ services:
       - MS_SERVER_PORT=5002
       - MS_ENV=development
       - MS_REDIS_URL=redis://matching-redis:6379
+      - MS_API_GATEWAY_URL=http://gateway:8080
+      - MS_COLLABORATION_SESSION_PATH=/v1/api/collaboration/sessions
+      - MS_DEPENDENCY_TIMEOUT_MS=5000
+      - US_INTERNAL_SERVICE_URL=http://gateway:8080
     restart: unless-stopped
 
   matching-redis:
@@ -167,33 +174,39 @@ services:
 #       - questions-db-network
 #     restart: unless-stopped
 
-#   # Collaboration Service
-#   collaboration-service:
-#     build: ./peer2prep-backend/services/collaborationService
-#     container_name: collaboration-service
-#     env_file:
-#       - ./peer2prep-backend/services/collaborationService/.env
-#     depends_on:
-#       rabbitmq:
-#         condition: service_healthy
-#       collaboration-db:
-#         condition: service_started
-#     networks:
-#       - gateway-network
-#       - collaboration-db-network
-#     volumes:
-#       - ./peer2prep-backend/services/collaborationService:/app
-#       - /app/node_modules
-#     restart: unless-stopped
+  # Collaboration Service
+  collaboration-service:
+    build: ./peer2prep-backend/services/collaborationService
+    container_name: collaboration-service
+    env_file:
+      - ./peer2prep-backend/services/collaborationService/.env
+    environment:
+      CS_REDIS_HOST: collaboration-redis
+      CS_API_GATEWAY_URL: http://gateway:8080
+      CS_USE_QUESTION_STUB: "true"
+      CS_STUB_QUESTION_PREFIX: stub
+    depends_on:
+      collaboration-redis:
+        condition: service_started
+    networks:
+      - gateway-network
+      - collaboration-redis-network
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./peer2prep-backend/services/collaborationService:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev"
+    restart: unless-stopped
 
-#   collaboration-db:
-#     image: mongo:latest
-#     container_name: collaboration-db
-#     volumes:
-#       - collaboration_data:/data/db
-#     networks:
-#       - collaboration-db-network
-#     restart: unless-stopped
+  collaboration-redis:
+    image: redis:latest
+    container_name: collaboration-redis
+    volumes:
+      - collaboration_data:/data
+    networks:
+      - collaboration-redis-network
+    restart: unless-stopped
 
 #   # Attempts Service
 #   attempts-service:
@@ -227,7 +240,7 @@ volumes:
   user_data:
 #   matching_data:
 #   questions_data:
-#   collaboration_data:
+  collaboration_data:
 #   attempts_data:
 #   redis_data:
 
@@ -240,7 +253,7 @@ networks:
     driver: bridge
 #   questions-db-network:
 #     driver: bridge
-#   collaboration-db-network:
-#     driver: bridge
+  collaboration-redis-network:
+    driver: bridge
 #   attempts-db-network:
 #     driver: bridge

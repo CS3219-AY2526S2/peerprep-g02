@@ -24,7 +24,11 @@ export function validateCreateSessionPayload(
     }
 
     const candidate = payload as Record<string, unknown>;
-    const { userAId, userBId, difficulty, language, topic } = candidate;
+    const { matchId, userAId, userBId, difficulty, language, topic } = candidate;
+
+    if (!nonEmptyString(matchId)) {
+        return { valid: false, error: "matchId is required." };
+    }
 
     if (!nonEmptyString(userAId)) {
         return { valid: false, error: "userAId is required." };
@@ -60,6 +64,7 @@ export function validateCreateSessionPayload(
     return {
         valid: true,
         value: {
+            matchId: matchId.trim(),
             userAId: userAId.trim(),
             userBId: userBId.trim(),
             difficulty: difficulty as SessionDifficulty,

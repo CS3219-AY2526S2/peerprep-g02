@@ -57,6 +57,20 @@ export type SessionErrorEvent = {
     message?: string;
 };
 
+export type CollaborationQuestionExample = {
+    input: string;
+    output: string;
+};
+
+export type CollaborationQuestionDetail = {
+    quid: string;
+    title: string;
+    description: string;
+    difficulty: string;
+    topics: string[];
+    testCase: CollaborationQuestionExample[];
+};
+
 export type ActivityMessage = {
     id: string;
     author: string;

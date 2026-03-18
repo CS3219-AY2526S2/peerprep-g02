@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 
 import { attemptRejoin, cancelMatch, findMatch, handleDisconnect } from "@/match/match.js";
+import { collaborationGatewayClient } from "@/services/collaborationGatewayClient.js";
 import { MatchDetailsSchema, type MatchRequest } from "@/types/match.js";
 import { socketLogger } from "@/utils/logger.js";
 
@@ -66,9 +67,46 @@ export const registerSocketHandlers = (io: Server) => {
                 const matchResult = await findMatch(matchRequest);
 
                 if (matchResult.matchFound) {
-                    socketLogger.info(`Match Found: ${userId} & ${matchResult.partnerId}`);
-                    io.to(userId).emit("match_success", matchResult);
-                    io.to(matchResult.partnerId).emit("match_success", matchResult);
+                    try {
+                        const collaborationSessionId =
+                            await collaborationGatewayClient.createSession({
+                                matchId: matchResult.matchId,
+                                userAId: matchResult.userId,
+                                userBId: matchResult.partnerId,
+                                difficulty: matchResult.matchedDifficulty,
+                                language: matchResult.matchedLanguage,
+                                topic: matchResult.matchedTopic,
+                            });
+
+                        const matchPayload = {
+                            ...matchResult,
+                            collaborationSessionId,
+                        };
+
+                        socketLogger.info(
+                            {
+                                userId,
+                                partnerId: matchResult.partnerId,
+                                collaborationSessionId,
+                            },
+                            "Match found and collaboration session created",
+                        );
+                        io.to(userId).emit("match_success", matchPayload);
+                        io.to(matchResult.partnerId).emit("match_success", matchPayload);
+                    } catch (error) {
+                        socketLogger.error(
+                            error,
+                            `Failed to create collaboration session for ${userId} and ${matchResult.partnerId}`,
+                        );
+                        io.to(userId).emit("match_error", {
+                            message:
+                                "Match found, but collaboration session setup failed. Please try again.",
+                        });
+                        io.to(matchResult.partnerId).emit("match_error", {
+                            message:
+                                "Match found, but collaboration session setup failed. Please try again.",
+                        });
+                    }
                 } else {
                     socketLogger.info(`User ${userId} added to queue for ${matchRequest.topic}.`);
                     socket.emit("match_waiting", {

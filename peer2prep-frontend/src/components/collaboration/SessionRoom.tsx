@@ -16,6 +16,7 @@ import { pushToast } from "@/lib/toast";
 import {
     ActivityMessage,
     ActivityTone,
+    CollaborationQuestionDetail,
     ParticipantPresence,
     ParticipantPresenceStatus,
     SessionErrorEvent,
@@ -32,33 +33,14 @@ const COLLABORATION_API_BASE =
 const COLLABORATION_SOCKET_BASE =
     import.meta.env.VITE_COLLABORATION_SOCKET_ENDPOINT ??
     getOriginFromApiBase(COLLABORATION_API_BASE);
+const QUESTION_API_BASE =
+    import.meta.env.VITE_QUESTION_API_ENDPOINT ?? "http://localhost:3005/v1/api";
 
 const starterCode = `function solve(input) {
   // Start coding with your partner.
   // Keep both explanation and implementation here.
   return input;
 }`;
-
-const sampleExamples = [
-    {
-        title: "Example 1",
-        input: "nums = [2, 7, 11, 15], target = 9",
-        output: "[0, 1]",
-        explanation: "Because nums[0] + nums[1] equals the target.",
-    },
-    {
-        title: "Example 2",
-        input: "nums = [3, 2, 4], target = 6",
-        output: "[1, 2]",
-        explanation: "Use a complement lookup while scanning the array once.",
-    },
-    {
-        title: "Example 3",
-        input: "nums = [3, 3], target = 6",
-        output: "[0, 1]",
-        explanation: "The two matching values may appear more than once.",
-    },
-];
 
 function pathSessionId(): string | null {
     const match = window.location.pathname.match(/^\/collaboration\/session\/([^/]+)$/);
@@ -75,6 +57,102 @@ function formatTime(totalSeconds: number): string {
 
 function topicTitle(topic: string): string {
     return topic.trim().length > 0 ? topic : "Collaboration Session";
+}
+
+function formatExampleValue(value: unknown): string {
+    if (typeof value === "string") {
+        return value;
+    }
+
+    try {
+        return JSON.stringify(value);
+    } catch {
+        return String(value);
+    }
+}
+
+function buildStubQuestionDetail(questionId: string): CollaborationQuestionDetail {
+    const rawTokens = questionId.replace(/^stub-/, "").split("-").filter(Boolean);
+    const difficultyToken = rawTokens.at(-1);
+    const topicTokens =
+        difficultyToken && ["easy", "medium", "hard"].includes(difficultyToken)
+            ? rawTokens.slice(0, -1)
+            : rawTokens;
+
+    const topic = topicTokens.length
+        ? topicTokens
+              .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+              .join(" ")
+        : "Collaboration";
+    const difficulty =
+        difficultyToken && ["easy", "medium", "hard"].includes(difficultyToken)
+            ? difficultyToken.charAt(0).toUpperCase() + difficultyToken.slice(1)
+            : "Medium";
+
+    return {
+        quid: questionId,
+        title: `${topic} Practice Stub`,
+        description:
+            "This is a local stub problem for collaboration testing. Work with your partner to outline an approach, discuss tradeoffs, and implement a clean solution in the shared editor.",
+        difficulty,
+        topics: [topic],
+        testCase: [
+            {
+                input: `[sample input for ${topic}]`,
+                output: "[expected output]",
+            },
+            {
+                input: "[edge case input]",
+                output: "[edge case output]",
+            },
+        ],
+    };
+}
+
+async function fetchQuestionDetail(
+    questionId: string,
+): Promise<CollaborationQuestionDetail | null> {
+    if (questionId.startsWith("stub-")) {
+        return buildStubQuestionDetail(questionId);
+    }
+
+    const response = await fetch(`${QUESTION_API_BASE}/questions/get`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ quid: questionId }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+        | {
+              body?: Array<{
+                  quid: string;
+                  title: string;
+                  description: string;
+                  difficulty: string;
+                  topics: string[];
+                  test_case?: Array<{ input: unknown; output: unknown }>;
+              }>;
+          }
+        | null;
+
+    const question = payload?.body?.[0];
+    if (!response.ok || !question) {
+        return null;
+    }
+
+    return {
+        quid: question.quid,
+        title: question.title,
+        description: question.description,
+        difficulty: question.difficulty,
+        topics: question.topics ?? [],
+        testCase: (question.test_case ?? []).map((item) => ({
+            input: formatExampleValue(item.input),
+            output: formatExampleValue(item.output),
+        })),
+    };
 }
 
 function createActivityMessage(
@@ -118,6 +196,9 @@ export default function SessionRoom() {
     const tabIdRef = useRef(`tab-${Math.random().toString(16).slice(2)}`);
     const sessionId = useMemo(() => pathSessionId(), []);
     const [sessionData, setSessionData] = useState<SessionJoinResponse | null>(null);
+    const [questionDetail, setQuestionDetail] = useState<CollaborationQuestionDetail | null>(
+        null,
+    );
     const [presence, setPresence] = useState<ParticipantPresence[]>([]);
     const [code, setCode] = useState(starterCode);
     const [chatInput, setChatInput] = useState("");
@@ -183,6 +264,12 @@ export default function SessionRoom() {
 
                 setSessionData(joinPayload);
                 setPresence(joinPayload.participants);
+                const resolvedQuestion = await fetchQuestionDetail(
+                    joinPayload.session.questionId,
+                );
+                if (!isCancelled) {
+                    setQuestionDetail(resolvedQuestion);
+                }
                 appendActivity(
                     createActivityMessage(
                         "You",
@@ -225,6 +312,9 @@ export default function SessionRoom() {
                 socket.on(SessionSocketEventName.SESSION_JOINED, (payload: SessionJoinResponse) => {
                     setSessionData(payload);
                     setPresence(payload.participants);
+                    void fetchQuestionDetail(payload.session.questionId).then((resolvedQuestion) => {
+                        setQuestionDetail(resolvedQuestion);
+                    });
                 });
 
                 socket.on(
@@ -491,10 +581,10 @@ export default function SessionRoom() {
                 <aside className="border-r border-slate-700/60 bg-slate-950/60 p-5 lg:p-7">
                     <div className="mb-6 flex flex-wrap gap-3">
                         <span className="rounded-full bg-emerald-500/15 px-4 py-2 text-sm font-bold text-emerald-300">
-                            {sessionData?.session.difficulty ?? "Medium"}
+                            {questionDetail?.difficulty ?? sessionData?.session.difficulty ?? "Medium"}
                         </span>
                         <span className="rounded-full bg-slate-700/80 px-4 py-2 text-sm font-bold text-slate-100">
-                            {sessionData?.session.topic ?? "Topic"}
+                            {questionDetail?.topics?.[0] ?? sessionData?.session.topic ?? "Topic"}
                         </span>
                         <span className="rounded-full bg-slate-700/80 px-4 py-2 text-sm font-bold text-slate-100">
                             Question #{sessionData?.session.questionId ?? "--"}
@@ -502,15 +592,14 @@ export default function SessionRoom() {
                     </div>
 
                     <h1 className="mb-8 text-4xl font-extrabold tracking-tight">
-                        1. {topicTitle(sessionData?.session.topic ?? "Collaboration Session")}
+                        1. {questionDetail?.title ?? topicTitle(sessionData?.session.topic ?? "Collaboration Session")}
                     </h1>
 
                     <section className="mb-8 space-y-4">
                         <h2 className="text-3xl font-bold">Description</h2>
                         <p className="text-lg leading-8 text-slate-300">
-                            You and your partner were matched successfully and joined this session
-                            automatically. Use the shared editor and chat to reason through the
-                            problem together without leaving the workspace.
+                            {questionDetail?.description ??
+                                "You and your partner were matched successfully and joined this session automatically. Use the shared editor and chat to reason through the problem together without leaving the workspace."}
                         </p>
                         <p className="text-lg leading-8 text-slate-300">
                             Language:
@@ -523,7 +612,13 @@ export default function SessionRoom() {
                     <section className="mb-8 space-y-4">
                         <h2 className="text-3xl font-bold">Examples</h2>
                         <div className="space-y-4">
-                            {sampleExamples.map((example) => (
+                            {(questionDetail?.testCase.length
+                                ? questionDetail.testCase.slice(0, 3).map((example, index) => ({
+                                      title: `Example ${index + 1}`,
+                                      input: example.input,
+                                      output: example.output,
+                                  }))
+                                : []).map((example) => (
                                 <Card
                                     key={example.title}
                                     className="border-slate-700/70 bg-slate-800/80 text-slate-100"
@@ -540,10 +635,17 @@ export default function SessionRoom() {
                                             <span className="font-semibold text-slate-100">Output:</span>{" "}
                                             {example.output}
                                         </p>
-                                        <p>{example.explanation}</p>
                                     </CardContent>
                                 </Card>
                             ))}
+                            {!questionDetail?.testCase.length ? (
+                                <Card className="border-slate-700/70 bg-slate-800/80 text-slate-100">
+                                    <CardContent className="py-6 text-sm leading-7 text-slate-300">
+                                        Question examples will appear here once the question service
+                                        returns test cases for this session.
+                                    </CardContent>
+                                </Card>
+                            ) : null}
                         </div>
                     </section>
 

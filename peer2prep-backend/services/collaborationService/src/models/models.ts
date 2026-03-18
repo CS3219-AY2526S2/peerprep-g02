@@ -44,6 +44,7 @@ export enum SessionRealtimeEvent {
 }
 
 export type CreateSessionRequest = {
+    matchId: string;
     userAId: string;
     userBId: string;
     difficulty: SessionDifficulty;
@@ -63,6 +64,7 @@ export type QuestionSummary = {
 
 export type CollaborationSession = {
     sessionId: string;
+    matchId: string;
     userAId: string;
     userBId: string;
     difficulty: SessionDifficulty;

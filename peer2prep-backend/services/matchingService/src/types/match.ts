@@ -22,6 +22,7 @@ export interface MatchResultSuccess {
     matchedLanguage: string;
     userId: string;
     partnerId: string;
+    collaborationSessionId: string;
 }
 
 export interface MatchResultWaiting {

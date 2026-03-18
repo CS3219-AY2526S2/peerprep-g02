@@ -4,6 +4,9 @@ const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
 export const collaborationConfig = {
     port: Number(process.env.CS_SERVER_PORT ?? "3003"),
     frontendUrl: process.env.CS_FRONTEND_URL ?? "http://localhost:5173",
+    useQuestionStub:
+        (process.env.CS_USE_QUESTION_STUB ?? "false").toLowerCase() === "true",
+    stubQuestionPrefix: process.env.CS_STUB_QUESTION_PREFIX ?? "stub",
     sessionTtlMs: Number(process.env.CS_SESSION_TTL_MS ?? `${60 * 60 * 1000}`),
     redisHost: process.env.CS_REDIS_HOST ?? "127.0.0.1",
     redisPort: Number(process.env.CS_REDIS_PORT ?? "6379"),
@@ -14,6 +17,9 @@ export const collaborationConfig = {
     apiGatewayUrl: trimTrailingSlash(
         process.env.CS_API_GATEWAY_URL ?? "http://localhost:8080",
     ),
+    questionServiceUrl: trimTrailingSlash(
+        process.env.CS_QUESTION_SERVICE_URL ?? "http://localhost:3005",
+    ),
     internalServiceApiKey: process.env.CS_INTERNAL_SERVICE_API_KEY ?? "",
     userAuthContextPath:
         process.env.CS_USER_AUTH_CONTEXT_PATH ??
@@ -23,7 +29,7 @@ export const collaborationConfig = {
         "/user-service/v1/api/users/internal/authz/context/batch",
     questionSelectionPath:
         process.env.CS_QUESTION_SELECTION_PATH ??
-        "/question-service/v1/api/questions/select",
+        "/v1/api/questions/select",
     requestTimeoutMs: Number(process.env.CS_DEPENDENCY_TIMEOUT_MS ?? "5000"),
     disconnectGraceMs: Number(process.env.CS_DISCONNECT_GRACE_MS ?? "30000"),
 };
