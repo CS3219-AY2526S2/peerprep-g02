@@ -2,8 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ROUTES } from "@/constants/routes";
 
-import Login from "@/services/user/Login";
-import Register from "@/services/user/Register";
+import LoginView from "@/views/user/LoginView";
+import RegisterView from "@/views/user/RegisterView";
 import ProfileView from "@/views/user/ProfileView";
 import AdminListView from "@/views/user/AdminListView";
 import QuestionAdmin from "@/components/admin/QuestionAdmin";
@@ -14,8 +14,8 @@ export default function App() {
         <BrowserRouter>
             <Routes>
                 <Route path={ROUTES.DASHBOARD} element={<HomeView />} />
-                <Route path={ROUTES.LOGIN} element={<Login />} />
-                <Route path={ROUTES.REGISTER} element={<Register />} />
+                <Route path={ROUTES.LOGIN} element={<LoginView />} />
+                <Route path={ROUTES.REGISTER} element={<RegisterView />} />
 
                 <Route element={<ProtectedRoute />}>
                     <Route path={ROUTES.PROFILE} element={<ProfileView />} />
