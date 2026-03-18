@@ -1,13 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ProtectedRoute } from "@/components/authRoute/ProtectedRoute";
 import { ROUTES } from "@/constants/routes";
 
 import LoginView from "@/views/user/LoginView";
 import RegisterView from "@/views/user/RegisterView";
 import ProfileView from "@/views/user/ProfileView";
 import AdminListView from "@/views/user/AdminListView";
-import QuestionAdmin from "@/components/admin/QuestionAdmin";
 import HomeView from "@/views/HomeView";
+import QuestionMainView from "@/views/question/QuestionMainView";
 
 export default function App() {
     return (
@@ -23,7 +23,7 @@ export default function App() {
 
                 <Route element={<ProtectedRoute adminOnly />}>
                     <Route path={ROUTES.USER_ADMIN} element={<AdminListView />} />
-                    <Route path={ROUTES.QUESTION_ADMIN} element={<QuestionAdmin />} />
+                    <Route path={ROUTES.QUESTION_ADMIN} element={<QuestionMainView />} />
                 </Route>
             </Routes>
         </BrowserRouter>

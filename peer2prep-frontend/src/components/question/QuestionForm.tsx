@@ -1,12 +1,12 @@
 import { JSX, useEffect, useState } from "react";
-import { Difficulty, FormData } from "./AdminType";
+import { Difficulty, FormData } from "../../models/question/questionType";
 import { UUID } from "node:crypto";
 import {
     createQuestion,
     deleteQuestion,
     editQuestion,
     getQuestion,
-} from "@/services/admin/adminService";
+} from "@/services/question/questionService";
 
 import "./QuestionPageStyle.css";
 

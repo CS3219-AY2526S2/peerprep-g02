@@ -1,20 +1,19 @@
-import { QuestionData, QuestionInfo, TestCase } from "../../components/admin/AdminType";
-import { UUID } from "node:crypto";
+import { QuestionData, QuestionInfo, TestCase } from "@/models/question/questionType";
 import { apiFetch } from "@/utils/apiClient";
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { UUID } from "node:crypto";
 
 export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
     try {
-        const res = await apiFetch("http://localhost:3005/v1/api/questions", {
+        const res = await apiFetch(API_ENDPOINTS.QUESTIONS.BASE, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
+
         const data = await res.json();
-        if (data == null) {
-            return null;
-        }
+        if (!data || !data.body) return null;
+
         const questions: QuestionInfo[] = data.body.map((item: any) => ({
             quid: item.quid,
             title: item.title,
@@ -23,58 +22,51 @@ export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
         }));
         return questions;
     } catch (e: any) {
-        console.log(e);
+        console.error(e);
         return null;
     }
 };
 
-export const getPopularQuestions = async (): Promise<String[] | null> => {
+export const getPopularQuestions = async (): Promise<string[] | null> => {
     try {
-        const res = await apiFetch("http://localhost:3005/v1/api/questions/popular", {
+        const res = await apiFetch(API_ENDPOINTS.QUESTIONS.POPULAR, {
             method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             credentials: "include",
         });
 
         const data = await res.json();
-        const result: String[] = data.body.map((item: any) => item.title);
-        if (data == null) {
-            return null;
-        }
-        return result;
+        if (!data || !data.body) return null;
+
+        return data.body.map((item: any) => item.title);
     } catch (e: any) {
-        console.log(e);
+        console.error(e);
         return null;
     }
 };
 
 export const getQuestion = async (id: UUID | null): Promise<QuestionData | null> => {
     try {
-        if (id == null) {
-            return null;
-        }
-        const res = await apiFetch("http://localhost:3005/v1/api/questions/get", {
+        if (!id) return null;
+
+        const res = await apiFetch(API_ENDPOINTS.QUESTIONS.GET_ONE, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ quid: id }),
         });
 
         const result = await res.json();
-        const data = result.body[0];
+        const data = result?.body?.[0];
 
-        if (data == null) {
-            return null;
-        }
+        if (!data) return null;
 
         const cases: TestCase[] = data.test_case.map((item: any) => ({
+            // Matching your .slice(1, -1) logic to strip quotes from stringified JSON
             input: JSON.stringify(item.input).slice(1, -1),
             output: JSON.stringify(item.output).slice(1, -1),
         }));
-        const question = {
+
+        return {
             quid: data.quid,
             title: data.title,
             topics: data.topics,
@@ -82,45 +74,35 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
             testCase: cases,
             description: data.description,
         };
-        return question;
     } catch (e: any) {
-        console.log(e);
+        console.error(e);
         return null;
     }
 };
 
 export const createQuestion = async (data: string): Promise<number> => {
-    const res = await apiFetch("http://localhost:3005/v1/api/questions", {
+    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.BASE, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: data,
     });
-
     return res.status;
 };
 
 export const editQuestion = async (data: string): Promise<number> => {
-    const res = await apiFetch("http://localhost:3005/v1/api/questions", {
+    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.BASE, {
         method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: data,
     });
-
     return res.status;
 };
 
 export const deleteQuestion = async (id: UUID): Promise<number> => {
-    const res = await apiFetch("http://localhost:3005/v1/api/questions/delete", {
+    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.DELETE, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quid: id }),
     });
-
     return res.status;
 };
