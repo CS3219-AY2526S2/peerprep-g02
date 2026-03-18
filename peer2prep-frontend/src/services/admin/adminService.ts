@@ -1,33 +1,10 @@
 import { QuestionData, QuestionInfo, TestCase } from "../../components/admin/AdminType";
 import { UUID } from "node:crypto";
-
-
-export const testLeetCode = async(): Promise<number> => {
-    try {
-        const res = await fetch("http://localhost:3005/v1/api/api/leetcode", {
-        method: "GET",
-        headers: {
-        "Content-Type": "application/json",
-        "cache-control": "no-cache"
-        
-        }
-        });
-        const data = await res.json();
-        console.log(data.body)
-        
-
-    } catch (e: any) {
-        
-        console.log(e);
-        return 0;
-    }
-    return 0;
-}
+import { apiFetch } from "@/lib/apiClient";
 
 export const getQuestions = async(): Promise<QuestionInfo[] | null> => {    
     try {
-        testLeetCode();
-        const res = await fetch("http://localhost:3005/v1/api/questions", {
+        const res = await apiFetch("http://localhost:3005/v1/api/questions", {
         method: "GET",
         headers: {
         "Content-Type": "application/json",
@@ -55,7 +32,7 @@ export const getQuestions = async(): Promise<QuestionInfo[] | null> => {
 
 export const getPopularQuestions = async(): Promise<String[] | null> => {    
     try {
-        const res = await fetch("http://localhost:3005/v1/api/questions/popular", {
+        const res = await apiFetch("http://localhost:3005/v1/api/questions/popular", {
         method: "GET",
         headers: {
         "Content-Type": "application/json",
@@ -83,7 +60,7 @@ export const getQuestion = async(id: UUID | null): Promise<QuestionData| null> =
         if (id == null) {
             return null;
         }
-        const res = await fetch("http://localhost:3005/v1/api/questions/get", {
+        const res = await apiFetch("http://localhost:3005/v1/api/questions/get", {
             method: "POST",
             headers: {
             "Content-Type": "application/json",
@@ -99,8 +76,8 @@ export const getQuestion = async(id: UUID | null): Promise<QuestionData| null> =
         }
 
         const cases: TestCase[] = data.test_case.map((item: any) => ({
-            input: JSON.stringify(item.input),
-            output: JSON.stringify(item.output)
+            input: JSON.stringify(item.input).slice(1, -1),
+            output: JSON.stringify(item.output).slice(1, -1)
         }));
         const question = {
             quid: data.quid,
@@ -119,7 +96,7 @@ export const getQuestion = async(id: UUID | null): Promise<QuestionData| null> =
 }
 
 export const createQuestion = async(data: string): Promise<number> => {   
-    const res = await fetch("http://localhost:3005/v1/api/questions", {
+    const res = await apiFetch("http://localhost:3005/v1/api/questions", {
         method: "POST",
         headers: {
         "Content-Type": "application/json",
@@ -131,7 +108,7 @@ export const createQuestion = async(data: string): Promise<number> => {
 }
 
 export const editQuestion = async(data: string): Promise<number> => {    
-    const res = await fetch("http://localhost:3005/v1/api/questions", {
+    const res = await apiFetch("http://localhost:3005/v1/api/questions", {
         method: "PUT",
         headers: {
         "Content-Type": "application/json",
@@ -143,7 +120,7 @@ export const editQuestion = async(data: string): Promise<number> => {
 }
 
 export const deleteQuestion = async(id: UUID): Promise<number> => {    
-    const res = await fetch("http://localhost:3005/v1/api/questions/delete", {
+    const res = await apiFetch("http://localhost:3005/v1/api/questions/delete", {
         method: "POST",
         headers: {
         "Content-Type": "application/json",

@@ -28,7 +28,7 @@ export function UserLoginView() {
         window.setTimeout(() => {
             pushToast({
                 tone: "error",
-                message: "This route is only for admins.",
+                message: "This route is only for admins",
             });
         }, 0);
 
