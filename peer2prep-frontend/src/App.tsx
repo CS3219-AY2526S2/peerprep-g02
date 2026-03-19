@@ -19,11 +19,11 @@ export default function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path={ROUTES.DASHBOARD} element={<HomeView />} />
                 <Route path={`${ROUTES.LOGIN}/*`} element={<LoginView />} />
                 <Route path={`${ROUTES.REGISTER}/*`} element={<RegisterView />} />
 
                 <Route element={<ProtectedRoute />}>
+                    <Route path={ROUTES.DASHBOARD} element={<HomeView />} />
                     <Route path={ROUTES.PROFILE} element={<ProfileView />} />
                 </Route>
 
