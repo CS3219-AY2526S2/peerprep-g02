@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "@/components/authRoute/ProtectedRoute";
 import { ROUTES } from "@/constants/routes";
 
@@ -18,6 +18,7 @@ export default function App() {
     return (
         <BrowserRouter>
             <Routes>
+                <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
                 <Route path={`${ROUTES.LOGIN}/*`} element={<LoginView />} />
                 <Route path={`${ROUTES.REGISTER}/*`} element={<RegisterView />} />
 
