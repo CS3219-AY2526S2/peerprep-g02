@@ -41,6 +41,7 @@ type StatCardProps = {
     iconClassName?: string;
     valueClassName?: string;
     descriptionClassName?: string;
+    titleClassName?: string;
 };
 
 type StatePanelProps = {
@@ -80,6 +81,7 @@ function StatCard({
     iconClassName,
     valueClassName,
     descriptionClassName,
+    titleClassName,
 }: StatCardProps) {
     return (
         <Card
@@ -98,7 +100,7 @@ function StatCard({
                     >
                         <Icon className="size-7" />
                     </div>
-                    <p className="text-sm font-medium text-black">{title}</p>
+                    <p className={cn("text-sm font-medium text-black", titleClassName)}>{title}</p>
                 </div>
                 <p
                     className={cn(
@@ -489,9 +491,9 @@ export default function AdminListView() {
                         size="lg"
                         className="rounded-full border-slate-300 bg-white px-5"
                     >
-                        <Link to={ROUTES.PROFILE}>
+                        <Link to={ROUTES.DASHBOARD}>
                             <ArrowLeft className="size-4" />
-                            Back to profile
+                            Back to dashboard
                         </Link>
                     </Button>
                 </div>
@@ -526,6 +528,7 @@ export default function AdminListView() {
                                 iconClassName="bg-white/15 text-white"
                                 valueClassName="text-white"
                                 descriptionClassName="text-white/85"
+                                titleClassName="text-white"
                             />
                             <StatCard
                                 title="Admins and super users"

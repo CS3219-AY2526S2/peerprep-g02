@@ -24,7 +24,18 @@ type AccountUserButtonProps = {
 
 export default function AccountUserButton({ role }: AccountUserButtonProps) {
     return (
-        <UserButton>
+        <UserButton
+            showName
+            appearance={{
+                elements: {
+                    userButtonTrigger:
+                        "rounded-full border border-slate-200 bg-white pl-2.5 pr-3 py-1.5 shadow-sm hover:bg-slate-50",
+                    userButtonBox: "flex-row-reverse items-center gap-2",
+                    userButtonOuterIdentifier: "text-left pr-0.5",
+                    userButtonInnerIdentifier: "text-xs text-slate-500",
+                },
+            }}
+        >
             <UserButton.UserProfilePage label="account" />
             <UserButton.UserProfilePage label="security" />
             <UserButton.UserProfilePage
