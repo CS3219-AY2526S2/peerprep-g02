@@ -5,7 +5,9 @@ export const API_ENDPOINTS = {
         UPDATE_ROLE: (clerkId: string) => `/users/admin/users/${clerkId}/role`, // PATCH
         UPDATE_STATUS: (clerkId: string) => `/users/admin/users/${clerkId}/status`, // PATCH
     },
-
+    MATCHING: {
+        GATEWAY_PATH: `${import.meta.env.VITE_GATEWAY_ENDPOINT}/v1/api/matching`,
+    },
     QUESTIONS: {
         BASE: "http://localhost:3005/v1/api/questions", // GET (all), POST (create), PUT (edit)
         POPULAR: "http://localhost:3005/v1/api/questions/popular", // GET

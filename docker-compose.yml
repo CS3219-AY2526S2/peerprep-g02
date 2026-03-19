@@ -103,11 +103,12 @@ services:
       - gateway-network
       - matching-redis-network
     ports:
-      - "3007:5002"
+      - "3002:3002"
     environment:
-      - MS_SERVER_PORT=5002
+      - MS_SERVER_PORT=3002
       - MS_ENV=development
       - MS_REDIS_URL=redis://matching-redis:6379
+      - US_INTERNAL_SERVICE_URL=http://user-service:3001
     restart: unless-stopped
 
   matching-redis:

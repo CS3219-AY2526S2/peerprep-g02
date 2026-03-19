@@ -13,9 +13,7 @@ import { socketAuthMiddleware } from "./middlewares/socketAuth.js";
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.MS_FRONTEND_URL,
-        methods: ["GET"],
-        credentials: true,
+        origin: false,
     },
 });
 
