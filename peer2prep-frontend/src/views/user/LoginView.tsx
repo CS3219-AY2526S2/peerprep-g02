@@ -10,8 +10,7 @@ export default function LoginView() {
                         card: "shadow-lg border border-border",
                     },
                 }}
-                routing="path"
-                path={ROUTES.LOGIN}
+                routing="hash"
                 signUpUrl={ROUTES.REGISTER}
                 forceRedirectUrl={ROUTES.PROFILE}
             />
