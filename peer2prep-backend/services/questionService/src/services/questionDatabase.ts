@@ -132,29 +132,29 @@ export async function SearchQuestion(topic: string, difficulty: string, userA: U
         if (defaultQuestion == null) return null;
         if (userA == null || userB == null) return defaultQuestion[0];
 
-        //With attempt service
-        try {
-            //Query
-            const userALogs = pool.query('SELECT quid FROM attempts WHERE topics == $1 AND difficulty == $2 AND uid = $3', [topic, difficulty, userA]);
-            const userBLogs = pool.query('SELECT quid FROM attempts WHERE topics == $1 AND difficulty == $2 AND uid = $3', [topic, difficulty, userB]);
-            const aQuestions: UUID[] = userALogs.rows.map((r: UUID) => r);
-            const bQuestions: UUID[] = userBLogs.rows.map((r: UUID) => r);
+        // //With attempt service
+        // try {
+        //     //Query
+        //     const userALogs = pool.query('SELECT quid FROM attempts WHERE topics == $1 AND difficulty == $2 AND uid = $3', [topic, difficulty, userA]);
+        //     const userBLogs = pool.query('SELECT quid FROM attempts WHERE topics == $1 AND difficulty == $2 AND uid = $3', [topic, difficulty, userB]);
+        //     const aQuestions: UUID[] = userALogs.rows.map((r: UUID) => r);
+        //     const bQuestions: UUID[] = userBLogs.rows.map((r: UUID) => r);
 
-            //Get an unattempted question for both users
-            const unattemptedBoth = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) && !bQuestions.includes(qid));
-            if (unattemptedBoth.length >= 2) {
-                return randomQuestion(unattemptedBoth);
-            }
-            //Get an unattempted question for either users
-            const unattemptedEither = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) || !bQuestions.includes(qid));
-            if (unattemptedEither.length >= 1) {
-                return randomQuestion(unattemptedBoth);
-            }
+        //     //Get an unattempted question for both users
+        //     const unattemptedBoth = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) && !bQuestions.includes(qid));
+        //     if (unattemptedBoth.length >= 2) {
+        //         return randomQuestion(unattemptedBoth);
+        //     }
+        //     //Get an unattempted question for either users
+        //     const unattemptedEither = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) || !bQuestions.includes(qid));
+        //     if (unattemptedEither.length >= 1) {
+        //         return randomQuestion(unattemptedBoth);
+        //     }
 
-        }
-        catch (e) {
-            return defaultQuestion[0];
-        }
+        // }
+        // catch (e) {
+        //     return defaultQuestion[0];
+        // }
         return defaultQuestion[0];
     }
     catch (e) {
