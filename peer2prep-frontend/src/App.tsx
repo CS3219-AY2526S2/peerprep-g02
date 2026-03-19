@@ -9,8 +9,10 @@ import AdminListView from "@/views/user/AdminListView";
 import HomeView from "@/views/HomeView";
 import QuestionMainView from "@/views/question/QuestionMainView";
 
+const ADMIN_ALLOWED_ROLES: Array<"admin" | "super_user"> = ["admin", "super_user"];
+
 function AdminProtectedRoute() {
-    return <ProtectedRoute allowedRoles={["admin", "super_user"]} />;
+    return <ProtectedRoute allowedRoles={ADMIN_ALLOWED_ROLES} />;
 }
 
 export default function App() {

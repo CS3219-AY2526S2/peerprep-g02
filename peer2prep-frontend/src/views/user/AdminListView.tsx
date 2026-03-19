@@ -2,16 +2,10 @@ import { type ComponentType, type ReactNode, useEffect, useMemo, useState } from
 import { useAuth } from "@clerk/clerk-react";
 import { ArrowLeft, RefreshCw, Search, ShieldAlert, ShieldCheck, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardAction,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
     Table,
@@ -38,133 +32,227 @@ type AdminUser = {
     status: UserStatus;
 };
 
-type SummaryCardProps = {
+type StatCardProps = {
     title: string;
     value: number;
     description: string;
     icon: ComponentType<{ className?: string }>;
-    tone?: "default" | "warning";
+    className?: string;
+    iconClassName?: string;
+    valueClassName?: string;
+    descriptionClassName?: string;
 };
 
-type StateCardProps = {
+type StatePanelProps = {
     title: string;
     description: string;
     action?: ReactNode;
 };
 
-type DirectoryTableProps = {
+type UserDirectoryTableProps = {
     users: AdminUser[];
-    updatingUserIds: Set<string>;
+    updatingUsers: Set<string>;
     onToggleRole: (user: AdminUser) => Promise<void>;
     onToggleStatus: (user: AdminUser) => Promise<void>;
 };
 
-function SummaryCard({
-    title,
-    value,
-    description,
-    icon: Icon,
-    tone = "default",
-}: SummaryCardProps) {
+function StatCardSkeleton() {
     return (
-        <Card className="border bg-card/95">
-            <CardHeader className="border-b">
-                <CardDescription>{title}</CardDescription>
-                <CardAction>
-                    <div
-                        className={cn(
-                            "rounded-full p-2",
-                            tone === "warning"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-primary/10 text-primary",
-                        )}
-                    >
-                        <Icon className="size-4" />
-                    </div>
-                </CardAction>
-                <CardTitle className="text-3xl font-semibold tracking-tight">{value}</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-sm text-muted-foreground">{description}</p>
+        <Card className="rounded-[28px] border-0 bg-white py-0 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+            <CardContent className="p-7">
+                <div className="mb-6 flex items-start justify-between gap-4">
+                    <div className="size-14 animate-pulse rounded-2xl bg-slate-100" />
+                    <div className="h-4 w-28 animate-pulse rounded-full bg-slate-100" />
+                </div>
+                <div className="h-12 w-20 animate-pulse rounded-full bg-slate-100" />
+                <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-slate-100" />
             </CardContent>
         </Card>
     );
 }
 
-function RoleBadge({ role }: { role: UserRole }) {
-    if (role === "super_user") {
-        return <Badge variant="outline">Super user</Badge>;
-    }
-
-    if (role === "admin") {
-        return <Badge>Admin</Badge>;
-    }
-
-    return <Badge variant="secondary">User</Badge>;
-}
-
-function StatusBadge({ status }: { status: UserStatus }) {
-    if (status === "active") {
-        return <Badge variant="success">Active</Badge>;
-    }
-
-    if (status === "suspended") {
-        return <Badge variant="warning">Suspended</Badge>;
-    }
-
-    return <Badge variant="destructive">Deleted</Badge>;
-}
-
-function StateCard({ title, description, action }: StateCardProps) {
+function StatCard({
+    title,
+    value,
+    description,
+    icon: Icon,
+    className,
+    iconClassName,
+    valueClassName,
+    descriptionClassName,
+}: StatCardProps) {
     return (
-        <div className="flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 text-center">
-            <p className="text-base font-medium text-foreground">{title}</p>
-            <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>
-            {action ? <div className="mt-4">{action}</div> : null}
+        <Card
+            className={cn(
+                "rounded-[28px] border-0 bg-white py-0 shadow-[0_18px_40px_rgba(15,23,42,0.08)]",
+                className,
+            )}
+        >
+            <CardContent className="p-7">
+                <div className="mb-6 flex items-start justify-between gap-4">
+                    <div
+                        className={cn(
+                            "flex size-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-700",
+                            iconClassName,
+                        )}
+                    >
+                        <Icon className="size-7" />
+                    </div>
+                    <p className="text-sm font-medium text-black">{title}</p>
+                </div>
+                <p
+                    className={cn(
+                        "text-5xl font-bold tracking-tight text-slate-950",
+                        valueClassName,
+                    )}
+                >
+                    {value}
+                </p>
+                <p className={cn("mt-2 text-base text-slate-600", descriptionClassName)}>
+                    {description}
+                </p>
+            </CardContent>
+        </Card>
+    );
+}
+
+function StatePanel({ title, description, action }: StatePanelProps) {
+    return (
+        <div className="flex min-h-60 flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50/80 px-6 text-center">
+            <p className="text-lg font-bold tracking-tight text-slate-950">{title}</p>
+            <p className="mt-2 max-w-xl text-sm text-slate-600">{description}</p>
+            {action ? <div className="mt-5">{action}</div> : null}
         </div>
     );
 }
 
-function DirectoryTable({
+function RoleBadge({ role }: { role: UserRole }) {
+    if (role === "super_user") {
+        return (
+            <Badge
+                variant="outline"
+                className="inline-flex w-auto justify-center rounded-full border-slate-800 bg-slate-900 px-2.5 py-0.5 text-[0.8rem] font-semibold text-white"
+            >
+                Super user
+            </Badge>
+        );
+    }
+
+    if (role === "admin") {
+        return (
+            <Badge className="inline-flex w-auto justify-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[0.8rem] font-semibold text-indigo-700 hover:bg-indigo-50">
+                Admin
+            </Badge>
+        );
+    }
+
+    return (
+        <Badge
+            variant="secondary"
+            className="inline-flex w-auto justify-center rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[0.8rem] font-semibold text-slate-700"
+        >
+            User
+        </Badge>
+    );
+}
+
+function StatusBadge({ status }: { status: UserStatus }) {
+    if (status === "active") {
+        return (
+            <Badge
+                variant="success"
+                className="inline-flex w-auto justify-center rounded-full border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[0.8rem] font-semibold"
+            >
+                Active
+            </Badge>
+        );
+    }
+
+    if (status === "suspended") {
+        return (
+            <Badge
+                variant="warning"
+                className="inline-flex w-auto justify-center rounded-full border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[0.8rem] font-semibold"
+            >
+                Suspended
+            </Badge>
+        );
+    }
+
+    return (
+        <Badge
+            variant="destructive"
+            className="inline-flex w-auto justify-center rounded-full border-red-200 bg-red-50 px-2.5 py-0.5 text-[0.8rem] font-semibold"
+        >
+            Deleted
+        </Badge>
+    );
+}
+
+function UserDirectoryTable({
     users,
-    updatingUserIds,
+    updatingUsers,
     onToggleRole,
     onToggleStatus,
-}: DirectoryTableProps) {
+}: UserDirectoryTableProps) {
     return (
-        <div className="overflow-hidden rounded-xl border">
-            <Table>
+        <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+            <Table className="table-fixed">
                 <TableHeader>
-                    <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="w-[24%]">Name</TableHead>
-                        <TableHead className="w-[30%]">Email</TableHead>
-                        <TableHead className="w-[14%]">Role</TableHead>
-                        <TableHead className="w-[14%]">Status</TableHead>
-                        <TableHead className="w-[22%] text-right">Actions</TableHead>
+                    <TableRow className="border-slate-200 bg-slate-50 hover:bg-slate-50">
+                        <TableHead className="w-[20%] px-4 text-slate-950">
+                            <div className="flex justify-left">Name</div>
+                        </TableHead>
+                        <TableHead className="w-[28%] px-4 text-slate-950">
+                            <div className="flex justify-left">Email</div>
+                        </TableHead>
+                        <TableHead className="w-[15%] px-4 text-center text-slate-950">
+                            Role
+                        </TableHead>
+                        <TableHead className="w-[15%] px-4 text-center text-slate-950">
+                            Status
+                        </TableHead>
+                        <TableHead className="w-[22%] px-4 text-center text-slate-950">
+                            Actions
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {users.map((user) => {
-                        const isUpdating = updatingUserIds.has(user.clerkUserId);
+                        const isUpdating = updatingUsers.has(user.clerkUserId);
 
                         return (
-                            <TableRow key={user.clerkUserId}>
-                                <TableCell>
-                                    <p className="font-medium text-foreground">{user.name}</p>
+                            <TableRow
+                                key={user.clerkUserId}
+                                className="border-slate-200 hover:bg-slate-50/70"
+                            >
+                                <TableCell className="px-4 py-4">
+                                    <p className="truncate text-[0.9rem] font-semibold text-slate-950">
+                                        {user.name}
+                                    </p>
                                 </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                    {user.email}
+                                <TableCell className="px-4 py-4">
+                                    <p className="truncate text-[0.9rem] text-slate-600">
+                                        {user.email}
+                                    </p>
                                 </TableCell>
-                                <TableCell>
-                                    <RoleBadge role={user.role} />
+                                <TableCell className="px-4 py-4 text-center">
+                                    <div className="flex justify-center">
+                                        <RoleBadge role={user.role} />
+                                    </div>
                                 </TableCell>
-                                <TableCell>
-                                    <StatusBadge status={user.status} />
+                                <TableCell className="px-4 py-4 text-center">
+                                    <div className="flex justify-center">
+                                        <StatusBadge status={user.status} />
+                                    </div>
                                 </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-nowrap justify-end gap-2">
+                                <TableCell className="px-4 py-4">
+                                    <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                                         {user.role === "super_user" ? (
-                                            <Badge variant="outline" className="rounded-md">
+                                            <Badge
+                                                variant="outline"
+                                                className="inline-flex w-auto justify-center rounded-full border-slate-300 px-2.5 py-0.5 text-[0.8rem] font-semibold text-slate-600"
+                                            >
                                                 Protected
                                             </Badge>
                                         ) : (
@@ -173,7 +261,7 @@ function DirectoryTable({
                                                     type="button"
                                                     variant="outline"
                                                     size="sm"
-                                                    className="rounded-full px-4"
+                                                    className="rounded-full border-slate-300 px-3.5"
                                                     disabled={isUpdating}
                                                     onClick={() => void onToggleRole(user)}
                                                 >
@@ -187,7 +275,10 @@ function DirectoryTable({
                                                             : "secondary"
                                                     }
                                                     size="sm"
-                                                    className="rounded-full px-4"
+                                                    className={cn(
+                                                        "rounded-full px-3.5",
+                                                        "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100",
+                                                    )}
                                                     disabled={isUpdating}
                                                     onClick={() => void onToggleStatus(user)}
                                                 >
@@ -209,7 +300,7 @@ function DirectoryTable({
 }
 
 export default function AdminListView() {
-    const { userId } = useAuth();
+    const { isLoaded: isAuthLoaded, userId } = useAuth();
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
@@ -217,6 +308,10 @@ export default function AdminListView() {
     const [updatingUserIds, setUpdatingUserIds] = useState<string[]>([]);
 
     const loadUsers = async () => {
+        if (!isAuthLoaded) {
+            return;
+        }
+
         setLoading(true);
         setError("");
 
@@ -235,6 +330,7 @@ export default function AdminListView() {
             }
 
             const fetchedUsers = payload?.data?.users;
+
             if (!Array.isArray(fetchedUsers)) {
                 setUsers([]);
                 return;
@@ -249,12 +345,19 @@ export default function AdminListView() {
     };
 
     useEffect(() => {
+        if (!isAuthLoaded) {
+            return;
+        }
+
         void loadUsers();
-    }, [userId]);
+    }, [isAuthLoaded, userId]);
 
     const filteredUsers = useMemo(() => {
         const normalizedSearch = search.trim().toLowerCase();
-        if (!normalizedSearch) return users;
+
+        if (!normalizedSearch) {
+            return users;
+        }
 
         return users.filter(
             (user) =>
@@ -263,241 +366,280 @@ export default function AdminListView() {
         );
     }, [search, users]);
 
-    const updatingUserIdSet = useMemo(() => new Set(updatingUserIds), [updatingUserIds]);
+    const updatingUsers = useMemo(() => new Set(updatingUserIds), [updatingUserIds]);
 
     const stats = useMemo(
         () => ({
             totalUsers: users.length,
-            adminUsers: users.filter((user) => user.role !== "user").length,
+            elevatedUsers: users.filter((user) => user.role !== "user").length,
             suspendedUsers: users.filter((user) => user.status === "suspended").length,
         }),
         [users],
     );
 
-    const patchRole = async (targetUser: AdminUser, role: "user" | "admin") => {
-        setUpdatingUserIds((previous) =>
-            previous.includes(targetUser.clerkUserId)
-                ? previous
-                : [...previous, targetUser.clerkUserId],
+    const updateTrackedUser = async (
+        targetUser: AdminUser,
+        action: () => Promise<Response>,
+        successMessage: string,
+        applyUpdate: (
+            currentUser: AdminUser,
+            payloadUser: Partial<AdminUser> | undefined,
+        ) => AdminUser,
+    ) => {
+        setUpdatingUserIds((currentIds) =>
+            currentIds.includes(targetUser.clerkUserId)
+                ? currentIds
+                : [...currentIds, targetUser.clerkUserId],
         );
 
         try {
-            const response = await apiFetch(
-                API_ENDPOINTS.USERS.UPDATE_ROLE(targetUser.clerkUserId),
-                {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ role }),
-                },
-            );
+            const response = await action();
             const payload = await response.json().catch(() => null);
 
             if (!response.ok) {
                 pushToast({
                     tone: "error",
-                    message: payload?.error || "Failed to update role.",
+                    message: payload?.error || "Failed to update user.",
                 });
                 return;
             }
 
-            const updatedUser = payload?.data?.user;
+            const payloadUser = payload?.data?.user as Partial<AdminUser> | undefined;
+
             setUsers((currentUsers) =>
-                currentUsers.map((user) =>
-                    user.clerkUserId === targetUser.clerkUserId
-                        ? { ...user, role: updatedUser?.role || user.role }
-                        : user,
+                currentUsers.map((currentUser) =>
+                    currentUser.clerkUserId === targetUser.clerkUserId
+                        ? applyUpdate(currentUser, payloadUser)
+                        : currentUser,
                 ),
             );
-            pushToast({ tone: "success", message: `Updated ${targetUser.name} to ${role}.` });
+            pushToast({ tone: "success", message: successMessage });
         } catch {
-            pushToast({ tone: "error", message: "Network error updating role." });
+            pushToast({
+                tone: "error",
+                message: "A network error occurred while updating the user.",
+            });
         } finally {
-            setUpdatingUserIds((previous) =>
-                previous.filter((id) => id !== targetUser.clerkUserId),
+            setUpdatingUserIds((currentIds) =>
+                currentIds.filter((id) => id !== targetUser.clerkUserId),
             );
         }
     };
 
-    const patchStatus = async (targetUser: AdminUser, status: "active" | "suspended") => {
-        setUpdatingUserIds((previous) =>
-            previous.includes(targetUser.clerkUserId)
-                ? previous
-                : [...previous, targetUser.clerkUserId],
-        );
+    const toggleRole = async (targetUser: AdminUser) => {
+        const nextRole = targetUser.role === "admin" ? "user" : "admin";
 
-        try {
-            const response = await apiFetch(
-                API_ENDPOINTS.USERS.UPDATE_STATUS(targetUser.clerkUserId),
-                {
+        await updateTrackedUser(
+            targetUser,
+            () =>
+                apiFetch(API_ENDPOINTS.USERS.UPDATE_ROLE(targetUser.clerkUserId), {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ status }),
-                },
-            );
-            const payload = await response.json().catch(() => null);
+                    body: JSON.stringify({ role: nextRole }),
+                }),
+            `Updated ${targetUser.name} to ${nextRole}.`,
+            (currentUser, payloadUser) => ({
+                ...currentUser,
+                role: (payloadUser?.role as UserRole | undefined) || currentUser.role,
+            }),
+        );
+    };
 
-            if (!response.ok) {
-                pushToast({
-                    tone: "error",
-                    message: payload?.error || "Failed to update status.",
-                });
-                return;
-            }
+    const toggleStatus = async (targetUser: AdminUser) => {
+        const nextStatus = targetUser.status === "active" ? "suspended" : "active";
 
-            const updatedUser = payload?.data?.user;
-            setUsers((currentUsers) =>
-                currentUsers.map((user) =>
-                    user.clerkUserId === targetUser.clerkUserId
-                        ? { ...user, status: updatedUser?.status || user.status }
-                        : user,
-                ),
-            );
-            pushToast({ tone: "success", message: `Updated ${targetUser.name} to ${status}.` });
-        } catch {
-            pushToast({ tone: "error", message: "Network error updating status." });
-        } finally {
-            setUpdatingUserIds((previous) =>
-                previous.filter((id) => id !== targetUser.clerkUserId),
-            );
-        }
+        await updateTrackedUser(
+            targetUser,
+            () =>
+                apiFetch(API_ENDPOINTS.USERS.UPDATE_STATUS(targetUser.clerkUserId), {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: nextStatus }),
+                }),
+            `Updated ${targetUser.name} to ${nextStatus}.`,
+            (currentUser, payloadUser) => ({
+                ...currentUser,
+                status: (payloadUser?.status as UserStatus | undefined) || currentUser.status,
+            }),
+        );
     };
 
     const isEmpty = !loading && !error && filteredUsers.length === 0;
+    const isInitialLoad = (!isAuthLoaded && users.length === 0) || (loading && users.length === 0);
 
     return (
-        <section className="min-h-screen bg-muted/30">
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10">
-                <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-3xl font-semibold tracking-tight">
-                            User administration
-                        </h1>
-                        <p className="max-w-2xl text-sm text-muted-foreground">
-                            Search users, review account roles, and manage account status from one
-                            place.
-                        </p>
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.10),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#f4f7fb_100%)] text-slate-900">
+            <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
+                <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-5 lg:px-10">
+                    <div className="flex items-center gap-4">
+                        <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25">
+                            <span className="text-2xl font-semibold">&lt;/&gt;</span>
+                        </div>
+                        <div>
+                            <p className="text-3xl font-extrabold tracking-tight text-slate-950">
+                                Peer2Prep
+                            </p>
+                            <p className="text-sm text-slate-500">Admin workspace</p>
+                        </div>
                     </div>
 
-                    <Button asChild variant="outline" size="lg">
+                    <Button
+                        asChild
+                        variant="outline"
+                        size="lg"
+                        className="rounded-full border-slate-300 bg-white px-5"
+                    >
                         <Link to={ROUTES.PROFILE}>
                             <ArrowLeft className="size-4" />
                             Back to profile
                         </Link>
                     </Button>
-                </header>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                    <SummaryCard
-                        title="Managed users"
-                        value={stats.totalUsers}
-                        description="All user accounts visible to this admin, excluding your own."
-                        icon={Users}
-                    />
-                    <SummaryCard
-                        title="Admins and super users"
-                        value={stats.adminUsers}
-                        description="Accounts with elevated permissions across the platform."
-                        icon={ShieldCheck}
-                    />
-                    <SummaryCard
-                        title="Suspended accounts"
-                        value={stats.suspendedUsers}
-                        description="Users currently restricted from normal account access."
-                        icon={ShieldAlert}
-                        tone="warning"
-                    />
                 </div>
+            </header>
 
-                <Card className="border bg-card/95">
-                    <CardHeader className="gap-4 border-b pb-5">
-                        <div className="space-y-1">
-                            <CardTitle>Directory</CardTitle>
-                            <CardDescription>
-                                {filteredUsers.length} result
-                                {filteredUsers.length === 1 ? "" : "s"}
-                                {search.trim() ? ` for "${search.trim()}"` : ""}.
-                            </CardDescription>
-                        </div>
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                            <div className="relative w-full md:min-w-80">
-                                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    type="search"
-                                    value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
-                                    placeholder="Search by name or email"
-                                    className="pl-9"
-                                />
+            <main className="mx-auto max-w-7xl px-6 py-10 lg:px-10 lg:py-12">
+                <section className="mb-10">
+                    <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl">
+                        User administration
+                    </h1>
+                    <p className="mt-3 max-w-3xl text-lg text-slate-600">
+                        Review roles, manage account status, and find users quickly from the same
+                        dashboard experience.
+                    </p>
+                </section>
+
+                <section className="grid gap-6 md:grid-cols-3">
+                    {isInitialLoad ? (
+                        <>
+                            <StatCardSkeleton />
+                            <StatCardSkeleton />
+                            <StatCardSkeleton />
+                        </>
+                    ) : (
+                        <>
+                            <StatCard
+                                title="Managed users"
+                                value={stats.totalUsers}
+                                description="Accounts currently visible to this admin view."
+                                icon={Users}
+                                className="bg-gradient-to-br from-indigo-500 via-indigo-500 to-violet-600 text-white"
+                                iconClassName="bg-white/15 text-white"
+                                valueClassName="text-white"
+                                descriptionClassName="text-white/85"
+                            />
+                            <StatCard
+                                title="Admins and super users"
+                                value={stats.elevatedUsers}
+                                description="People with elevated permissions across the platform."
+                                icon={ShieldCheck}
+                                iconClassName="bg-violet-100 text-violet-600"
+                            />
+                            <StatCard
+                                title="Suspended accounts"
+                                value={stats.suspendedUsers}
+                                description="Users currently restricted from normal account access."
+                                icon={ShieldAlert}
+                                iconClassName="bg-amber-100 text-amber-600"
+                            />
+                        </>
+                    )}
+                </section>
+
+                <section className="mt-8">
+                    <Card className="rounded-[30px] border border-white/70 bg-white/90 py-0 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
+                        <CardHeader className="gap-5 border-b border-slate-200 px-6 py-6 sm:px-8">
+                            <div className="space-y-1">
+                                <CardTitle className="text-3xl font-extrabold tracking-tight text-slate-950">
+                                    User directory
+                                </CardTitle>
+                                <CardDescription className="text-base text-slate-600">
+                                    {isInitialLoad
+                                        ? "Preparing your user directory..."
+                                        : loading
+                                          ? "Loading users..."
+                                          : `${filteredUsers.length} result${filteredUsers.length === 1 ? "" : "s"}${search.trim() ? ` for "${search.trim()}"` : ""}.`}
+                                </CardDescription>
                             </div>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => void loadUsers()}
-                                disabled={loading}
-                            >
-                                <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-                                Refresh
-                            </Button>
-                        </div>
-                    </CardHeader>
 
-                    <CardContent className="pt-4">
-                        {loading ? (
-                            <div className="grid gap-3">
-                                {Array.from({ length: 4 }).map((_, index) => (
-                                    <div
-                                        key={index}
-                                        className="h-16 animate-pulse rounded-xl bg-muted"
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div className="relative w-full md:max-w-md">
+                                    <Search className="pointer-events-none absolute left-5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                                    <Input
+                                        type="search"
+                                        value={search}
+                                        onChange={(event) => setSearch(event.target.value)}
+                                        placeholder="Search by name or email"
+                                        className="h-11 rounded-full border-slate-200 bg-white pl-14 pr-4 text-slate-900 shadow-sm"
                                     />
-                                ))}
+                                </div>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => void loadUsers()}
+                                    disabled={loading}
+                                    className="rounded-full border-slate-300 bg-white px-5"
+                                >
+                                    <RefreshCw
+                                        className={cn("size-4", loading && "animate-spin")}
+                                    />
+                                    Refresh
+                                </Button>
                             </div>
-                        ) : null}
+                        </CardHeader>
 
-                        {!loading && error ? (
-                            <StateCard
-                                title="Unable to load users"
-                                description={error}
-                                action={
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={() => void loadUsers()}
-                                    >
-                                        Try again
-                                    </Button>
-                                }
-                            />
-                        ) : null}
+                        <CardContent className="p-6 sm:p-8">
+                            {isInitialLoad ? (
+                                <div className="grid gap-4">
+                                    {Array.from({ length: 4 }).map((_, index) => (
+                                        <div
+                                            key={index}
+                                            className="h-16 animate-pulse rounded-[20px] bg-slate-100"
+                                        />
+                                    ))}
+                                </div>
+                            ) : null}
 
-                        {isEmpty ? (
-                            <StateCard
-                                title="No users found"
-                                description={
-                                    search.trim()
-                                        ? "Try a different name or email search."
-                                        : "User accounts will appear here once they are available."
-                                }
-                            />
-                        ) : null}
+                            {!loading && error ? (
+                                <StatePanel
+                                    title="Unable to load users"
+                                    description={error}
+                                    action={
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => void loadUsers()}
+                                            className="rounded-full border-slate-300 bg-white px-5"
+                                        >
+                                            Try again
+                                        </Button>
+                                    }
+                                />
+                            ) : null}
 
-                        {!loading && !error && !isEmpty ? (
-                            <DirectoryTable
-                                users={filteredUsers}
-                                updatingUserIds={updatingUserIdSet}
-                                onToggleRole={(user) =>
-                                    patchRole(user, user.role === "admin" ? "user" : "admin")
-                                }
-                                onToggleStatus={(user) =>
-                                    patchStatus(
-                                        user,
-                                        user.status === "active" ? "suspended" : "active",
-                                    )
-                                }
-                            />
-                        ) : null}
-                    </CardContent>
-                </Card>
-            </div>
-        </section>
+                            {isEmpty ? (
+                                <StatePanel
+                                    title="No users found"
+                                    description={
+                                        search.trim()
+                                            ? "Try a different name or email search."
+                                            : "User accounts will appear here once they are available."
+                                    }
+                                />
+                            ) : null}
+
+                            {!loading && !error && !isEmpty ? (
+                                <UserDirectoryTable
+                                    users={filteredUsers}
+                                    updatingUsers={updatingUsers}
+                                    onToggleRole={toggleRole}
+                                    onToggleStatus={toggleStatus}
+                                />
+                            ) : null}
+                        </CardContent>
+                    </Card>
+                </section>
+            </main>
+        </div>
     );
 }
