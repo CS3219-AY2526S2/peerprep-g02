@@ -8,23 +8,25 @@ dotenv.config();
 
 const sqlFilePath = path.resolve(__dirname, "../QUDB.sql");
 
-const DB_HOST = process.env.DB_HOST || "localhost";
-const DB_PORT = Number(process.env.DB_PORT) || 5432;
+
+const DB_HOST = process.env.DB_HOST || "questions-db";
+const DB_PORT = Number(process.env.DB_PORT) || 5435;
 const DB_USER = process.env.DB_USER || "postgres";
 const DB_PASSWORD = process.env.DB_PASSWORD || "postgres";
-const TARGET_DB = process.env.DB_NAME || "peerprep_question";
+const TARGET_DB = process.env.DB_NAME || "questions";
 
 function quoteIdentifier(identifier: string): string {
     return `"${identifier.replace(/"/g, '""')}"`;
 }
 
 async function ensureDatabaseExists(): Promise<void> {
+
     const maintenanceClient = new Client({
         host: DB_HOST,
         port: DB_PORT,
         user: DB_USER,
         password: DB_PASSWORD,
-        database: "postgres",
+        database: "questions",
     });
 
     await maintenanceClient.connect();
@@ -51,20 +53,29 @@ async function initializeSchema(): Promise<void> {
         port: DB_PORT,
         user: DB_USER,
         password: DB_PASSWORD,
-        database: TARGET_DB,
+        database: "questions",
     });
-
     await client.connect();
     try {
         const tableResult = await client.query("SELECT to_regclass('public.questions') AS table_name");
-
         if ((tableResult.rows[0] as { table_name?: string | null } | undefined)?.table_name) {
             console.log("Question schema already exists. Skipping QUDB.sql import.");
             return;
         }
+        
+        const sqlCommands: string = await readFile(sqlFilePath, 'utf8');
+        
+        // Split the SQL file content into individual commands
+        const commands: string[] = sqlCommands.split(';');
 
-        const sql = await readFile(sqlFilePath, "utf8");
-        await client.query(sql);
+        // Execute each SQL command
+        for (let command of commands) {
+            if (command.trim()) {
+                // Execute the command (trimming any extra spaces)
+                await client.query(command.trim());
+            }
+        }
+
         console.log(`Imported '${path.basename(sqlFilePath)}' into '${TARGET_DB}'.`);
     } finally {
         await client.end();
