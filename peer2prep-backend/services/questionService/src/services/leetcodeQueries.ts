@@ -36,18 +36,18 @@ const query = `
 
 
 export async function getLeetCode(topic: String) {
-    const queryVars = {
-        skip: 0,
-        topic: topic
-    }
-    const response = await fetch('https://leetcode.com/graphql/', {
-        method: 'POST',
-        headers: {
-        'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: query, variables: queryVars }),
-    });
+  const queryVars = {
+    skip: 0,
+    topic: topic
+  }
+  const response = await fetch('https://leetcode.com/graphql/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query: query, variables: queryVars }),
+  });
 
-    const data = await response.json();
-    return data.data.problemsetQuestionList.questions;
+  const data = await response.json();
+  return data.data.problemsetQuestionList.questions;
 }

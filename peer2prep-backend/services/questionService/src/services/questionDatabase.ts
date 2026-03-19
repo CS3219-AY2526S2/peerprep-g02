@@ -1,5 +1,5 @@
 import { UUID } from "node:crypto";
-import pool from "../database"; 
+import pool from "../database";
 
 type TestCase = {
     input: string;
@@ -11,7 +11,7 @@ type QuestionData = {
     qnDesc: string;
     testCase: TestCase[];
     difficulty: string;
-    qnTopics: string; 
+    qnTopics: string;
     qnImage?: File | null;
 }
 
@@ -21,34 +21,34 @@ type QuestionEdit = {
     qnDesc: string;
     testCase: TestCase[];
     difficulty: string;
-    qnTopics: string; 
+    qnTopics: string;
     qnImage?: File | null;
 }
 
 export async function GetQuestions() {
     try {
-        
+
         const result = await pool.query('SELECT * FROM questions LIMIT 5');
         return result.rows;
     }
-    catch(e){
+    catch (e) {
         console.log(e)
         return null;
     }
-    
+
 }
 
 export async function GetPopularQuestions() {
     try {
-        
+
         const result = await pool.query('SELECT title FROM questions ORDER BY popularity_score DESC LIMIT 3');
         return result.rows;
     }
-    catch(e){
+    catch (e) {
         console.log(e)
         return null;
     }
-    
+
 }
 
 export async function GetQuestion(quid: UUID) {
@@ -56,11 +56,11 @@ export async function GetQuestion(quid: UUID) {
         const result = await pool.query('SELECT * FROM questions WHERE quid = $1', [quid]);
         return result.rows;
     }
-    catch(e){
+    catch (e) {
         console.log(e);
         return null;
     }
-    
+
 }
 
 export async function CreateQuestion(data: QuestionData) {
@@ -77,7 +77,7 @@ export async function CreateQuestion(data: QuestionData) {
         console.error("Insert failed:", err);
         success = false;
     }
-    
+
     return success;
 }
 
@@ -94,10 +94,10 @@ export async function EditQuestion(data: QuestionEdit) {
         success = true;
     }
     catch (e) {
-        console.log("Edit failed:",e);
+        console.log("Edit failed:", e);
         success = false;
     }
-    
+
     return success;
 }
 
@@ -107,11 +107,11 @@ export async function DeleteQuestion(questionId: UUID) {
         const result = await pool.query('DELETE FROM questions WHERE quid = $1', [questionId]);
         success = true;
     }
-    catch (e){
+    catch (e) {
         console.log(e);
         success = false;
     }
-    
+
     return success;
 }
 
@@ -130,8 +130,8 @@ export async function SearchQuestion(topic: string, difficulty: string, userA: U
         const defaultQuestion = await randomQuestion(allQuestions);
 
         if (defaultQuestion == null) return null;
-        if (userA  == null || userB == null) return defaultQuestion[0];
-        
+        if (userA == null || userB == null) return defaultQuestion[0];
+
         //With attempt service
         try {
             //Query
@@ -147,7 +147,7 @@ export async function SearchQuestion(topic: string, difficulty: string, userA: U
             }
             //Get an unattempted question for either users
             const unattemptedEither = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) || !bQuestions.includes(qid));
-            if (unattemptedEither.length >=  1) {
+            if (unattemptedEither.length >= 1) {
                 return randomQuestion(unattemptedBoth);
             }
 
@@ -157,7 +157,7 @@ export async function SearchQuestion(topic: string, difficulty: string, userA: U
         }
         return defaultQuestion[0];
     }
-    catch (e){
+    catch (e) {
         console.log(e);
         return null;
     }

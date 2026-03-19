@@ -104,7 +104,7 @@ router.delete("/questions/:id", async (req, res) => {
             message: "Unable to delete question from database."
         })
     }
-    
+
     return res.status(200).json({
         message: "Question successfully deleted from the database."
     })
@@ -112,9 +112,9 @@ router.delete("/questions/:id", async (req, res) => {
 
 //Search for matching question
 router.post("/questions/search", async (req, res) => {
-    const {topic, difficulty, userA, userB} = req.body;
+    const { topic, difficulty, userA, userB } = req.body;
     var result = await SearchQuestion(topic, difficulty, userA, userB);
-    
+
     if (!result) {
         return res.status(400).json({
             message: "Unable to find matching question in the database."
@@ -197,7 +197,7 @@ router.delete("/topics/:id", async (req, res) => {
             message: "Unable to delete topic from database."
         })
     }
-    
+
     return res.status(200).json({
         message: "Topic successfully deleted from the database."
     })

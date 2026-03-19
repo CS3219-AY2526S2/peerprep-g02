@@ -1,16 +1,16 @@
 import { UUID } from "node:crypto";
-import pool from "../database"; 
+import pool from "../database";
 
 export async function GetTopics() {
     try {
         const result = await pool.query('SELECT * FROM topics');
         return result.rows;
     }
-    catch(e){
+    catch (e) {
         console.log(e);
         return null;
     }
-    
+
 }
 
 
@@ -26,7 +26,7 @@ export async function AddTopic(data: string) {
         console.error("Insert failed:", err);
         success = false;
     }
-    
+
     return success;
 }
 
@@ -44,7 +44,7 @@ export async function EditTopic(tid: UUID, data: string) {
         console.log(e);
         success = false;
     }
-    
+
     return success;
 }
 
@@ -54,10 +54,10 @@ export async function DeleteTopic(tid: UUID) {
         const result = await pool.query('DELETE FROM topics WHERE tid = $1', [tid]);
         success = true;
     }
-    catch (e){
+    catch (e) {
         console.log(e);
         success = false;
     }
-    
+
     return success;
 }

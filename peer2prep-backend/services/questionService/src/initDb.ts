@@ -62,9 +62,9 @@ async function initializeSchema(): Promise<void> {
             console.log("Question schema already exists. Skipping QUDB.sql import.");
             return;
         }
-        
+
         const sqlCommands: string = await readFile(sqlFilePath, 'utf8');
-        
+
         // Split the SQL file content into individual commands
         const commands: string[] = sqlCommands.split(';');
 
