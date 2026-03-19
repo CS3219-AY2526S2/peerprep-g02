@@ -6,80 +6,65 @@ import { ROUTES } from "@/constants/routes";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { pushToast } from "@/utils/toast";
 
-type UserRole = "user" | "admin" | "super_user";
-
 interface ProtectedRouteProps {
-    allowedRoles?: UserRole[];
+    adminOnly?: boolean;
 }
 
-export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ adminOnly = false }: ProtectedRouteProps) => {
     const { isLoaded, isSignedIn } = useAuth();
-    const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
-    const [isCheckingRole, setIsCheckingRole] = useState(false);
-    const requiresRoleCheck = Boolean(allowedRoles?.length);
+    const [adminRouteAllowed, setAdminRouteAllowed] = useState<boolean | null>(null);
 
     useEffect(() => {
-        if (!requiresRoleCheck || !isLoaded || !isSignedIn) {
-            setCurrentRole(null);
-            setIsCheckingRole(false);
+        if (!adminOnly || !isLoaded || !isSignedIn) {
+            setAdminRouteAllowed(null);
             return;
         }
 
         let isCancelled = false;
-        setIsCheckingRole(true);
+        setAdminRouteAllowed(null);
 
         void apiFetch(API_ENDPOINTS.USERS.ME, { method: "GET" })
             .then(async (response) => {
-                if (isCancelled) {
+                if (isCancelled) return;
+
+                if (!response.ok) {
+                    setAdminRouteAllowed(false);
+                    pushToast({
+                        tone: "error",
+                        message: "Failed to verify administrator permissions.",
+                    });
                     return;
                 }
 
                 const payload = await response.json().catch(() => null);
-
-                if (!response.ok) {
-                    setCurrentRole(null);
-                    pushToast({
-                        tone: "error",
-                        message:
-                            payload?.error || "Failed to verify your account permissions.",
-                    });
-                    return;
-                }
-
                 const role = payload?.data?.user?.role;
 
-                if (role === "user" || role === "admin" || role === "super_user") {
-                    setCurrentRole(role);
-                    return;
+                if (role === "admin" || role === "super_user") {
+                    setAdminRouteAllowed(true);
+                } else {
+                    setAdminRouteAllowed(false);
+                    pushToast({
+                        tone: "error",
+                        message: "Access denied: This area is for administrators only.",
+                    });
                 }
-
-                setCurrentRole(null);
-                pushToast({
-                    tone: "error",
-                    message: "Unable to determine your account role.",
-                });
             })
             .catch(() => {
                 if (!isCancelled) {
-                    setCurrentRole(null);
+                    setAdminRouteAllowed(false);
                     pushToast({
                         tone: "error",
                         message: "A network error occurred while verifying your role.",
                     });
-                }
-            })
-            .finally(() => {
-                if (!isCancelled) {
-                    setIsCheckingRole(false);
                 }
             });
 
         return () => {
             isCancelled = true;
         };
-    }, [isLoaded, isSignedIn, requiresRoleCheck, allowedRoles]);
+    }, [adminOnly, isLoaded, isSignedIn]);
 
-    if (!isLoaded || (requiresRoleCheck && isSignedIn && isCheckingRole)) {
+    if (!isLoaded || (adminOnly && adminRouteAllowed === null)) {
         return null;
     }
 
@@ -87,7 +72,7 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         return <Navigate to={ROUTES.LOGIN} replace />;
     }
 
-    if (requiresRoleCheck && (!currentRole || !allowedRoles?.includes(currentRole))) {
+    if (adminOnly && adminRouteAllowed === false) {
         return <Navigate to={ROUTES.PROFILE} replace />;
     }
 
