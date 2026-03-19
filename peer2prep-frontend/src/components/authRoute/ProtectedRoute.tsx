@@ -77,7 +77,7 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         return () => {
             isCancelled = true;
         };
-    }, [isLoaded, isSignedIn, requiresRoleCheck]);
+    }, [isLoaded, isSignedIn, requiresRoleCheck, allowedRoles]);
 
     if (!isLoaded || (requiresRoleCheck && isSignedIn && isCheckingRole)) {
         return null;
