@@ -13,9 +13,9 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-    const { isLoaded, isSignedIn } = useAuth();
+    const { isLoaded, isSignedIn, userId } = useAuth();
     const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
-    const [isCheckingRole, setIsCheckingRole] = useState(false);
+    const [isCheckingRole, setIsCheckingRole] = useState(Boolean(allowedRoles?.length));
     const requiresRoleCheck = Boolean(allowedRoles?.length);
 
     useEffect(() => {
@@ -40,8 +40,7 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
                     setCurrentRole(null);
                     pushToast({
                         tone: "error",
-                        message:
-                            payload?.error || "Failed to verify your account permissions.",
+                        message: payload?.error || "Failed to verify your account permissions.",
                     });
                     return;
                 }
@@ -77,7 +76,7 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         return () => {
             isCancelled = true;
         };
-    }, [isLoaded, isSignedIn, requiresRoleCheck, allowedRoles]);
+    }, [isLoaded, isSignedIn, userId, requiresRoleCheck, allowedRoles]);
 
     if (!isLoaded || (requiresRoleCheck && isSignedIn && isCheckingRole)) {
         return null;
