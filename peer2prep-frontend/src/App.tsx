@@ -21,7 +21,9 @@ export default function App() {
                     <Route path={ROUTES.PROFILE} element={<ProfileView />} />
                 </Route>
 
-                <Route element={<ProtectedRoute adminOnly />}>
+                <Route
+                    element={<ProtectedRoute allowedRoles={["admin", "super_user"]} />}
+                >
                     <Route path={ROUTES.USER_ADMIN} element={<AdminListView />} />
                     <Route path={ROUTES.QUESTION_ADMIN} element={<QuestionMainView />} />
                 </Route>
