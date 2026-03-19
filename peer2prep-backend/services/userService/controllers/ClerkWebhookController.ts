@@ -28,14 +28,6 @@ export class ClerkWebhookController {
             });
 
             const payload = event.data as { id?: string };
-            logger.info(
-                {
-                    eventType: event.type,
-                    clerkUserId: payload?.id,
-                },
-                "Received Clerk webhook event",
-            );
-
             await this.clerkWebhookService.process(event);
             logger.info(
                 {
