@@ -1,7 +1,7 @@
 import { useClerk } from "@clerk/clerk-react";
 import { MouseEvent, PointerEvent, useState } from "react";
-import { apiFetch } from "@/lib/apiClient";
-import { pushToast } from "@/lib/toast";
+import { apiFetch } from "@/utils/apiClient";
+import { pushToast } from "@/utils/toast";
 
 const CLERK_FONT_FAMILY = "var(--clerk-font-family, inherit)";
 
@@ -35,8 +35,7 @@ export default function DeleteAccount() {
 
             await signOut({ redirectUrl: "/account/login" });
         } catch (error) {
-            const message =
-                error instanceof Error ? error.message : "Failed to delete account.";
+            const message = error instanceof Error ? error.message : "Failed to delete account.";
             pushToast({ message, tone: "error" });
         } finally {
             setIsDeleting(false);

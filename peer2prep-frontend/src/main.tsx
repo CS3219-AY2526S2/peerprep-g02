@@ -4,7 +4,8 @@ import { createRoot } from "react-dom/client";
 
 import App from "@/App";
 import "./index.css";
-import { AuthInterceptorProvider } from "@/providers/AuthInterceptorProvider";
+import { AuthInterceptorProvider } from "@/context/AuthInterceptorProvider";
+import ToastHost from "@/components/toast/ToastHost";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -17,6 +18,7 @@ createRoot(document.getElementById("root")!).render(
         <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/account/login">
             <AuthInterceptorProvider>
                 <App />
+                <ToastHost />
             </AuthInterceptorProvider>
         </ClerkProvider>
     </StrictMode>,
