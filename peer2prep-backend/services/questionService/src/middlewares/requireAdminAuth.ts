@@ -13,7 +13,7 @@ type InternalAuthContextResponse = {
 
 const INTERNAL_AUTHZ_URL =
     process.env.USER_SERVICE_INTERNAL_AUTHZ_URL ??
-    "http://localhost:3001/v1/api/users/internal/authz/context";
+    "http://user-service:3001/v1/api/users/internal/authz/context";
 
 export async function requireAdminAuth(
     req: Request,

@@ -1,5 +1,5 @@
 import { UUID } from "node:crypto";
-import pool from "../database"; 
+import pool from "@/database";
 
 type TestCase = {
     input: string;
@@ -11,7 +11,7 @@ type QuestionData = {
     qnDesc: string;
     testCase: TestCase[];
     difficulty: string;
-    qnTopics: string; 
+    qnTopics: string;
     qnImage?: File | null;
 }
 
@@ -21,34 +21,34 @@ type QuestionEdit = {
     qnDesc: string;
     testCase: TestCase[];
     difficulty: string;
-    qnTopics: string; 
+    qnTopics: string;
     qnImage?: File | null;
 }
 
 export async function GetQuestions() {
     try {
-        
+
         const result = await pool.query('SELECT * FROM questions LIMIT 5');
         return result.rows;
     }
-    catch(e){
+    catch (e) {
         console.log(e)
         return null;
     }
-    
+
 }
 
 export async function GetPopularQuestions() {
     try {
-        
+
         const result = await pool.query('SELECT title FROM questions ORDER BY popularity_score DESC LIMIT 3');
         return result.rows;
     }
-    catch(e){
+    catch (e) {
         console.log(e)
         return null;
     }
-    
+
 }
 
 export async function GetQuestion(quid: UUID) {
@@ -56,11 +56,11 @@ export async function GetQuestion(quid: UUID) {
         const result = await pool.query('SELECT * FROM questions WHERE quid = $1', [quid]);
         return result.rows;
     }
-    catch(e){
+    catch (e) {
         console.log(e);
         return null;
     }
-    
+
 }
 
 export async function CreateQuestion(data: QuestionData) {
@@ -77,7 +77,7 @@ export async function CreateQuestion(data: QuestionData) {
         console.error("Insert failed:", err);
         success = false;
     }
-    
+
     return success;
 }
 
@@ -94,23 +94,72 @@ export async function EditQuestion(data: QuestionEdit) {
         success = true;
     }
     catch (e) {
-        console.log("Edit failed:",e);
+        console.log("Edit failed:", e);
         success = false;
     }
-    
+
     return success;
 }
 
-export async function DeleteQuestion(questionId: Number) {
+export async function DeleteQuestion(questionId: UUID) {
     var success = false;
     try {
-        const result = pool.query('DELETE FROM questions WHERE quid = $1', [questionId]);
+        const result = await pool.query('DELETE FROM questions WHERE quid = $1', [questionId]);
         success = true;
     }
-    catch (e){
+    catch (e) {
         console.log(e);
         success = false;
     }
-    
+
     return success;
+}
+
+async function randomQuestion(questions: UUID[]) {
+    const randomIndex = Math.floor(Math.random() * questions.length);
+    const result = await GetQuestion(questions[randomIndex]);
+    return result;
+}
+
+export async function SearchQuestion(topic: string, difficulty: string, userA: UUID | null, userB: UUID | null) {
+    try {
+        //Default random question
+        const result = await pool.query('SELECT quid FROM qn_topics WHERE tid = $1 AND difficulty = $2', [topic, difficulty]);
+        if (result == undefined || result.rows.length == 0) return null;
+        const allQuestions: UUID[] = result.rows.map((r: any) => r.quid);
+        const defaultQuestion = await randomQuestion(allQuestions);
+
+        if (defaultQuestion == null) return null;
+        if (userA == null || userB == null) return defaultQuestion[0];
+
+        // //With attempt service
+        // try {
+        //     //Query
+        //     const userALogs = pool.query('SELECT quid FROM attempts WHERE topics == $1 AND difficulty == $2 AND uid = $3', [topic, difficulty, userA]);
+        //     const userBLogs = pool.query('SELECT quid FROM attempts WHERE topics == $1 AND difficulty == $2 AND uid = $3', [topic, difficulty, userB]);
+        //     const aQuestions: UUID[] = userALogs.rows.map((r: UUID) => r);
+        //     const bQuestions: UUID[] = userBLogs.rows.map((r: UUID) => r);
+
+        //     //Get an unattempted question for both users
+        //     const unattemptedBoth = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) && !bQuestions.includes(qid));
+        //     if (unattemptedBoth.length >= 2) {
+        //         return randomQuestion(unattemptedBoth);
+        //     }
+        //     //Get an unattempted question for either users
+        //     const unattemptedEither = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) || !bQuestions.includes(qid));
+        //     if (unattemptedEither.length >= 1) {
+        //         return randomQuestion(unattemptedBoth);
+        //     }
+
+        // }
+        // catch (e) {
+        //     return defaultQuestion[0];
+        // }
+        return defaultQuestion[0];
+    }
+    catch (e) {
+        console.log(e);
+        return null;
+    }
+
 }
