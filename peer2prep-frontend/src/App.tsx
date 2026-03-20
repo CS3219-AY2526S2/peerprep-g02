@@ -1,3 +1,4 @@
+import { useAuth } from "@clerk/clerk-react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "@/components/authRoute/ProtectedRoute";
 import { ROUTES } from "@/constants/routes";
@@ -14,11 +15,21 @@ function AdminProtectedRoute() {
     return <ProtectedRoute allowedRoles={ADMIN_ALLOWED_ROLES} />;
 }
 
+function RootRedirect() {
+    const { isLoaded, isSignedIn } = useAuth();
+
+    if (!isLoaded) {
+        return null;
+    }
+
+    return <Navigate to={isSignedIn ? ROUTES.DASHBOARD : ROUTES.LOGIN} replace />;
+}
+
 export default function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+                <Route path="/" element={<RootRedirect />} />
                 <Route path={`${ROUTES.LOGIN}/*`} element={<LoginView />} />
                 <Route path={`${ROUTES.REGISTER}/*`} element={<RegisterView />} />
 
