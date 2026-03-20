@@ -50,7 +50,7 @@ export async function attemptRejoin(userId: string): Promise<RejoinResult> {
 
     return {
         success: status === "success",
-        startTime: startTime ? parseInt(startTime) : undefined
+        startTime: startTime ? parseInt(startTime, 10) : undefined
     };
 }
 
