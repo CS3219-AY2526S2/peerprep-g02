@@ -1,5 +1,5 @@
 import { Flame, Sprout, Zap } from "lucide-react";
-import { Difficulty } from "./questionType";
+import { Difficulty } from "@/models/question/questionType";
 export const difficultyOptions = [
     { value: Difficulty.EASY, label: "Easy", icon: Sprout, activeClassName: "border-emerald-400 bg-emerald-50 text-emerald-700" },
     { value: Difficulty.MEDIUM, label: "Medium", icon: Flame, activeClassName: "border-amber-400 bg-amber-50 text-amber-700" },

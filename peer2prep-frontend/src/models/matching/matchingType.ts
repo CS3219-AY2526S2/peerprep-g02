@@ -1,4 +1,4 @@
-import { Difficulty } from "../question/questionType";
+import { Difficulty } from "@/models/question/questionType";
 
 export type MatchDetails = {
     topic: string;

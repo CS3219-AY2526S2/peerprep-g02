@@ -8,7 +8,7 @@ import RedisManager from "@/managers/redisManager.js";
 import { registerSocketHandlers } from "@/managers/socketManager.js";
 import { mainLogger } from "@/utils/logger.js";
 
-import { socketAuthMiddleware } from "./middlewares/socketAuth.js";
+import { socketAuthMiddleware } from "@/middlewares/socketAuth.js";
 
 const server = createServer(app);
 const io = new Server(server, {

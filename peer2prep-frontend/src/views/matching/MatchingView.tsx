@@ -3,8 +3,8 @@ import { matchingService } from "@/services/matching/matchingService";
 import { Difficulty } from "@/models/question/questionType";
 import { topicOptions, languageOptions } from "@/models/question/tempStubType";
 import { Card } from "@/components/ui/card";
-import MatchSearchingView from "./MatchSearchingView";
-import MatchFormView from "./MatchFormView";
+import MatchSearchingView from "@/views/matching/MatchSearchingView";
+import MatchFormView from "@/views/matching/MatchFormView";
 import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
 
 export function MatchingView() {
