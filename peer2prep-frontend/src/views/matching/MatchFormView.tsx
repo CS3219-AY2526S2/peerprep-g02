@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { Difficulty } from "@/models/question/questionType";
 
 import { topicOptions, languageOptions, difficultyOptions } from "@/models/question/tempStubType";
+import { MatchFormViewProps } from "@/models/matching/matchViewType";
 
 export default function MatchFormView({
     topic,
@@ -23,7 +24,7 @@ export default function MatchFormView({
     difficulty,
     setDifficulty,
     onFindMatch,
-}: any) {
+}: MatchFormViewProps) {
     return (
         <CardContent className="p-6 sm:p-8 bg-white/90 transition-opacity">
             <div className="mb-8 flex items-start justify-between gap-6">

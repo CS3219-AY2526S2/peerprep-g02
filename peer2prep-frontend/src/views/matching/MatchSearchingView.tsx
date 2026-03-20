@@ -1,14 +1,7 @@
 import { BookOpen, Brain, Code, Loader2, X, Sparkles } from "lucide-react";
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-interface MatchSearchingViewProps {
-    topic: string;
-    languages: string[];
-    difficulties: string[];
-    relaxationTier: number;
-    onCancel: () => void;
-}
+import { MatchSearchingViewProps } from "@/models/matching/matchViewType";
 
 export default function MatchSearchingView({
     topic,
