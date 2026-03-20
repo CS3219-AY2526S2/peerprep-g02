@@ -1,5 +1,4 @@
 import pino from "pino";
-import { pinoHttp } from "pino-http";
 
 import { AppConstants } from "../constants.js";
 
@@ -19,8 +18,4 @@ export const logger = pino({
     name: "user-service",
     level: AppConstants.LOG_LEVEL,
     transport: prettyTransport,
-});
-
-export const httpLogger = pinoHttp({
-    logger,
 });
