@@ -5,8 +5,9 @@ export type Difficulty = z.infer<typeof zDifficultySchema>;
 
 export const MatchDetailsSchema = z.object({
     topic: z.string().min(1, "Topic is required"),
-    difficulty: zDifficultySchema,
+    difficulties: z.array(zDifficultySchema).min(1, "Select at least one difficulty"), 
     languages: z.array(z.string()).min(1, "Select at least one language"),
+    isUpdate: z.boolean().optional(),
 });
 
 export type MatchRequest = z.infer<typeof MatchDetailsSchema> & { userId: string };
@@ -26,6 +27,12 @@ export interface MatchResultSuccess {
 
 export interface MatchResultWaiting {
     matchFound: false;
+    startTime: number;
 }
 
 export type MatchResult = MatchResultSuccess | MatchResultWaiting;
+
+export interface RejoinResult {
+    success: boolean;
+    startTime: number | undefined;
+}

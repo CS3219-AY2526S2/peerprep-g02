@@ -2,9 +2,10 @@ import { Difficulty } from "../question/questionType";
 
 export type MatchDetails = {
     topic: string;
-    difficulty: Difficulty;
+    difficulties: Difficulty[];
     languages: string[];
-}
+    isUpdate?: boolean;
+};
 
 export const MATCH_EVENTS = {
     JOIN_QUEUE: "join_queue",

@@ -15,9 +15,9 @@ export async function createAuthenticatedSocket(fullUrl: string): Promise<Socket
     const socket = io(baseUrl, {
         path: `${customPath}/socket.io/`,
         auth: {
-            token: token
+            token: token,
         },
     });
-    
+
     return socket;
 }

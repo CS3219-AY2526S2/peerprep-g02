@@ -47,14 +47,17 @@ export const registerSocketHandlers = (io: Server) => {
                     socket.emit("match_error", { message: "Invalid request format" });
                     return;
                 }
-
-                const isSuccessfulRejoin = await attemptRejoin(userId);
-                if (isSuccessfulRejoin) {
-                    socketLogger.info(`User ${userId} resumed queuing`);
-                    socket.emit("match_waiting", {
-                        message: "Resumed search, waiting for a match...",
-                    });
-                    return;
+                
+                if (!matchDetails.data.isUpdate) {
+                    const rejoinResult = await attemptRejoin(userId);
+                    if (rejoinResult.success) {
+                        socketLogger.info(`User ${userId} resumed queuing`);
+                        socket.emit("match_waiting", {
+                            message: "Resumed search, waiting for a match...",
+                            startTime: rejoinResult.startTime
+                        });
+                        return;
+                    }
                 }
 
                 socketLogger.info(`User ${userId} finding match`);
@@ -73,6 +76,7 @@ export const registerSocketHandlers = (io: Server) => {
                     socketLogger.info(`User ${userId} added to queue for ${matchRequest.topic}.`);
                     socket.emit("match_waiting", {
                         message: "Added to queue, waiting for a match...",
+                        startTime: matchResult.startTime
                     });
                 }
             }),
