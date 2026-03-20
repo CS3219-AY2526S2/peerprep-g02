@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { Difficulty } from "@/models/question/questionType";
 
 import { topicOptions, languageOptions, difficultyOptions } from "@/models/question/tempStubType";
-import { MatchFormViewProps } from "@/models/matching/matchViewType";
+import { MatchFormViewProps } from "@/models/matching/matchingViewType";
 
 export default function MatchFormView({
     topic,
