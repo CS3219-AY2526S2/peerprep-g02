@@ -14,7 +14,7 @@ export interface MatchFormViewProps {
 export interface MatchSearchingViewProps {
     topic: string;
     languages: string[];
-    difficulties: string[];
+    difficulties: Difficulty[];
     relaxationTier: number;
     onCancel: () => void;
 }
