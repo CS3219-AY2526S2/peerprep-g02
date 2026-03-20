@@ -27,7 +27,7 @@ services:
     depends_on:
       - user-service
       # - matching-service
-      # - questions-service
+      - questions-service
       # - collaboration-service
       # - attempts-service
     networks:
