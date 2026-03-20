@@ -61,7 +61,6 @@ export async function requireAdminAuth(
             error: payload?.error,
         });
 
-        console.log(response);
         if (!response.ok) {
             res.status(response.status).json(payload ?? { error: "Failed to authorize user." });
             return;

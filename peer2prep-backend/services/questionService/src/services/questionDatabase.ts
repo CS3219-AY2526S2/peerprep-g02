@@ -1,5 +1,5 @@
 import { UUID } from "node:crypto";
-import pool from "../database";
+import pool from "@/database";
 
 type TestCase = {
     input: string;
