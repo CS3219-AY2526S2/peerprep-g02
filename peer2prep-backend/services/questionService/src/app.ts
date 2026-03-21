@@ -1,5 +1,6 @@
 import express from "express";
 import questionRoute from "@/routes/routes";
+import internalRoute from "@/routes/internalRoutes";
 import cors from "cors";
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(
 );
 app.use(express.json());
 app.use("/v1/api", questionRoute);
+app.use("/v1/api", internalRoute);
 
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
