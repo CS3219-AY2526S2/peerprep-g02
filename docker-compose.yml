@@ -28,7 +28,7 @@ services:
       - user-service
       # - matching-service
       - questions-service
-      # - collaboration-service
+      - collaboration-service
       # - attempts-service
     networks:
       - gateway-network
@@ -109,6 +109,7 @@ services:
       - MS_ENV=development
       - MS_REDIS_URL=redis://matching-redis:6379
       - US_INTERNAL_SERVICE_URL=http://user-service:3001
+      - MS_COLLABORATION_SESSION_PATH=/v1/api/sessions
     restart: unless-stopped
 
   matching-redis:
@@ -166,33 +167,40 @@ services:
       - questions-db-network
     restart: unless-stopped
 
-#   # Collaboration Service
-#   collaboration-service:
-#     build: ./peer2prep-backend/services/collaborationService
-#     container_name: collaboration-service
-#     env_file:
-#       - ./peer2prep-backend/services/collaborationService/.env
-#     depends_on:
-#       rabbitmq:
-#         condition: service_healthy
-#       collaboration-db:
-#         condition: service_started
-#     networks:
-#       - gateway-network
-#       - collaboration-db-network
-#     volumes:
-#       - ./peer2prep-backend/services/collaborationService:/app
-#       - /app/node_modules
-#     restart: unless-stopped
+  # Collaboration Service
+  collaboration-service:
+    build: ./peer2prep-backend/services/collaborationService
+    container_name: collaboration-service
+    env_file:
+      - ./peer2prep-backend/services/collaborationService/.env
+    environment:
+      - CS_SERVER_PORT=3003
+      - CS_API_GATEWAY_URL=http://gateway:8080
+      - CS_REDIS_HOST=collaboration-redis
+      - CS_REDIS_PORT=6379
+    depends_on:
+      collaboration-redis:
+        condition: service_started
+      user-service:
+        condition: service_started
+      questions-service:
+        condition: service_started
+    networks:
+      - gateway-network
+      - collaboration-redis-network
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./peer2prep-backend/services/collaborationService:/app
+      - /app/node_modules
+    restart: unless-stopped
 
-#   collaboration-db:
-#     image: mongo:latest
-#     container_name: collaboration-db
-#     volumes:
-#       - collaboration_data:/data/db
-#     networks:
-#       - collaboration-db-network
-#     restart: unless-stopped
+  collaboration-redis:
+    image: redis:latest
+    container_name: collaboration-redis
+    restart: unless-stopped
+    networks:
+      - collaboration-redis-network
 
 #   # Attempts Service
 #   attempts-service:
@@ -226,7 +234,6 @@ volumes:
   user_data:
 #   matching_data:
   questions_data:
-#   collaboration_data:
 #   attempts_data:
 #   redis_data:
 
@@ -239,7 +246,7 @@ networks:
     driver: bridge
   questions-db-network:
     driver: bridge
-#   collaboration-db-network:
-#     driver: bridge
+  collaboration-redis-network:
+    driver: bridge
 #   attempts-db-network:
 #     driver: bridge
