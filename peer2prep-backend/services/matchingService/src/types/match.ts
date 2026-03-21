@@ -18,6 +18,7 @@ export const USER_STATUS_PREFIX = "mm:us";
 export interface MatchResultSuccess {
     matchFound: true;
     matchId: string;
+    collaborationId: string;
     matchedTopic: string;
     matchedDifficulty: Difficulty;
     matchedLanguage: string;

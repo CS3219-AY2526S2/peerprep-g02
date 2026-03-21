@@ -99,6 +99,8 @@ services:
     depends_on:
       matching-redis:
         condition: service_started
+      collaboration-service:
+        condition: service_started
     networks:
       - gateway-network
       - matching-redis-network
@@ -109,7 +111,8 @@ services:
       - MS_ENV=development
       - MS_REDIS_URL=redis://matching-redis:6379
       - US_INTERNAL_SERVICE_URL=http://user-service:3001
-      - MS_COLLABORATION_SESSION_PATH=/v1/api/sessions
+      - MS_COLLABORATION_SERVICE_URL=http://collaboration-service:3003
+      - MS_INTERNAL_SERVICE_API_KEY=cdd4140e23d0643cb8637fe247ecb70ec3c32be16be4a8b6d678e62c1b7baca6
     restart: unless-stopped
 
   matching-redis:

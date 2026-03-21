@@ -7,6 +7,7 @@ import {
     FIND_MATCH_LUA_SCRIPT,
 } from "@/luaScripts/matchmaking.js";
 import RedisManager from "@/managers/redisManager.js";
+import { createCollaborationSession } from "@/services/collaborationService.js";
 import { type Difficulty, type MatchRequest, type MatchResult, type RejoinResult } from "@/types/match.js";
 import { buildQueueKey, buildUserStatusKey } from "@/utils/match.js";
 
@@ -25,9 +26,28 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     })) as [string, string, string, string, string];
 
     if (status === "matched") {
+        const matchId = uuidv4();
+
+        // Create collaboration session
+        const collaborationId = await createCollaborationSession({
+            matchId,
+            userAId: req.userId,
+            userBId: partnerId,
+            difficulty: matchedDifficulty,
+            language: matchedLanguage,
+            topic: req.topic,
+        });
+
+        if (!collaborationId) {
+            // Failed to create collaboration session - return as waiting
+            // The user will need to retry matching
+            return { matchFound: false, startTime: Date.now() };
+        }
+
         return {
             matchFound: true,
-            matchId: uuidv4(),
+            matchId,
+            collaborationId,
             matchedTopic: req.topic,
             matchedDifficulty: matchedDifficulty as Difficulty,
             matchedLanguage,

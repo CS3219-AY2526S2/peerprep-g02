@@ -1,6 +1,6 @@
 import express from "express";
-import questionRoute from "@/routes/routes";
-import internalRoute from "@/routes/internalRoutes";
+import questionRoute from "./routes/routes";
+import internalRoute from "./routes/internalRoutes";
 import cors from "cors";
 
 const app = express();
@@ -15,8 +15,10 @@ app.use(
     }),
 );
 app.use(express.json());
-app.use("/v1/api", questionRoute);
+// Internal routes must be mounted BEFORE question routes
+// to avoid requireAdminAuth middleware blocking internal service calls
 app.use("/v1/api", internalRoute);
+app.use("/v1/api", questionRoute);
 
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);

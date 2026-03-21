@@ -1,8 +1,8 @@
 import { Router } from "express";
 import type { UUID } from "node:crypto";
 
-import { requireInternalAuth } from "@/middlewares/requireInternalAuth";
-import { SearchQuestion } from "@/services/questionDatabase";
+import { requireInternalAuth } from "../middlewares/requireInternalAuth";
+import { SearchQuestion } from "../services/questionDatabase";
 
 const router = Router();
 

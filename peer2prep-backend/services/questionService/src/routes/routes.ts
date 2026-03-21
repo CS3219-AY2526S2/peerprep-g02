@@ -7,11 +7,11 @@ import {
     GetQuestions,
     GetPopularQuestions,
     SearchQuestion,
-} from "@/services/questionDatabase";
-import { requireAdminAuth } from "@/middlewares/requireAdminAuth";
+} from "../services/questionDatabase";
+import { requireAdminAuth } from "../middlewares/requireAdminAuth";
 import { UUID } from "node:crypto";
-import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "@/services/topicsDatabase";
-import { getLeetCode } from "@/services/leetcodeQueries";
+import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicsDatabase";
+import { getLeetCode } from "../services/leetcodeQueries";
 
 const router = Router();
 
