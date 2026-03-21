@@ -236,10 +236,14 @@ export class CollaborationSessionService {
         const codeSnapshot = await this.otManager.getContent(input.collaborationId);
         const codeRevision = await this.otManager.getRevision(input.collaborationId);
 
+        // Fetch question details from question service
+        const question = await this.questionSelectionService.getQuestionDetails(session.questionId);
+
         // F4.6.5 - Return authoritative server state for reconciliation
         return {
             session,
             questionId: session.questionId,
+            question: question ?? undefined,
             codeSnapshot,
             codeRevision,
             participants: await this.redisPresenceRepository.getParticipants(

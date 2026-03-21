@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { collaborationService } from "@/services/collaboration/collaborationService";
 import { OTClient, textChangeToOperations, type OfflineChanges } from "@/services/collaboration/otClient";
-import { getQuestion } from "@/services/question/questionService";
 import { pushToast } from "@/utils/toast";
 import type {
     CodeChangePayload,
@@ -199,19 +198,17 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                     }
                 }
 
-                const fetchedQuestion = await getQuestion(ack.state.questionId as never);
-                if (!isMounted || !fetchedQuestion) {
-                    return;
+                // Use question from join response (fetched by collaboration service internally)
+                if (ack.state.question) {
+                    setQuestion({
+                        quid: ack.state.question.quid,
+                        title: ack.state.question.title,
+                        topics: ack.state.question.topics,
+                        difficulty: ack.state.question.difficulty,
+                        description: ack.state.question.description,
+                        testCase: ack.state.question.testCase,
+                    });
                 }
-
-                setQuestion({
-                    quid: fetchedQuestion.quid as unknown as string,
-                    title: fetchedQuestion.title,
-                    topics: fetchedQuestion.topics,
-                    difficulty: fetchedQuestion.difficulty,
-                    description: fetchedQuestion.description,
-                    testCase: fetchedQuestion.testCase,
-                });
             } catch (error) {
                 if (!isMounted) {
                     return;

@@ -27,6 +27,15 @@ export type SelectedQuestion = {
     title?: string;
 };
 
+export type QuestionDetails = {
+    quid: string;
+    title: string;
+    description: string;
+    difficulty: string;
+    topics: string[];
+    testCase: Array<{ input: string; output: string }>;
+};
+
 export type CollaborationSession = {
     collaborationId: string;
     matchId?: string;
@@ -49,6 +58,7 @@ export type SessionParticipantPresence = {
 export type SessionJoinState = {
     session: CollaborationSession;
     questionId: string;
+    question?: QuestionDetails;
     codeSnapshot: string;
     codeRevision: number;
     participants: SessionParticipantPresence[];

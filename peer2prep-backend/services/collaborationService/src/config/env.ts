@@ -47,6 +47,8 @@ export const env = {
         process.env.CS_USER_AUTH_BATCH_PATH ?? "/v1/api/users/internal/validation/batch",
     questionSelectionPath:
         process.env.CS_QUESTION_SELECTION_PATH ?? "/v1/api/questions/internal/select",
+    questionDetailsPath:
+        process.env.CS_QUESTION_DETAILS_PATH ?? "/v1/api/questions/internal/get",
     useQuestionStub: readBoolean(process.env.CS_USE_QUESTION_STUB, false),
     stubQuestionPrefix:
         process.env.CS_STUB_QUESTION_PREFIX ?? DEFAULTS.STUB_QUESTION_PREFIX,

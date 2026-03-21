@@ -2,11 +2,45 @@ import { Router } from "express";
 import type { UUID } from "node:crypto";
 
 import { requireInternalAuth } from "../middlewares/requireInternalAuth";
-import { SearchQuestion } from "../services/questionDatabase";
+import { GetQuestion, SearchQuestion } from "../services/questionDatabase";
 
 const router = Router();
 
 router.use(requireInternalAuth);
+
+// Get question details by ID (for collaboration service)
+router.post("/questions/internal/get", async (req, res) => {
+    const { questionId } = req.body ?? {};
+
+    if (typeof questionId !== "string" || questionId.trim().length === 0) {
+        return res.status(400).json({
+            error: "questionId is required.",
+        });
+    }
+
+    const result = await GetQuestion(questionId.trim() as UUID);
+
+    if (!result || result.length === 0) {
+        return res.status(404).json({
+            error: "Question not found.",
+        });
+    }
+
+    const question = result[0] as Record<string, unknown>;
+
+    return res.status(200).json({
+        data: {
+            question: {
+                quid: question.quid,
+                title: question.title,
+                description: question.description,
+                difficulty: question.difficulty,
+                topics: question.topics,
+                testCase: question.test_case,
+            },
+        },
+    });
+});
 
 router.post("/questions/internal/select", async (req, res) => {
     const { topic, difficulty, userAId, userBId } = req.body ?? {};

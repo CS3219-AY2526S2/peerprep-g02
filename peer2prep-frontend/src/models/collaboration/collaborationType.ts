@@ -22,6 +22,7 @@ export type CollaborationSession = {
 export type CollaborationJoinState = {
     session: CollaborationSession;
     questionId: string;
+    question?: CollaborationQuestion;
     codeSnapshot: string;
     codeRevision: number;
     participants: CollaborationParticipant[];
