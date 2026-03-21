@@ -3,8 +3,24 @@ import { matchingService } from "@/services/matching/matchingService";
 import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
 import { SocketEvents } from "@/models/matching/matchingSocketType";
 import { Difficulty } from "@/models/question/questionType";
+import { pushToast } from "@/utils/toast";
 
-export function useMatchingQueue(topic: string, language: string, difficulty: Difficulty) {
+type MatchSuccessPayload = {
+    collaborationId?: string;
+    matchId?: string;
+    matchedTopic?: string;
+    matchedDifficulty?: string;
+    matchedLanguage?: string;
+    userId?: string;
+    partnerId?: string;
+};
+
+export function useMatchingQueue(
+    topic: string,
+    language: string,
+    difficulty: Difficulty,
+    onMatchFound?: (payload: MatchSuccessPayload) => void,
+) {
     const [isSearching, setIsSearching] = useState(false);
     const [activeTier, setActiveTier] = useState(0);
     
@@ -55,9 +71,21 @@ export function useMatchingQueue(topic: string, language: string, difficulty: Di
                 resetSearchState();
             });
 
-            socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: any) => {
+            socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
                 console.log("Partner found!", data);
                 resetSearchState();
+
+                if (data.collaborationId && onMatchFound) {
+                    onMatchFound(data);
+                    return;
+                }
+
+                pushToast({
+                    tone: "info",
+                    message:
+                        "Match found. Waiting for collaboration session routing to become available.",
+                    durationMs: 4500,
+                });
             });
         };
 
@@ -72,7 +100,7 @@ export function useMatchingQueue(topic: string, language: string, difficulty: Di
                 socketInstance.off(SocketEvents.MATCH_SUCCESS);
             }
         };
-    }, [topic, language, difficulty]); // Added dependencies so it knows about current state
+    }, [topic, language, difficulty, onMatchFound]);
 
     // 2. Relaxation Timer Logic
     useEffect(() => {

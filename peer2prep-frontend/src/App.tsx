@@ -8,6 +8,7 @@ import RegisterView from "@/views/user/RegisterView";
 import AdminListView from "@/views/user/AdminListView";
 import HomeView from "@/views/HomeView";
 import QuestionMainView from "@/views/question/QuestionMainView";
+import CollaborationSessionView from "@/views/collaboration/CollaborationSessionView";
 
 const ADMIN_ALLOWED_ROLES: Array<"admin" | "super_user"> = ["admin", "super_user"];
 
@@ -35,6 +36,7 @@ export default function App() {
 
                 <Route element={<ProtectedRoute />}>
                     <Route path={ROUTES.DASHBOARD} element={<HomeView />} />
+                    <Route path={ROUTES.COLLABORATION} element={<CollaborationSessionView />} />
                 </Route>
 
                 <Route element={<AdminProtectedRoute />}>
