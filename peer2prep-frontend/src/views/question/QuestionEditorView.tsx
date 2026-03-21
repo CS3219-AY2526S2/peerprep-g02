@@ -145,7 +145,7 @@ function Admin(props: AdminProp) {
                 </div>
                 <div style={{ display: "flex" }}>
                     <a
-                        href="/account/profile"
+                        href="/home"
                         style={{
                             alignSelf: "center",
                             background: "#5046E6",
@@ -157,7 +157,7 @@ function Admin(props: AdminProp) {
                             textDecoration: "none",
                         }}
                     >
-                        Back to profile
+                        Back to dashboard
                     </a>
                 </div>
             </header>

@@ -13,7 +13,7 @@ export default function LoginView() {
                 routing="path"
                 path={ROUTES.LOGIN}
                 signUpUrl={ROUTES.REGISTER}
-                forceRedirectUrl={ROUTES.PROFILE}
+                forceRedirectUrl={ROUTES.DASHBOARD}
             />
         </section>
     );

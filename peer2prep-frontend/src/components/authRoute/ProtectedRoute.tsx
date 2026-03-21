@@ -87,7 +87,7 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     }
 
     if (requiresRoleCheck && (!currentRole || !allowedRoles?.includes(currentRole))) {
-        return <Navigate to={ROUTES.PROFILE} replace />;
+        return <Navigate to={ROUTES.DASHBOARD} replace />;
     }
 
     return <Outlet />;
