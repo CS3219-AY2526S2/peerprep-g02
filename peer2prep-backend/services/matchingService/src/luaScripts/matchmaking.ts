@@ -16,7 +16,6 @@ local seekerKey     = KEYS[numQueues + 1]
 local maxCandidatesPerQueue = 10
 local gracePeriodMs = 5000
 
--- Helper: Remove user from all tracked ZSETs and delete their status HSET
 local function remove_from_all_queues(userKey)
     local keysRaw = redis.call('HGET', userKey, 'queues')
     if keysRaw then
@@ -28,7 +27,11 @@ local function remove_from_all_queues(userKey)
     redis.call('DEL', userKey)
 end
 
+-- Track start time for frontend relaxation
+local existingStartTime = now
 if redis.call('EXISTS', seekerKey) == 1 then
+    local st = redis.call('HGET', seekerKey, 'start_time')
+    if st then existingStartTime = tonumber(st) end
     remove_from_all_queues(seekerKey)
 end
 
@@ -51,17 +54,17 @@ for i = 1, numQueues do
                     if (now - lastSeen) > gracePeriodMs then
                         remove_from_all_queues(candidateKey)
                     end
-                    -- Skip to next candidate
                 elseif status == 'READY' then
                     remove_from_all_queues(candidateKey)
                     remove_from_all_queues(seekerKey)
                     
                     local matchedPartnerId = candidateKey:match("([^:]+)$")
-                    local matchedLang = queueKey:match("([^:]+)$")
                     
-                    return { 'matched', matchedPartnerId, matchedLang }
+                    -- Extract the last two segments from mm:q:topic:diff:lang
+                    local matchedDiff, matchedLang = queueKey:match("([^:]+):([^:]+)$")
+                    
+                    return { 'matched', matchedPartnerId, matchedDiff, matchedLang, tostring(existingStartTime) }
                 end
-                -- If status is 'MATCHED', we just skip them
             end
         end
     end
@@ -72,10 +75,9 @@ for i = 1, numQueues do
     redis.call('ZADD', KEYS[i], now, seekerKey)
 end
 
--- Update seeker status to READY and store the queues they are in
-redis.call('HSET', seekerKey, 'queues', queueKeysJson, 'status', 'READY', 'last_seen', now)
+redis.call('HSET', seekerKey, 'queues', queueKeysJson, 'status', 'READY', 'last_seen', now, 'start_time', existingStartTime)
 
-return { 'enqueued', '', '' }
+return { 'enqueued', '', '', '', tostring(existingStartTime) }
 `;
 
 export const ATTEMPT_REJOIN_LUA_SCRIPT = `
@@ -86,7 +88,8 @@ local seekerKey = KEYS[1]
 local now = tonumber(ARGV[1])
 local gracePeriodMs = 5000
 
-local data = redis.call('HMGET', seekerKey, 'status', 'last_seen')
+-- Fetch start_time as well
+local data = redis.call('HMGET', seekerKey, 'status', 'last_seen', 'start_time')
 local status = data[1]
 
 if not status then
@@ -94,19 +97,18 @@ if not status then
 end
 
 local lastSeen = tonumber(data[2] or 0)
+local startTime = data[3] or tostring(now)
 
 if status == 'READY' then
-    return { 'success' }
+    return { 'success', startTime }
 elseif status == 'DISCONNECTED' then
     if (now - lastSeen) > gracePeriodMs then
         return { 'fail' }
     else
-        -- Partial HSET: revive status
         redis.call('HSET', seekerKey, 'status', 'READY', 'last_seen', now)
-        return { 'success' }
+        return { 'success', startTime }
     end
 else
-    -- should not reach
     redis.call('DEL', seekerKey)
     return { 'fail' }
 end

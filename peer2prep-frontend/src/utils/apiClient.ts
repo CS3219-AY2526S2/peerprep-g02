@@ -50,3 +50,10 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}): Promise
         credentials: credentials ?? "include",
     });
 }
+
+export async function getAuthToken(): Promise<string | null> {
+    if (!getTokenRef) {
+        throw new Error("Auth interceptor not initialized");
+    }
+    return await getTokenRef({ template: "jwt" });
+}
