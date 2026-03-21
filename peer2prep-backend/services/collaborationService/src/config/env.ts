@@ -30,6 +30,15 @@ export const env = {
         process.env.CS_DEPENDENCY_TIMEOUT_MS,
         DEFAULTS.DEPENDENCY_TIMEOUT_MS,
     ),
+    disconnectGraceMs: readNumber(process.env.CS_DISCONNECT_GRACE_MS, DEFAULTS.DISCONNECT_GRACE_MS),
+    heartbeatIntervalMs: readNumber(
+        process.env.CS_HEARTBEAT_INTERVAL_MS,
+        DEFAULTS.HEARTBEAT_INTERVAL_MS,
+    ),
+    heartbeatTimeoutMs: readNumber(
+        process.env.CS_HEARTBEAT_TIMEOUT_MS,
+        DEFAULTS.HEARTBEAT_TIMEOUT_MS,
+    ),
     apiGatewayUrl: trimTrailingSlash(process.env.CS_API_GATEWAY_URL) ?? "http://localhost:8080",
     internalServiceApiKey: process.env.CS_INTERNAL_SERVICE_API_KEY ?? "",
     userAuthContextPath:
@@ -45,4 +54,13 @@ export const env = {
     redisPort: readNumber(process.env.CS_REDIS_PORT, DEFAULTS.REDIS_PORT),
     redisDb: readNumber(process.env.CS_REDIS_DB, DEFAULTS.REDIS_DB),
     redisKeyPrefix: process.env.CS_REDIS_KEY_PREFIX ?? "collaboration-service:",
+    sessionInactivityTimeoutMs: readNumber(
+        process.env.CS_SESSION_INACTIVITY_TIMEOUT_MS,
+        DEFAULTS.SESSION_INACTIVITY_TIMEOUT_MS,
+    ),
+    inactivityCheckIntervalMs: readNumber(
+        process.env.CS_INACTIVITY_CHECK_INTERVAL_MS,
+        DEFAULTS.INACTIVITY_CHECK_INTERVAL_MS,
+    ),
+    databaseUri: process.env.CS_DATABASE_URI ?? "postgresql://localhost:5432/collaboration_service",
 };

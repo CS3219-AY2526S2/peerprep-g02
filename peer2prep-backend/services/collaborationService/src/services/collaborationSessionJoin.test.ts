@@ -19,41 +19,72 @@ function buildSession(): CollaborationSession {
 }
 
 describe("CollaborationSessionService join flow", () => {
-    it("allows multiple sockets for the same assigned user", () => {
+    it("allows multiple sockets for the same assigned user", async () => {
         const session = buildSession();
         const presenceRepository = {
             getDistinctUserIds: vi
                 .fn()
-                .mockReturnValueOnce(new Set<string>())
-                .mockReturnValueOnce(new Set<string>(["user-1"])),
-            addSocketConnection: vi.fn(),
+                .mockResolvedValueOnce(new Set<string>())
+                .mockResolvedValueOnce(new Set<string>(["user-1"])),
+            addSocketConnection: vi.fn().mockResolvedValue({
+                isFirstConnection: true,
+                wasDisconnected: false,
+                disconnectDurationMs: 0,
+            }),
             getParticipants: vi
                 .fn()
-                .mockReturnValue([
+                .mockResolvedValue([
                     { userId: "user-1", status: "online", connectionCount: 2 },
                     { userId: "user-2", status: "offline", connectionCount: 0 },
                 ]),
             removeSocketConnection: vi.fn(),
+            hasUserLeft: vi.fn().mockResolvedValue(false),
+            canRejoinWithinGracePeriod: vi.fn().mockResolvedValue({
+                canRejoin: true,
+                disconnectDurationMs: 0,
+                gracePeriodMs: 30000,
+            }),
+        };
+
+        const otRepository = {
+            initializeDocument: vi.fn(),
+            getDocument: vi.fn().mockResolvedValue({ content: "", revision: 0 }),
+            getContent: vi.fn().mockResolvedValue(""),
+            getRevision: vi.fn().mockResolvedValue(0),
+            updateDocument: vi.fn(),
+            deleteDocument: vi.fn(),
         };
 
         const service = new CollaborationSessionService(
             {
-                getSessionByCollaborationId: vi.fn().mockReturnValue(session),
-                getCodeSnapshot: vi.fn().mockReturnValue(""),
+                getSessionByCollaborationId: vi.fn().mockResolvedValue(session),
                 createActiveSession: vi.fn(),
+                getActiveSessions: vi.fn(),
+                markSessionInactive: vi.fn(),
+                deleteSessionData: vi.fn(),
             } as never,
             presenceRepository as never,
+            otRepository as never,
+            {
+                setOutput: vi.fn(),
+                getOutput: vi.fn(),
+                deleteOutput: vi.fn(),
+            } as never,
+            {
+                insertSession: vi.fn(),
+                updateSessionEnded: vi.fn(),
+            } as never,
             {} as never,
             {} as never,
             {} as never,
         );
 
-        const firstJoin = service.joinSession({
+        const firstJoin = await service.joinSession({
             collaborationId: "collab-1",
             userId: "user-1",
             socketId: "socket-1",
         });
-        const secondJoin = service.joinSession({
+        const secondJoin = await service.joinSession({
             collaborationId: "collab-1",
             userId: "user-1",
             socketId: "socket-2",
@@ -63,19 +94,44 @@ describe("CollaborationSessionService join flow", () => {
         expect(secondJoin.participants[0].connectionCount).toBe(2);
     });
 
-    it("rejects an unassigned user from joining a session", () => {
+    it("rejects an unassigned user from joining a session", async () => {
         const session = buildSession();
         const service = new CollaborationSessionService(
             {
-                getSessionByCollaborationId: vi.fn().mockReturnValue(session),
-                getCodeSnapshot: vi.fn().mockReturnValue(""),
+                getSessionByCollaborationId: vi.fn().mockResolvedValue(session),
                 createActiveSession: vi.fn(),
+                getActiveSessions: vi.fn(),
+                markSessionInactive: vi.fn(),
+                deleteSessionData: vi.fn(),
             } as never,
             {
-                getDistinctUserIds: vi.fn().mockReturnValue(new Set<string>(["user-1", "user-2"])),
+                getDistinctUserIds: vi.fn().mockResolvedValue(new Set<string>(["user-1", "user-2"])),
                 addSocketConnection: vi.fn(),
                 getParticipants: vi.fn(),
                 removeSocketConnection: vi.fn(),
+                hasUserLeft: vi.fn().mockResolvedValue(false),
+                canRejoinWithinGracePeriod: vi.fn().mockResolvedValue({
+                    canRejoin: true,
+                    disconnectDurationMs: 0,
+                    gracePeriodMs: 30000,
+                }),
+            } as never,
+            {
+                initializeDocument: vi.fn(),
+                getDocument: vi.fn(),
+                getContent: vi.fn(),
+                getRevision: vi.fn(),
+                updateDocument: vi.fn(),
+                deleteDocument: vi.fn(),
+            } as never,
+            {
+                setOutput: vi.fn(),
+                getOutput: vi.fn(),
+                deleteOutput: vi.fn(),
+            } as never,
+            {
+                insertSession: vi.fn(),
+                updateSessionEnded: vi.fn(),
             } as never,
             {} as never,
             {} as never,
@@ -83,7 +139,7 @@ describe("CollaborationSessionService join flow", () => {
         );
 
         try {
-            service.joinSession({
+            await service.joinSession({
                 collaborationId: "collab-1",
                 userId: "user-3",
                 socketId: "socket-3",

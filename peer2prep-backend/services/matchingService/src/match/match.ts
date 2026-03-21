@@ -28,7 +28,7 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     if (status === "matched") {
         const matchId = uuidv4();
 
-        // Create collaboration session
+        // Create collaboration session via HTTP
         const collaborationId = await createCollaborationSession({
             matchId,
             userAId: req.userId,

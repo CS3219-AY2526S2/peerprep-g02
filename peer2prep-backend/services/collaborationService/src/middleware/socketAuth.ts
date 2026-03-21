@@ -19,7 +19,19 @@ export async function socketAuthMiddleware(
     const authorization =
         socket.handshake.headers["authorization"] ?? socket.handshake.auth?.token;
 
+    logger.info(
+        {
+            socketId: socket.id,
+            hasAuth: !!authorization,
+            authType: typeof authorization,
+            hasAuthHeader: !!socket.handshake.headers["authorization"],
+            hasAuthToken: !!socket.handshake.auth?.token,
+        },
+        "Socket auth middleware - checking credentials",
+    );
+
     if (!authorization || typeof authorization !== "string") {
+        logger.warn({ socketId: socket.id }, "Socket auth failed - no authorization token");
         next(new Error(ERROR_CODES.SOCKET_AUTHENTICATION_FAILED));
         return;
     }

@@ -51,6 +51,20 @@ function getInitials(userId: string): string {
     return userId.slice(0, 2).toUpperCase();
 }
 
+function getEditorPlaceholder(language: string): string {
+    const placeholders: Record<string, string> = {
+        javascript: "// Start coding in JavaScript...",
+        typescript: "// Start coding in TypeScript...",
+        python: "# Start coding in Python...",
+        java: "// Start coding in Java...",
+        cpp: "// Start coding in C++...",
+        c: "// Start coding in C...",
+        go: "// Start coding in Go...",
+        rust: "// Start coding in Rust...",
+    };
+    return placeholders[language.toLowerCase()] ?? "// Start collaborating here...";
+}
+
 export default function CollaborationSessionView() {
     const { collaborationId } = useParams<{ collaborationId: string }>();
     const navigate = useNavigate();
@@ -63,6 +77,14 @@ export default function CollaborationSessionView() {
         setEditorValue,
         participants,
         joinError,
+        partnerNotification,
+        leaveSession,
+        executionOutput,
+        language,
+        offlineChanges,
+        submitOfflineChanges,
+        discardOfflineChanges,
+        sessionEnded,
     } = useCollaborationSession(collaborationId);
 
     useEffect(() => {
@@ -138,7 +160,9 @@ export default function CollaborationSessionView() {
                             size="lg"
                             className="rounded-2xl bg-red-500 px-5 text-white hover:bg-red-400"
                             onClick={() => {
-                                startTransition(() => navigate(ROUTES.DASHBOARD));
+                                void leaveSession().then(() => {
+                                    startTransition(() => navigate(ROUTES.DASHBOARD));
+                                });
                             }}
                         >
                             <LogOut className="size-4" />
@@ -174,9 +198,14 @@ export default function CollaborationSessionView() {
                                 {connectionBadge}
                                 <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-300">
                                     <UsersRound className="size-4 text-cyan-300" />
-                                    {participants.filter((participant) => participant.status === "online").length}
+                                    {participants.filter((participant) => participant.status === "connected").length}
                                     /2 present
                                 </div>
+                                {partnerNotification && (
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-sm text-blue-300">
+                                        {partnerNotification}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -249,7 +278,7 @@ export default function CollaborationSessionView() {
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex flex-wrap items-center gap-3">
                                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-lg font-medium text-slate-100">
-                                    {session?.language ?? "Language"}
+                                    {language || session?.language || "Language"}
                                 </div>
                                 {connectionBadge}
                             </div>
@@ -265,12 +294,68 @@ export default function CollaborationSessionView() {
                     </div>
 
                     <div className="grid flex-1 lg:grid-rows-[minmax(0,1.4fr)_minmax(280px,0.95fr)]">
+                        {/* F4.8 & F4.9 - Session ended banner */}
+                        {sessionEnded && (
+                            <div className="flex items-center justify-between border-b border-red-500/30 bg-red-500/10 px-5 py-4">
+                                <div className="flex items-center gap-3">
+                                    <XCircle className="size-5 text-red-400" />
+                                    <span className="font-medium text-red-300">
+                                        {sessionEnded.reason === "both_users_left"
+                                            ? "Session ended - both users have left"
+                                            : sessionEnded.reason === "inactivity_timeout"
+                                              ? "Session ended due to inactivity"
+                                              : "Session has ended"}
+                                    </span>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-500/50 bg-transparent text-red-300 hover:bg-red-500/20"
+                                    onClick={() => {
+                                        startTransition(() => navigate(ROUTES.DASHBOARD));
+                                    }}
+                                >
+                                    Return to Dashboard
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* F4.7.4 & F4.7.5 - Offline changes banner */}
+                        {offlineChanges && !sessionEnded && (
+                            <div className="flex items-center justify-between border-b border-amber-500/30 bg-amber-500/10 px-5 py-3">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-amber-300">
+                                        You have unsaved changes from when you were offline
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-amber-500/50 bg-transparent text-amber-300 hover:bg-amber-500/20"
+                                        onClick={submitOfflineChanges}
+                                    >
+                                        Submit Changes
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-slate-400 hover:text-slate-200"
+                                        onClick={discardOfflineChanges}
+                                    >
+                                        Discard
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="border-b border-white/10 bg-black">
                             <Textarea
                                 value={editorValue}
                                 onChange={(event) => setEditorValue(event.target.value)}
-                                placeholder="// Start collaborating here..."
-                                className="h-full min-h-[360px] resize-none rounded-none border-0 bg-black px-6 py-5 font-mono text-base leading-7 text-slate-100 shadow-none focus-visible:ring-0"
+                                placeholder={getEditorPlaceholder(language)}
+                                disabled={!!sessionEnded}
+                                className="h-full min-h-[360px] resize-none rounded-none border-0 bg-black px-6 py-5 font-mono text-base leading-7 text-slate-100 shadow-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
                             />
                         </div>
 
@@ -285,9 +370,19 @@ export default function CollaborationSessionView() {
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-slate-400">
                                         <Radio className="size-4 text-emerald-400" />
-                                        Execution shell ready
+                                        {executionOutput ? "Output received" : "Execution shell ready"}
                                     </div>
                                 </div>
+
+                                {/* F4.4.4 - Shared execution output visible to all users */}
+                                {executionOutput && (
+                                    <div className="border-b border-white/10 bg-black/50 p-4">
+                                        <p className="mb-2 text-sm font-medium text-slate-400">Execution Output:</p>
+                                        <pre className="whitespace-pre-wrap font-mono text-sm text-slate-200">
+                                            {executionOutput}
+                                        </pre>
+                                    </div>
+                                )}
 
                                 <div className="overflow-auto">
                                     <table className="min-w-full text-left text-sm">
@@ -374,9 +469,11 @@ export default function CollaborationSessionView() {
                                                     </p>
                                                     <Badge
                                                         variant={
-                                                            participant.status === "online"
+                                                            participant.status === "connected"
                                                                 ? "success"
-                                                                : "outline"
+                                                                : participant.status === "disconnected"
+                                                                  ? "warning"
+                                                                  : "destructive"
                                                         }
                                                         className="rounded-full"
                                                     >

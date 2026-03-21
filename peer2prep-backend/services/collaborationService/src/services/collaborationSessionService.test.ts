@@ -32,20 +32,40 @@ describe("CollaborationSessionService", () => {
         const session = buildSession();
         const service = new CollaborationSessionService(
             {
-                createActiveSession: vi.fn().mockReturnValue({
+                createActiveSession: vi.fn().mockResolvedValue({
                     session,
                     created: false,
                     idempotentHit: true,
                     conflict: false,
                 }),
                 getSessionByCollaborationId: vi.fn(),
-                getCodeSnapshot: vi.fn(),
+                getActiveSessions: vi.fn(),
+                markSessionInactive: vi.fn(),
+                deleteSessionData: vi.fn(),
             } as never,
             {
                 getDistinctUserIds: vi.fn(),
                 addSocketConnection: vi.fn(),
                 getParticipants: vi.fn(),
                 removeSocketConnection: vi.fn(),
+                cleanupSession: vi.fn(),
+            } as never,
+            {
+                initializeDocument: vi.fn(),
+                getDocument: vi.fn(),
+                getContent: vi.fn(),
+                getRevision: vi.fn(),
+                updateDocument: vi.fn(),
+                deleteDocument: vi.fn(),
+            } as never,
+            {
+                setOutput: vi.fn(),
+                getOutput: vi.fn(),
+                deleteOutput: vi.fn(),
+            } as never,
+            {
+                insertSession: vi.fn(),
+                updateSessionEnded: vi.fn(),
             } as never,
             {
                 cacheActiveSession: vi.fn().mockResolvedValue(true),
@@ -75,20 +95,40 @@ describe("CollaborationSessionService", () => {
         const session = buildSession();
         const service = new CollaborationSessionService(
             {
-                createActiveSession: vi.fn().mockReturnValue({
+                createActiveSession: vi.fn().mockResolvedValue({
                     session,
                     created: true,
                     idempotentHit: false,
                     conflict: false,
                 }),
                 getSessionByCollaborationId: vi.fn(),
-                getCodeSnapshot: vi.fn(),
+                getActiveSessions: vi.fn(),
+                markSessionInactive: vi.fn(),
+                deleteSessionData: vi.fn(),
             } as never,
             {
                 getDistinctUserIds: vi.fn(),
                 addSocketConnection: vi.fn(),
                 getParticipants: vi.fn(),
                 removeSocketConnection: vi.fn(),
+                cleanupSession: vi.fn(),
+            } as never,
+            {
+                initializeDocument: vi.fn(),
+                getDocument: vi.fn(),
+                getContent: vi.fn(),
+                getRevision: vi.fn(),
+                updateDocument: vi.fn(),
+                deleteDocument: vi.fn(),
+            } as never,
+            {
+                setOutput: vi.fn(),
+                getOutput: vi.fn(),
+                deleteOutput: vi.fn(),
+            } as never,
+            {
+                insertSession: vi.fn(),
+                updateSessionEnded: vi.fn(),
             } as never,
             {
                 cacheActiveSession: vi.fn().mockResolvedValue(false),

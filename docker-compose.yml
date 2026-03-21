@@ -113,6 +113,9 @@ services:
       - US_INTERNAL_SERVICE_URL=http://user-service:3001
       - MS_COLLABORATION_SERVICE_URL=http://collaboration-service:3003
       - MS_INTERNAL_SERVICE_API_KEY=cdd4140e23d0643cb8637fe247ecb70ec3c32be16be4a8b6d678e62c1b7baca6
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
+    volumes:
+      - ./secrets:/secrets:ro
     restart: unless-stopped
 
   matching-redis:
@@ -181,6 +184,7 @@ services:
       - CS_API_GATEWAY_URL=http://gateway:8080
       - CS_REDIS_HOST=collaboration-redis
       - CS_REDIS_PORT=6379
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
     depends_on:
       collaboration-redis:
         condition: service_started
@@ -196,6 +200,7 @@ services:
     volumes:
       - ./peer2prep-backend/services/collaborationService:/app
       - /app/node_modules
+      - ./secrets:/secrets:ro
     restart: unless-stopped
 
   collaboration-redis:

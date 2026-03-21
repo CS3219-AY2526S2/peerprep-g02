@@ -26,6 +26,7 @@ export const ERROR_CODES = {
     SESSION_ACCESS_DENIED: "SESSION_ACCESS_DENIED",
     SESSION_CAPACITY_REACHED: "SESSION_CAPACITY_REACHED",
     INVALID_JOIN_REQUEST: "INVALID_JOIN_REQUEST",
+    REJOIN_GRACE_PERIOD_EXPIRED: "REJOIN_GRACE_PERIOD_EXPIRED",
 } as const;
 
 export const DEFAULTS = {
@@ -35,10 +36,33 @@ export const DEFAULTS = {
     REDIS_PORT: 6379,
     REDIS_DB: 0,
     STUB_QUESTION_PREFIX: "stub",
+    DISCONNECT_GRACE_MS: 30 * 1000, // 30 seconds grace period for reconnection
+    HEARTBEAT_INTERVAL_MS: 25 * 1000, // Socket.IO pingInterval
+    HEARTBEAT_TIMEOUT_MS: 20 * 1000, // Socket.IO pingTimeout
+    SESSION_INACTIVITY_TIMEOUT_MS: 30 * 60 * 1000, // 30 minutes inactivity timeout
+    INACTIVITY_CHECK_INTERVAL_MS: 60 * 1000, // Check every minute
 } as const;
 
 export const SOCKET_EVENTS = {
+    // Connection events
     CONNECTION_READY: "connection:ready",
+
+    // Session events
     SESSION_JOIN: "session:join",
+    SESSION_LEAVE: "session:leave",
+    SESSION_ENDED: "session:ended",
+
+    // Presence events
     PRESENCE_UPDATED: "presence:updated",
+    USER_JOINED: "user:joined",
+    USER_DISCONNECTED: "user:disconnected",
+    USER_LEFT: "user:left",
+
+    // Code editor events (OT-based)
+    CODE_CHANGE: "code:change",
+    CODE_ACK: "code:ack",
+    CODE_SYNC: "code:sync",
+
+    // Output events
+    OUTPUT_UPDATED: "output:updated",
 } as const;

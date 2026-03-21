@@ -7,7 +7,7 @@ import { logger } from "@/utils/logger.js";
 
 const router = Router();
 
-router.post("/sessions", async (req, res, next) => {
+router.post("/", async (req, res, next) => {
     const validationResult = validateCreateSessionPayload(req.body);
 
     if (!validationResult.valid) {
