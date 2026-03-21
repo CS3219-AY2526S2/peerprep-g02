@@ -50,33 +50,45 @@ The Collaboration Service enables real-time collaborative coding sessions betwee
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  Services                                                                    │
 │  ┌────────────────────────────┐  ┌──────────────────────────────────────┐   │
-│  │ CollaborationSessionService│  │           OTService                  │   │
-│  │ - createSession()          │  │ - transform()                        │   │
-│  │ - joinSession()            │  │ - applyOperations()                  │   │
-│  │ - leaveSession()           │  │ - OTDocument class                   │   │
-│  │ - applyCodeChange()        │  └──────────────────────────────────────┘   │
-│  │ - endSession()             │                                             │
+│  │ CollaborationSessionService│  │      OTDocumentManager (OTService)   │   │
+│  │ - createSession()          │  │ - getDocument() / initDocument()     │   │
+│  │ - joinSession()            │  │ - applyClientOperations()            │   │
+│  │ - leaveSession()           │  │ - transform()                        │   │
+│  │ - applyCodeChange()        │  │ - deleteDocument()                   │   │
+│  │ - endSession()             │  └──────────────────────────────────────┘   │
 │  └────────────────────────────┘                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  Repositories                                                                │
+│  Repositories (Redis-backed)                                                 │
 │  ┌────────────────────────────┐  ┌──────────────────────────────────────┐   │
-│  │ SessionRepository          │  │ SessionPresenceRepository            │   │
-│  │ - sessions (Map)           │  │ - socketsBySession (Map)             │   │
-│  │ - otDocuments (Map)        │  │ - socketBindings (Map)               │   │
-│  │ - output (Map)             │  │ - leftUsers (Set)                    │   │
-│  └────────────────────────────┘  │ - sessionLastActivity (Map)          │   │
-│                                  └──────────────────────────────────────┘   │
+│  │ RedisSessionRepository     │  │ RedisPresenceRepository              │   │
+│  │ - session metadata         │  │ - socket bindings                    │   │
+│  │ - user pair lookups        │  │ - presence state per user            │   │
+│  │ - idempotency keys         │  │ - left users tracking                │   │
+│  └────────────────────────────┘  │ - session activity timestamps        │   │
+│  ┌────────────────────────────┐  └──────────────────────────────────────┘   │
+│  │ RedisOTRepository          │  ┌──────────────────────────────────────┐   │
+│  │ - document content         │  │ RedisOutputRepository                │   │
+│  │ - revision numbers         │  │ - execution output cache             │   │
+│  │ - operation history        │  └──────────────────────────────────────┘   │
+│  └────────────────────────────┘                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  PostgreSQL (Session History)                                                │
 │  ┌────────────────────────────┐                                             │
-│  │ SessionCacheRepository     │  ◄─── Redis cache                          │
-│  │ - session data caching     │                                             │
+│  │ PostgresSessionRepository  │                                             │
+│  │ - insertSession()          │  ◄─── Permanent session records            │
+│  │ - updateSessionEnded()     │       with final code snapshot             │
 │  └────────────────────────────┘                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                     │                          │
-                    ▼                          ▼
-┌───────────────────────────┐    ┌───────────────────────────────────────────┐
-│       User Service        │    │            Question Service               │
-│ - batch user validation   │    │ - question selection by topic/difficulty  │
-└───────────────────────────┘    └───────────────────────────────────────────┘
+        ┌───────────┴───────────┐              │
+        ▼                       ▼              ▼
+┌───────────────┐    ┌───────────────┐    ┌───────────────────────────────────┐
+│     Redis     │    │  PostgreSQL   │    │        External Services          │
+│ - Real-time   │    │ - Session     │    │ - User Service (validation)       │
+│   session data│    │   history     │    │ - Question Service (selection)    │
+│ - Presence    │    │ - Final code  │    └───────────────────────────────────┘
+│ - OT docs     │    │ - Audit trail │
+└───────────────┘    └───────────────┘
 ```
 
 ---
@@ -571,42 +583,79 @@ Full sync when client is too far behind.
 
 ---
 
-## Redis Cache
+## Data Storage
 
-### Key Format
+### Storage Strategy
+
+| Data | Storage | Reason |
+|------|---------|--------|
+| Session metadata | Redis | Fast lookup, ephemeral during session |
+| OT documents (code, revision) | Redis | Real-time, needs fast access |
+| OT operation history | Redis | Last ~50 ops for transforms |
+| Presence state | Redis | Real-time, multi-instance coordination |
+| Socket bindings | Redis | Multi-instance routing |
+| Left users tracking | Redis | Session lifecycle |
+| Activity timestamps | Redis | Inactivity timeout checks |
+| Execution output | Redis | Shared state |
+| **Completed sessions** | **PostgreSQL** | Permanent history/audit trail |
+
+### Redis Key Design
+
+All keys use the prefix from `CS_REDIS_KEY_PREFIX` (default: `collaboration-service:`).
 
 ```
-{redisKeyPrefix}session:{collaborationId}
+collaboration-service:
+├── session:{collaborationId}              # Hash: session metadata
+├── session:pair:{userA}:{userB}           # String: active collaborationId for pair
+├── session:idempotency:{key}              # String: collaborationId for idempotency
+├── ot:{collaborationId}:content           # String: code content
+├── ot:{collaborationId}:revision          # String: revision number
+├── ot:{collaborationId}:ops               # List: recent operations (capped at 50)
+├── output:{collaborationId}               # String: execution output
+├── presence:{collaborationId}:{userId}    # Hash: user presence state
+├── presence:{collaborationId}:sockets     # Set: all socket IDs in session
+├── socket:{socketId}                      # Hash: socketId → {collaborationId, userId}
+├── left:{collaborationId}                 # Set: userIds who left
+└── activity:{collaborationId}             # String: last activity timestamp
 ```
 
-Default prefix: `collaboration-service:`
+### Redis TTL
 
-Example: `collaboration-service:session:4f0d95c6-b6e7-4c0e-b38f-2dd5332ed7d7`
+All keys use TTL = `CS_SESSION_TTL_MS` (default: 1 hour) for automatic cleanup.
 
-### Stored Fields
+### PostgreSQL Schema
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `collaborationId` | string | Unique session identifier |
-| `matchId` | string | Match identifier (optional) |
-| `userAId` | string | First user's ID |
-| `userBId` | string | Second user's ID |
-| `difficulty` | string | Easy, Medium, or Hard |
-| `language` | string | Programming language |
-| `topic` | string | Question topic |
-| `questionId` | string | Selected question ID |
-| `status` | string | active or inactive |
-| `createdAt` | string | ISO timestamp |
+```sql
+CREATE TABLE collaboration_sessions (
+    collaboration_id UUID PRIMARY KEY,
+    match_id TEXT,
+    user_a_id TEXT NOT NULL,
+    user_b_id TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    language TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    question_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    final_code TEXT,                    -- Snapshot when session ends
+    ended_reason TEXT,                  -- 'both_users_left', 'inactivity_timeout', 'manual'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ended_at TIMESTAMPTZ,
 
-### TTL
+    CONSTRAINT difficulty_check CHECK (difficulty IN ('Easy', 'Medium', 'Hard')),
+    CONSTRAINT status_check CHECK (status IN ('active', 'inactive'))
+);
 
-Controlled by `CS_SESSION_TTL_MS` (default: 1 hour)
+CREATE INDEX idx_sessions_user_a ON collaboration_sessions(user_a_id);
+CREATE INDEX idx_sessions_user_b ON collaboration_sessions(user_b_id);
+CREATE INDEX idx_sessions_status ON collaboration_sessions(status);
+```
 
-### Cache Behavior
+### Data Lifecycle
 
-- Cache write failure does not fail session creation
-- `cacheWriteSucceeded` in response indicates cache status
-- Cache is for acceleration/recovery, not source of truth
+1. **Session Creation**: Data written to Redis (and optionally PostgreSQL)
+2. **During Session**: All real-time data in Redis
+3. **Session End**: Final code snapshot saved to PostgreSQL, Redis keys cleaned up
+4. **TTL Expiry**: Any orphaned Redis keys auto-expire after `CS_SESSION_TTL_MS`
 
 ---
 
@@ -676,28 +725,45 @@ Server receives A first:
 Both clients receive transformed operations and converge to "XhelloY"
 ```
 
-### Server-side Document
+### Server-side Document (Redis-backed)
 
 ```typescript
-class OTDocument {
-  private content: string;
-  private revision: number;
-  private pendingOperations: Map<number, HistoryEntry>;  // Last 50 revisions
+class OTDocumentManager {
+  private readonly otRepo: RedisOTRepository;
+  private readonly maxHistoryLength = 50;
 
-  applyClientOperations(userId, clientRevision, operations) {
+  async applyClientOperations(collaborationId, userId, clientRevision, operations) {
+    // Get current document state from Redis
+    const doc = await this.otRepo.getDocument(collaborationId);
+
+    // Get recent operations for transformation
+    const recentOps = await this.otRepo.getRecentOperations(collaborationId, this.maxHistoryLength);
+
     // Transform against all ops since client's revision
     let transformed = operations;
-    for (let rev = clientRevision + 1; rev <= this.revision; rev++) {
-      transformed = transform(transformed, this.pendingOperations.get(rev));
+    for (const historyEntry of recentOps) {
+      if (historyEntry.revision > clientRevision) {
+        transformed = transform(transformed, historyEntry.operations);
+      }
     }
 
-    this.content = applyOperations(this.content, transformed);
-    this.revision++;
+    // Apply to document and save to Redis
+    const newContent = applyOperations(doc.content, transformed);
+    const newRevision = doc.revision + 1;
 
-    return { transformed, newRevision: this.revision };
+    await this.otRepo.setDocument(collaborationId, newContent, newRevision);
+    await this.otRepo.pushOperation(collaborationId, newRevision, userId, transformed);
+
+    return { transformed, newRevision, newContent };
   }
 }
 ```
+
+### Redis OT Storage
+
+- **Content**: Stored as string at `ot:{collaborationId}:content`
+- **Revision**: Stored as string at `ot:{collaborationId}:revision`
+- **Operations**: Stored as list at `ot:{collaborationId}:ops` (capped at 50 entries)
 
 ---
 
@@ -727,6 +793,7 @@ class OTDocument {
 | `CS_REDIS_PORT` | 6379 | Redis port |
 | `CS_REDIS_DB` | 0 | Redis database |
 | `CS_REDIS_KEY_PREFIX` | collaboration-service: | Redis key prefix |
+| `CS_DATABASE_URI` | postgresql://localhost:5432/collaboration_service | PostgreSQL connection URI |
 
 ---
 
@@ -846,19 +913,29 @@ src/
 ├── models/
 │   └── session.ts                      # TypeScript types
 ├── repositories/
-│   ├── sessionRepository.ts            # Session + OT document storage
-│   ├── sessionPresenceRepository.ts    # Presence + socket tracking
-│   └── sessionCacheRepository.ts       # Redis cache operations
+│   ├── redisSessionRepository.ts       # Session metadata in Redis
+│   ├── redisOTRepository.ts            # OT documents in Redis
+│   ├── redisPresenceRepository.ts      # Presence + socket tracking in Redis
+│   ├── redisOutputRepository.ts        # Execution output in Redis
+│   ├── postgresSessionRepository.ts    # Session history in PostgreSQL
+│   └── sessionCacheRepository.ts       # Legacy Redis cache (deprecated)
 ├── routes/
 │   └── sessionRoutes.ts                # REST API routes
 ├── services/
 │   ├── collaborationSessionService.ts  # Core session logic
-│   ├── otService.ts                    # OT algorithm implementation
+│   ├── otService.ts                    # OT algorithm + Redis-backed document manager
 │   ├── userValidationService.ts        # User Service integration
 │   ├── questionSelectionService.ts     # Question Service integration
 │   └── validation.ts                   # Request validation
-└── sockets/
-    └── registerSocketHandlers.ts       # Socket event handlers
+├── sockets/
+│   └── registerSocketHandlers.ts       # Socket event handlers
+├── utils/
+│   ├── redis.ts                        # Redis client singleton
+│   ├── postgres.ts                     # PostgreSQL pool + query helper
+│   └── logger.ts                       # Pino logger
+└── migrations/
+    ├── migrate.ts                      # Migration runner
+    └── 0001_create_sessions_table.sql  # Sessions table schema
 ```
 
 ### Frontend
@@ -882,12 +959,20 @@ src/
 
 | Data Type | Storage | On Session End |
 |-----------|---------|----------------|
-| Session record | In-memory Map | **Kept** (for history) |
-| OT document (code) | In-memory Map | **Deleted** |
-| Output cache | In-memory Map | **Deleted** |
-| Presence data | In-memory Map | **Deleted** |
-| Socket bindings | In-memory Map | **Deleted** |
-| Redis cache | Redis | Expires via TTL |
+| Session metadata | Redis | **Deleted** |
+| OT document (code) | Redis | **Deleted** (final snapshot → PostgreSQL) |
+| OT operation history | Redis | **Deleted** |
+| Output cache | Redis | **Deleted** |
+| Presence data | Redis | **Deleted** |
+| Socket bindings | Redis | **Deleted** |
+| Session history | PostgreSQL | **Kept** (permanent record with final code) |
+
+### Persistence Benefits
+
+- **Server Restart**: Active sessions survive service restarts (data in Redis)
+- **Multi-Instance**: Multiple service instances can share session state
+- **Audit Trail**: Completed sessions stored permanently in PostgreSQL
+- **Auto-Cleanup**: Redis TTL ensures orphaned data is cleaned up
 
 ---
 
