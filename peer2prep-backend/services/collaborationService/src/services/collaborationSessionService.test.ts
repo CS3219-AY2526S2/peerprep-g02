@@ -38,6 +38,14 @@ describe("CollaborationSessionService", () => {
                     idempotentHit: true,
                     conflict: false,
                 }),
+                getSessionByCollaborationId: vi.fn(),
+                getCodeSnapshot: vi.fn(),
+            } as never,
+            {
+                getDistinctUserIds: vi.fn(),
+                addSocketConnection: vi.fn(),
+                getParticipants: vi.fn(),
+                removeSocketConnection: vi.fn(),
             } as never,
             {
                 cacheActiveSession: vi.fn().mockResolvedValue(true),
@@ -73,6 +81,14 @@ describe("CollaborationSessionService", () => {
                     idempotentHit: false,
                     conflict: false,
                 }),
+                getSessionByCollaborationId: vi.fn(),
+                getCodeSnapshot: vi.fn(),
+            } as never,
+            {
+                getDistinctUserIds: vi.fn(),
+                addSocketConnection: vi.fn(),
+                getParticipants: vi.fn(),
+                removeSocketConnection: vi.fn(),
             } as never,
             {
                 cacheActiveSession: vi.fn().mockResolvedValue(false),

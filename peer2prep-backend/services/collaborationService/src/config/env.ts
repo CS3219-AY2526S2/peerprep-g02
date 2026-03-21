@@ -32,6 +32,8 @@ export const env = {
     ),
     apiGatewayUrl: trimTrailingSlash(process.env.CS_API_GATEWAY_URL) ?? "http://localhost:8080",
     internalServiceApiKey: process.env.CS_INTERNAL_SERVICE_API_KEY ?? "",
+    userAuthContextPath:
+        process.env.CS_USER_AUTH_CONTEXT_PATH ?? "/v1/api/users/internal/authz/context",
     userAuthBatchPath:
         process.env.CS_USER_AUTH_BATCH_PATH ?? "/v1/api/users/internal/validation/batch",
     questionSelectionPath:

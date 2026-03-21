@@ -43,6 +43,8 @@ type CreateSessionResult =
 export class SessionRepository {
     private readonly sessionsByIdempotencyKey = new Map<string, CollaborationSession>();
     private readonly activeSessionsByPair = new Map<string, CollaborationSession>();
+    private readonly sessionsByCollaborationId = new Map<string, CollaborationSession>();
+    private readonly codeSnapshotsByCollaborationId = new Map<string, string>();
 
     createActiveSession(input: CreateSessionInput): CreateSessionResult {
         const pairKey = buildPairKey(input.userAId, input.userBId);
@@ -83,6 +85,8 @@ export class SessionRepository {
 
         this.sessionsByIdempotencyKey.set(idempotencyKey, session);
         this.activeSessionsByPair.set(pairKey, session);
+        this.sessionsByCollaborationId.set(session.collaborationId, session);
+        this.codeSnapshotsByCollaborationId.set(session.collaborationId, "");
 
         return {
             session,
@@ -90,5 +94,13 @@ export class SessionRepository {
             idempotentHit: false,
             conflict: false,
         };
+    }
+
+    getSessionByCollaborationId(collaborationId: string): CollaborationSession | null {
+        return this.sessionsByCollaborationId.get(collaborationId) ?? null;
+    }
+
+    getCodeSnapshot(collaborationId: string): string {
+        return this.codeSnapshotsByCollaborationId.get(collaborationId) ?? "";
     }
 }

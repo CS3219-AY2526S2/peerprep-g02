@@ -37,3 +37,16 @@ export type CollaborationSession = {
     status: SessionStatus;
     createdAt: string;
 };
+
+export type SessionParticipantPresence = {
+    userId: string;
+    status: "online" | "offline";
+    connectionCount: number;
+};
+
+export type SessionJoinState = {
+    session: CollaborationSession;
+    questionId: string;
+    codeSnapshot: string;
+    participants: SessionParticipantPresence[];
+};
