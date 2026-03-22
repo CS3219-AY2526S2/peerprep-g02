@@ -9,9 +9,9 @@ export const API_ENDPOINTS = {
         GATEWAY_PATH: `${import.meta.env.VITE_GATEWAY_ENDPOINT}/v1/api/matching`,
     },
     QUESTIONS: {
-        BASE: "http://localhost:3005/v1/api/questions", // GET (all), POST (create), PUT (edit)
-        POPULAR: "http://localhost:3005/v1/api/questions/popular", // GET
-        GET_ONE: "http://localhost:3005/v1/api/questions/get", // POST with {quid}
-        DELETE: "http://localhost:3005/v1/api/questions/delete", // POST with {quid}
+        BASE: "/questions", // GET (all), POST (create), PUT (edit)
+        POPULAR: "/questions/popular", // GET
+        GET_ONE: "/questions/get", // POST with {quid}
+        DELETE: "/questions/delete", // POST with {quid}
     },
 };

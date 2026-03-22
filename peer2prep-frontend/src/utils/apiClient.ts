@@ -12,14 +12,14 @@ export function injectAuthInterceptor(getToken?: TokenGetter): void {
 }
 
 function resolveUrl(path: string): string {
-    const baseUrl = import.meta.env.VITE_BACKEND_API_ENDPOINT;
+    const gatewayUrl = import.meta.env.VITE_GATEWAY_ENDPOINT;
     if (path.startsWith("http://") || path.startsWith("https://")) {
         return path;
     }
 
-    const normalizedBase = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    const normalizedGateway = gatewayUrl.endsWith("/") ? gatewayUrl.slice(0, -1) : gatewayUrl;
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return `${normalizedBase}${normalizedPath}`;
+    return `${normalizedGateway}/v1/api${normalizedPath}`;
 }
 
 // automatically injects auth token from Clerk
