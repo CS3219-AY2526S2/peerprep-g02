@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "private": true,
     "type": "module",
+    "packageManager": "npm@11.10.0",
     "main": "dist/server.js",
     "scripts": {
         "predev": "npm run db:migrate",
