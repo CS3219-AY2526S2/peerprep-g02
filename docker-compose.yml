@@ -112,7 +112,7 @@ services:
       - MS_REDIS_URL=redis://matching-redis:6379
       - US_INTERNAL_SERVICE_URL=http://user-service:3001
       - MS_COLLABORATION_SERVICE_URL=http://collaboration-service:3003
-      - MS_INTERNAL_SERVICE_API_KEY=cdd4140e23d0643cb8637fe247ecb70ec3c32be16be4a8b6d678e62c1b7baca6
+      - MS_INTERNAL_SERVICE_API_KEY=${MS_INTERNAL_SERVICE_API_KEY:?MS_INTERNAL_SERVICE_API_KEY not set}
       - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
     volumes:
       - ./secrets:/secrets:ro
