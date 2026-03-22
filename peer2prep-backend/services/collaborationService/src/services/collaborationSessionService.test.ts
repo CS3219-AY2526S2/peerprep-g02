@@ -1,12 +1,13 @@
+import type { UUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CollaborationSession, CreateSessionRequest } from "../models/session.js";
 import { CollaborationSessionService } from "./collaborationSessionService.js";
 
 const payload: CreateSessionRequest = {
-    matchId: "match-1",
-    userAId: "user-a",
-    userBId: "user-b",
+    matchId: "00000000-0000-0000-0000-000000000001" as UUID,
+    userAId: "00000000-0000-0000-0000-000000000011" as UUID,
+    userBId: "00000000-0000-0000-0000-000000000012" as UUID,
     difficulty: "Medium",
     language: "typescript",
     topic: "arrays",
@@ -14,14 +15,14 @@ const payload: CreateSessionRequest = {
 
 function buildSession(): CollaborationSession {
     return {
-        collaborationId: "collab-1",
+        collaborationId: "00000000-0000-0000-0000-000000000002" as UUID,
         matchId: payload.matchId,
         userAId: payload.userAId,
         userBId: payload.userBId,
         difficulty: payload.difficulty,
         language: payload.language,
         topic: payload.topic,
-        questionId: "question-1",
+        questionId: "00000000-0000-0000-0000-000000000021" as UUID,
         status: "active",
         createdAt: new Date().toISOString(),
     };
@@ -88,7 +89,7 @@ describe("CollaborationSessionService", () => {
         const result = await service.createSession(payload);
 
         expect(result.idempotentHit).toBe(true);
-        expect(result.session.collaborationId).toBe("collab-1");
+        expect(result.session.collaborationId).toBe("00000000-0000-0000-0000-000000000002");
     });
 
     it("does not fail session creation when cache write fails", async () => {
@@ -150,7 +151,7 @@ describe("CollaborationSessionService", () => {
 
         const result = await service.createSession(payload);
 
-        expect(result.session.questionId).toBe("question-1");
+        expect(result.session.questionId).toBe("00000000-0000-0000-0000-000000000021");
         expect(result.cacheWriteSucceeded).toBe(false);
     });
 });

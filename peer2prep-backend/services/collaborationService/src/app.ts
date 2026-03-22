@@ -21,15 +21,8 @@ app.get("/health", (_req, res) => {
 });
 
 // API routes require internal service authentication
-// Skip auth for socket.io paths - Socket.IO handles these on the HTTP server with its own auth
-app.use("/v1/api/sessions", (req, res, next) => {
-    // Socket.IO paths should bypass Express - they're handled by Socket.IO attached to HTTP server
-    // Don't call next() so request falls through to Socket.IO handler
-    if (req.originalUrl.includes("/socket.io")) {
-        return;
-    }
-    requireInternalServiceAuth(req, res, next);
-}, sessionRoutes);
+// Socket.IO paths are handled by Socket.IO on the HTTP server with its own auth middleware
+app.use("/v1/api/sessions", requireInternalServiceAuth, sessionRoutes);
 app.use(errorHandler);
 
 export default app;

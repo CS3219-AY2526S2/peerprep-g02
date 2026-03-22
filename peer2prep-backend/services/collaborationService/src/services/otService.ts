@@ -84,17 +84,19 @@ export function transformOperation(
 
     if (op1.type === "delete" && op2.type === "insert") {
         if (op2.position <= op1.position) {
+            // Insert is before or at delete start - shift delete position
             return { ...op1, position: op1.position + (op2.text?.length ?? 0) };
         }
         if (op2.position >= op1.position + (op1.count ?? 0)) {
+            // Insert is after delete region - no change
             return op1;
         }
-        // Insert is within our delete region - split the delete
-        const beforeInsert = op2.position - op1.position;
-        const afterInsert = (op1.count ?? 0) - beforeInsert;
-        // For simplicity, delete just the part before the insert
-        // A more complete implementation would return two operations
-        return { ...op1, count: beforeInsert + afterInsert };
+        // Insert is within our delete region
+        // The delete still removes the same count, but the portion after the insert
+        // is now shifted by the insert length. Since we can only return one operation,
+        // we expand the delete to cover the original range plus the inserted text.
+        const insertLength = op2.text?.length ?? 0;
+        return { ...op1, count: (op1.count ?? 0) + insertLength };
     }
 
     if (op1.type === "delete" && op2.type === "delete") {
@@ -152,6 +154,9 @@ export type ApplyOperationsResult = {
     newContent: string;
 };
 
+// Max retry attempts for atomic update
+const MAX_RETRY_ATTEMPTS = 5;
+
 /**
  * OT Document Manager using Redis for persistence
  */
@@ -177,6 +182,8 @@ export class OTDocumentManager {
     /**
      * Process incoming operations from a client
      * Returns transformed operations to broadcast and acknowledgment
+     *
+     * Uses optimistic locking with retry to handle concurrent updates safely.
      */
     async applyClientOperations(
         collaborationId: string,
@@ -184,56 +191,78 @@ export class OTDocumentManager {
         clientRevision: number,
         operations: OTOperation[],
     ): Promise<ApplyOperationsResult | null> {
-        // Get current document state
-        const doc = await this.otRepository.getDocument(collaborationId);
-        if (!doc) {
-            logger.warn({ collaborationId }, "Document not found for OT operation");
-            return null;
-        }
+        for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
+            // Get current document state
+            const doc = await this.otRepository.getDocument(collaborationId);
+            if (!doc) {
+                logger.warn({ collaborationId }, "Document not found for OT operation");
+                return null;
+            }
 
-        // Client must be at most one revision behind
-        if (clientRevision > doc.revision) {
-            logger.warn(
-                { clientRevision, serverRevision: doc.revision },
-                "Client revision ahead of server",
-            );
-            return null;
-        }
+            // Client revision cannot be ahead of server
+            if (clientRevision > doc.revision) {
+                logger.warn(
+                    { clientRevision, serverRevision: doc.revision },
+                    "Client revision ahead of server",
+                );
+                return null;
+            }
 
-        // Transform operations against any operations that happened since client's revision
-        let transformedOps = operations;
+            // Transform operations against any operations that happened since client's revision
+            let transformedOps = operations;
 
-        if (clientRevision < doc.revision) {
-            // Get all operations that happened after client's revision
-            const historyOps = await this.otRepository.getOperationsSinceRevision(
-                collaborationId,
-                clientRevision,
-            );
+            if (clientRevision < doc.revision) {
+                // Get all operations that happened after client's revision
+                const historyOps = await this.otRepository.getOperationsSinceRevision(
+                    collaborationId,
+                    clientRevision,
+                );
 
-            for (const historyEntry of historyOps) {
-                if (historyEntry.userId !== userId) {
-                    transformedOps = transform(transformedOps, historyEntry.serverOps, "right");
+                for (const historyEntry of historyOps) {
+                    if (historyEntry.userId !== userId) {
+                        transformedOps = transform(transformedOps, historyEntry.serverOps, "right");
+                    }
                 }
             }
+
+            // Apply transformed operations to document
+            const newContent = applyOperations(doc.content, transformedOps);
+            const newRevision = doc.revision + 1;
+
+            // Atomically update if revision hasn't changed
+            const success = await this.otRepository.updateDocumentIfRevisionMatches(
+                collaborationId,
+                doc.revision,
+                newContent,
+                newRevision,
+                {
+                    userId,
+                    revision: newRevision,
+                    clientOps: operations,
+                    serverOps: transformedOps,
+                },
+            );
+
+            if (success) {
+                return {
+                    transformedOps,
+                    newRevision,
+                    newContent,
+                };
+            }
+
+            // Revision changed - retry with fresh state
+            logger.debug(
+                { collaborationId, userId, attempt: attempt + 1 },
+                "OT update conflict, retrying",
+            );
         }
 
-        // Apply transformed operations to document
-        const newContent = applyOperations(doc.content, transformedOps);
-        const newRevision = doc.revision + 1;
-
-        // Store the update
-        await this.otRepository.updateDocument(collaborationId, newContent, newRevision, {
-            userId,
-            revision: newRevision,
-            clientOps: operations,
-            serverOps: transformedOps,
-        });
-
-        return {
-            transformedOps,
-            newRevision,
-            newContent,
-        };
+        logger.warn(
+            { collaborationId, userId, maxAttempts: MAX_RETRY_ATTEMPTS },
+            "OT update failed after max retry attempts",
+        );
+        return null;
     }
 
     async deleteDocument(collaborationId: string): Promise<void> {

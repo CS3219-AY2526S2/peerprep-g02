@@ -1,3 +1,4 @@
+import type { UUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
 import { AppError } from "../utils/errors.js";
@@ -6,13 +7,13 @@ import { CollaborationSessionService } from "./collaborationSessionService.js";
 
 function buildSession(): CollaborationSession {
     return {
-        collaborationId: "collab-1",
-        userAId: "user-1",
-        userBId: "user-2",
+        collaborationId: "00000000-0000-0000-0000-000000000001" as UUID,
+        userAId: "00000000-0000-0000-0000-000000000011" as UUID,
+        userBId: "00000000-0000-0000-0000-000000000012" as UUID,
         difficulty: "Medium",
         language: "typescript",
         topic: "arrays",
-        questionId: "question-1",
+        questionId: "00000000-0000-0000-0000-000000000021" as UUID,
         status: "active",
         createdAt: new Date().toISOString(),
     };
@@ -80,17 +81,17 @@ describe("CollaborationSessionService join flow", () => {
         );
 
         const firstJoin = await service.joinSession({
-            collaborationId: "collab-1",
-            userId: "user-1",
+            collaborationId: "00000000-0000-0000-0000-000000000001" as UUID,
+            userId: "00000000-0000-0000-0000-000000000011" as UUID,
             socketId: "socket-1",
         });
         const secondJoin = await service.joinSession({
-            collaborationId: "collab-1",
-            userId: "user-1",
+            collaborationId: "00000000-0000-0000-0000-000000000001" as UUID,
+            userId: "00000000-0000-0000-0000-000000000011" as UUID,
             socketId: "socket-2",
         });
 
-        expect(firstJoin.session.collaborationId).toBe("collab-1");
+        expect(firstJoin.session.collaborationId).toBe("00000000-0000-0000-0000-000000000001");
         expect(secondJoin.participants[0].connectionCount).toBe(2);
     });
 
@@ -140,8 +141,8 @@ describe("CollaborationSessionService join flow", () => {
 
         try {
             await service.joinSession({
-                collaborationId: "collab-1",
-                userId: "user-3",
+                collaborationId: "00000000-0000-0000-0000-000000000001" as UUID,
+                userId: "00000000-0000-0000-0000-000000000013" as UUID,
                 socketId: "socket-3",
             });
         } catch (error) {

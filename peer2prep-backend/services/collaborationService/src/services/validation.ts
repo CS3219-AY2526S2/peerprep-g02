@@ -1,3 +1,5 @@
+import type { UUID } from "node:crypto";
+
 import type { CreateSessionRequest } from "@/models/session.js";
 
 function isNonEmptyString(value: unknown): value is string {
@@ -56,9 +58,9 @@ export function validateCreateSessionPayload(payload: unknown): ValidationResult
     return {
         valid: true,
         value: {
-            matchId: matchId?.trim(),
-            userAId: userAId.trim(),
-            userBId: userBId.trim(),
+            matchId: matchId?.trim() as UUID | undefined,
+            userAId: userAId.trim() as UUID,
+            userBId: userBId.trim() as UUID,
             difficulty,
             language: language.trim(),
             topic: topic.trim(),

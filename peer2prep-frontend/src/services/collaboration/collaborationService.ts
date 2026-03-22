@@ -32,27 +32,27 @@ class CollaborationService {
         return this.socket;
     }
 
-    joinSession(collaborationId: string): Promise<CollaborationJoinAck> {
-        return new Promise(async (resolve) => {
-            const socket = await this.connect();
+    async joinSession(collaborationId: string): Promise<CollaborationJoinAck> {
+        const socket = await this.connect();
+        return new Promise((resolve) => {
             socket.emit(COLLABORATION_SOCKET_EVENTS.SESSION_JOIN, { collaborationId }, resolve);
         });
     }
 
-    leaveSession(collaborationId: string): Promise<{ ok: boolean }> {
-        return new Promise(async (resolve) => {
-            const socket = await this.connect();
+    async leaveSession(collaborationId: string): Promise<{ ok: boolean }> {
+        const socket = await this.connect();
+        return new Promise((resolve) => {
             socket.emit(COLLABORATION_SOCKET_EVENTS.SESSION_LEAVE, { collaborationId }, resolve);
         });
     }
 
-    sendCodeChange(
+    async sendCodeChange(
         collaborationId: string,
         revision: number,
         operations: OTOperation[]
     ): Promise<CodeAck> {
-        return new Promise(async (resolve) => {
-            const socket = await this.connect();
+        const socket = await this.connect();
+        return new Promise((resolve) => {
             socket.emit(
                 COLLABORATION_SOCKET_EVENTS.CODE_CHANGE,
                 { collaborationId, revision, operations },

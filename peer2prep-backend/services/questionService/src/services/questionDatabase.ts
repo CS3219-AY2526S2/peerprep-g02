@@ -123,7 +123,7 @@ async function randomQuestion(questions: UUID[]) {
 
 export async function SearchQuestion(topic: string, difficulty: string, userA: UUID | null, userB: UUID | null) {
     try {
-        //Default random question - join with topics table to search by topic name
+        // Query qn_topics with JOIN to topics table to search by topic name
         const result = await pool.query(
             `SELECT qt.quid FROM qn_topics qt
              JOIN topics t ON qt.tid = t.tid

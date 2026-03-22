@@ -13,6 +13,36 @@ const KEYS = {
 // Max operations to keep for transformation history
 const MAX_OPS_HISTORY = 50;
 
+/**
+ * Lua script for atomic compare-and-swap update.
+ * Returns 1 if update succeeded (revision matched), 0 if revision changed.
+ */
+const UPDATE_IF_REVISION_MATCHES_SCRIPT = `
+local contentKey = KEYS[1]
+local revisionKey = KEYS[2]
+local opsKey = KEYS[3]
+local expectedRevision = tonumber(ARGV[1])
+local newContent = ARGV[2]
+local newRevision = ARGV[3]
+local operationJson = ARGV[4]
+local ttlMs = tonumber(ARGV[5])
+local maxOpsHistory = tonumber(ARGV[6])
+
+local currentRevision = tonumber(redis.call('GET', revisionKey) or '0')
+
+if currentRevision ~= expectedRevision then
+    return 0
+end
+
+redis.call('SET', contentKey, newContent, 'PX', ttlMs)
+redis.call('SET', revisionKey, newRevision, 'PX', ttlMs)
+redis.call('LPUSH', opsKey, operationJson)
+redis.call('LTRIM', opsKey, 0, maxOpsHistory - 1)
+redis.call('PEXPIRE', opsKey, ttlMs)
+
+return 1
+`;
+
 type StoredOperation = {
     userId: string;
     revision: number;
@@ -64,6 +94,37 @@ export class RedisOTRepository {
         return parseInt(revisionStr ?? "0", 10);
     }
 
+    /**
+     * Atomically update document if the current revision matches expected.
+     * Returns true if update succeeded, false if revision changed (retry needed).
+     */
+    async updateDocumentIfRevisionMatches(
+        collaborationId: string,
+        expectedRevision: number,
+        content: string,
+        newRevision: number,
+        operation: StoredOperation,
+    ): Promise<boolean> {
+        const result = await (this.redis as any).eval(
+            UPDATE_IF_REVISION_MATCHES_SCRIPT,
+            3,
+            KEYS.content(collaborationId),
+            KEYS.revision(collaborationId),
+            KEYS.ops(collaborationId),
+            expectedRevision.toString(),
+            content,
+            newRevision.toString(),
+            JSON.stringify(operation),
+            this.ttlMs.toString(),
+            MAX_OPS_HISTORY.toString(),
+        );
+
+        return result === 1;
+    }
+
+    /**
+     * @deprecated Use updateDocumentIfRevisionMatches for atomic updates
+     */
     async updateDocument(
         collaborationId: string,
         content: string,

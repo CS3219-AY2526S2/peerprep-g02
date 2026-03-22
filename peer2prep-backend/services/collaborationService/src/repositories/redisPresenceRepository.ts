@@ -1,15 +1,17 @@
+import type { UUID } from "node:crypto";
+
 import { env } from "@/config/env.js";
 import type { PresenceStatus, SessionParticipantPresence } from "@/models/session.js";
 import { getRedisClient } from "@/utils/redis.js";
 
 type SocketBinding = {
-    collaborationId: string;
-    userId: string;
+    collaborationId: UUID;
+    userId: UUID;
 };
 
 export type DisconnectInfo = {
-    collaborationId: string;
-    userId: string;
+    collaborationId: UUID;
+    userId: UUID;
     disconnectedAt: number;
     durationMs: number;
 };
@@ -87,12 +89,13 @@ export class RedisPresenceRepository {
         status: PresenceStatus;
     } | null> {
         // Get socket binding
-        const binding = await this.redis.hgetall(KEYS.socket(socketId));
-        if (!binding.collaborationId || !binding.userId) {
+        const rawBinding = await this.redis.hgetall(KEYS.socket(socketId));
+        if (!rawBinding.collaborationId || !rawBinding.userId) {
             return null;
         }
 
-        const { collaborationId, userId } = binding;
+        const collaborationId = rawBinding.collaborationId as UUID;
+        const userId = rawBinding.userId as UUID;
         const presenceKey = KEYS.presence(collaborationId, userId);
 
         // Get current socket count
@@ -178,7 +181,7 @@ export class RedisPresenceRepository {
 
     async getParticipants(
         collaborationId: string,
-        assignedUserIds: string[],
+        assignedUserIds: UUID[],
     ): Promise<SessionParticipantPresence[]> {
         const results: SessionParticipantPresence[] = [];
 
@@ -204,7 +207,61 @@ export class RedisPresenceRepository {
         if (!binding.collaborationId || !binding.userId) {
             return undefined;
         }
-        return { collaborationId: binding.collaborationId, userId: binding.userId };
+        return {
+            collaborationId: binding.collaborationId as UUID,
+            userId: binding.userId as UUID,
+        };
+    }
+
+    /**
+     * Get all socket IDs for a specific user in a collaboration session
+     */
+    async getUserSocketIds(collaborationId: string, userId: string): Promise<string[]> {
+        const socketIds = await this.redis.smembers(KEYS.sockets(collaborationId));
+        const userSocketIds: string[] = [];
+
+        for (const socketId of socketIds) {
+            const binding = await this.redis.hgetall(KEYS.socket(socketId));
+            if (binding.userId === userId) {
+                userSocketIds.push(socketId);
+            }
+        }
+
+        return userSocketIds;
+    }
+
+    /**
+     * Remove all socket connections for a user in a collaboration session
+     */
+    async removeAllUserSocketConnections(
+        collaborationId: string,
+        userId: string,
+    ): Promise<string[]> {
+        const socketIds = await this.getUserSocketIds(collaborationId, userId);
+
+        if (socketIds.length === 0) {
+            return [];
+        }
+
+        const presenceKey = KEYS.presence(collaborationId, userId);
+        const pipeline = this.redis.pipeline();
+
+        // Remove all sockets from session's socket set
+        for (const socketId of socketIds) {
+            pipeline.srem(KEYS.sockets(collaborationId), socketId);
+            pipeline.del(KEYS.socket(socketId));
+        }
+
+        // Update presence to show no connections
+        pipeline.hset(presenceKey, {
+            socketCount: "0",
+            status: "left",
+            lastDisconnectTime: Date.now().toString(),
+        });
+
+        await pipeline.exec();
+
+        return socketIds;
     }
 
     async getDisconnectDuration(collaborationId: string, userId: string): Promise<number | null> {
@@ -220,13 +277,13 @@ export class RedisPresenceRepository {
 
     async getDisconnectedUsers(collaborationId: string): Promise<DisconnectInfo[]> {
         const socketIds = await this.redis.smembers(KEYS.sockets(collaborationId));
-        const userIds = new Set<string>();
+        const userIds = new Set<UUID>();
 
         // Collect all user IDs from sockets
         for (const socketId of socketIds) {
             const binding = await this.redis.hgetall(KEYS.socket(socketId));
             if (binding.userId) {
-                userIds.add(binding.userId);
+                userIds.add(binding.userId as UUID);
             }
         }
 
@@ -240,7 +297,7 @@ export class RedisPresenceRepository {
             if (state.status === "disconnected" && state.lastDisconnectTime) {
                 const disconnectedAt = parseInt(state.lastDisconnectTime, 10);
                 disconnected.push({
-                    collaborationId,
+                    collaborationId: collaborationId as UUID,
                     userId,
                     disconnectedAt,
                     durationMs: now - disconnectedAt,

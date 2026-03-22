@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, type UUID } from "node:crypto";
 
 import { env } from "@/config/env.js";
 import type { CollaborationSession, CreateSessionRequest, SessionStatus } from "@/models/session.js";
@@ -19,7 +19,7 @@ function buildIdempotencyKey(payload: CreateSessionRequest): string {
 }
 
 type CreateSessionInput = CreateSessionRequest & {
-    questionId: string;
+    questionId: UUID;
 };
 
 type CreateSessionResult =
@@ -55,14 +55,14 @@ function parseSession(data: Record<string, string>): CollaborationSession | null
     }
 
     return {
-        collaborationId: data.collaborationId,
-        matchId: data.matchId || undefined,
-        userAId: data.userAId,
-        userBId: data.userBId,
+        collaborationId: data.collaborationId as UUID,
+        matchId: data.matchId ? (data.matchId as UUID) : undefined,
+        userAId: data.userAId as UUID,
+        userBId: data.userBId as UUID,
         difficulty: data.difficulty as CollaborationSession["difficulty"],
         language: data.language,
         topic: data.topic,
-        questionId: data.questionId,
+        questionId: data.questionId as UUID,
         status: data.status as SessionStatus,
         createdAt: data.createdAt,
     };
@@ -197,6 +197,7 @@ export class RedisSessionRepository {
         // Scan for all session keys
         const sessions: CollaborationSession[] = [];
         let cursor = "0";
+        const prefix = env.redisKeyPrefix;
 
         do {
             // Note: scan without prefix since keyPrefix is auto-added
@@ -209,15 +210,21 @@ export class RedisSessionRepository {
             );
             cursor = nextCursor;
 
+            // Strip prefix first (SCAN returns keys WITH the prefix), then filter
+            const strippedKeys = keys.map((key: string) =>
+                key.startsWith(prefix) ? key.slice(prefix.length) : key,
+            );
+
             // Filter for session hashes (not pair or idempotency keys)
-            const sessionKeys = keys.filter(
-                (key: string) => key.startsWith("session:") && !key.includes(":pair:") && !key.includes(":idempotency:"),
+            const sessionKeys = strippedKeys.filter(
+                (key: string) =>
+                    key.startsWith("session:") &&
+                    !key.includes(":pair:") &&
+                    !key.includes(":idempotency:"),
             );
 
             for (const key of sessionKeys) {
-                // Get without prefix since keyPrefix is auto-added
-                const keyWithoutPrefix = key.replace(env.redisKeyPrefix, "");
-                const data = await this.redis.hgetall(keyWithoutPrefix);
+                const data = await this.redis.hgetall(key);
                 const session = parseSession(data);
                 if (session && session.status === "active") {
                     sessions.push(session);

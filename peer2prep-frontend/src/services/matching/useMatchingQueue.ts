@@ -23,10 +23,16 @@ export function useMatchingQueue(
 ) {
     const [isSearching, setIsSearching] = useState(false);
     const [activeTier, setActiveTier] = useState(0);
-    
+
     const searchStartTime = useRef<number | null>(null);
     const relaxationTier = useRef(0);
     const isSearchingRef = useRef(false);
+
+    // Store callback in ref to avoid effect re-runs when callback identity changes
+    const onMatchFoundRef = useRef(onMatchFound);
+    useEffect(() => {
+        onMatchFoundRef.current = onMatchFound;
+    }, [onMatchFound]);
 
     useEffect(() => {
         isSearchingRef.current = isSearching;
@@ -75,8 +81,8 @@ export function useMatchingQueue(
                 console.log("Partner found!", data);
                 resetSearchState();
 
-                if (data.collaborationId && onMatchFound) {
-                    onMatchFound(data);
+                if (data.collaborationId && onMatchFoundRef.current) {
+                    onMatchFoundRef.current(data);
                     return;
                 }
 
@@ -100,7 +106,7 @@ export function useMatchingQueue(
                 socketInstance.off(SocketEvents.MATCH_SUCCESS);
             }
         };
-    }, [topic, language, difficulty, onMatchFound]);
+    }, [topic, language, difficulty]);
 
     // 2. Relaxation Timer Logic
     useEffect(() => {

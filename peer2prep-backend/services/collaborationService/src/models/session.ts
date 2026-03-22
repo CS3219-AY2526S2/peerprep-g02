@@ -1,3 +1,5 @@
+import type { UUID } from "node:crypto";
+
 export const SESSION_DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 export const SESSION_STATUSES = ["active", "inactive"] as const;
 export const PRESENCE_STATUSES = ["connected", "disconnected", "left"] as const;
@@ -7,16 +9,16 @@ export type SessionStatus = (typeof SESSION_STATUSES)[number];
 export type PresenceStatus = (typeof PRESENCE_STATUSES)[number];
 
 export type CreateSessionRequest = {
-    matchId?: string;
-    userAId: string;
-    userBId: string;
+    matchId?: UUID;
+    userAId: UUID;
+    userBId: UUID;
     difficulty: SessionDifficulty;
     language: string;
     topic: string;
 };
 
 export type UserValidationRecord = {
-    userId: string;
+    userId: UUID;
     status: "active" | "inactive" | "suspended" | "deleted" | "unknown";
 };
 
@@ -37,27 +39,27 @@ export type QuestionDetails = {
 };
 
 export type CollaborationSession = {
-    collaborationId: string;
-    matchId?: string;
-    userAId: string;
-    userBId: string;
+    collaborationId: UUID;
+    matchId?: UUID;
+    userAId: UUID;
+    userBId: UUID;
     difficulty: SessionDifficulty;
     language: string;
     topic: string;
-    questionId: string;
+    questionId: UUID;
     status: SessionStatus;
     createdAt: string;
 };
 
 export type SessionParticipantPresence = {
-    userId: string;
+    userId: UUID;
     status: PresenceStatus;
     connectionCount: number;
 };
 
 export type SessionJoinState = {
     session: CollaborationSession;
-    questionId: string;
+    questionId: UUID;
     question?: QuestionDetails;
     codeSnapshot: string;
     codeRevision: number;
@@ -73,14 +75,14 @@ export type OTOperation = {
 };
 
 export type CodeChange = {
-    userId: string;
+    userId: UUID;
     revision: number;
     operations: OTOperation[];
 };
 
 export type RoomState = {
-    collaborationId: string;
-    questionId: string;
+    collaborationId: UUID;
+    questionId: UUID;
     code: string;
     codeRevision: number;
     language: string;

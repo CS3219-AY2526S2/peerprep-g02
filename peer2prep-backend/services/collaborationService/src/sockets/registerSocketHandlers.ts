@@ -1,3 +1,4 @@
+import type { UUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
 
 import { ERROR_CODES, SOCKET_EVENTS } from "@/config/constants.js";
@@ -71,8 +72,8 @@ export function registerSocketHandlers(io: Server): void {
 
                 try {
                     const state = await collaborationSessionService.joinSession({
-                        collaborationId: payload.collaborationId,
-                        userId,
+                        collaborationId: payload.collaborationId as UUID,
+                        userId: userId as UUID,
                         socketId: socket.id,
                     });
 
@@ -150,8 +151,8 @@ export function registerSocketHandlers(io: Server): void {
                 }
 
                 const result = await collaborationSessionService.applyCodeChange({
-                    collaborationId: payload.collaborationId,
-                    userId,
+                    collaborationId: payload.collaborationId as UUID,
+                    userId: userId as UUID,
                     revision: payload.revision,
                     operations: payload.operations,
                 });

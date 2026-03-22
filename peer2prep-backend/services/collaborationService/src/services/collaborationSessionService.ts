@@ -1,3 +1,5 @@
+import type { UUID } from "node:crypto";
+
 import { ERROR_CODES, HTTP_STATUS } from "@/config/constants.js";
 import { env } from "@/config/env.js";
 import type {
@@ -16,9 +18,9 @@ import { SessionCacheRepository } from "@/repositories/sessionCacheRepository.js
 import { AppError } from "@/utils/errors.js";
 import { logger } from "@/utils/logger.js";
 
-import { OTDocumentManager } from "./otService.js";
-import { QuestionSelectionService } from "./questionSelectionService.js";
-import { UserValidationService } from "./userValidationService.js";
+import { OTDocumentManager } from "@/services/otService.js";
+import { QuestionSelectionService } from "@/services/questionSelectionService.js";
+import { UserValidationService } from "@/services/userValidationService.js";
 
 export type CreateSessionResponse = {
     session: CollaborationSession;
@@ -27,8 +29,8 @@ export type CreateSessionResponse = {
 };
 
 export type JoinSessionInput = {
-    collaborationId: string;
-    userId: string;
+    collaborationId: UUID;
+    userId: UUID;
     socketId: string;
 };
 
@@ -39,8 +41,8 @@ export type JoinSessionResult = SessionJoinState & {
 };
 
 export type ApplyCodeChangeInput = {
-    collaborationId: string;
-    userId: string;
+    collaborationId: UUID;
+    userId: UUID;
     revision: number;
     operations: OTOperation[];
 };
@@ -60,14 +62,15 @@ export type ApplyCodeChangeResult =
       };
 
 export type LeaveSessionResult = {
-    collaborationId: string;
-    userId: string;
+    collaborationId: UUID;
+    userId: UUID;
     participants: SessionJoinState["participants"];
     sessionEnded: boolean;
+    removedSocketIds: string[];
 } | null;
 
 export type EndSessionResult = {
-    collaborationId: string;
+    collaborationId: UUID;
     reason: "both_users_left" | "inactivity_timeout" | "manual";
     finalCode: string;
     finalCodeRevision: number;
@@ -95,7 +98,7 @@ export class CollaborationSessionService {
 
         const result = await this.redisSessionRepository.createActiveSession({
             ...payload,
-            questionId: selectedQuestion.questionId,
+            questionId: selectedQuestion.questionId as UUID,
         });
 
         if (result.conflict) {
@@ -380,8 +383,11 @@ export class CollaborationSessionService {
         // Mark user as intentionally left
         await this.redisPresenceRepository.markUserAsLeft(binding.collaborationId, userId);
 
-        // Remove all socket connections for this user (they may have multiple tabs)
-        await this.redisPresenceRepository.removeSocketConnection(socketId);
+        // Remove ALL socket connections for this user (they may have multiple tabs)
+        const removedSocketIds = await this.redisPresenceRepository.removeAllUserSocketConnections(
+            binding.collaborationId,
+            userId,
+        );
 
         const assignedUserIds = [session.userAId, session.userBId];
         const participants = await this.redisPresenceRepository.getParticipants(
@@ -404,6 +410,7 @@ export class CollaborationSessionService {
             userId,
             participants,
             sessionEnded,
+            removedSocketIds,
         };
     }
 
@@ -456,7 +463,7 @@ export class CollaborationSessionService {
         );
 
         return {
-            collaborationId,
+            collaborationId: collaborationId as UUID,
             reason,
             finalCode,
             finalCodeRevision,
@@ -506,7 +513,7 @@ export class CollaborationSessionService {
         const output = await this.redisOutputRepository.getOutput(collaborationId);
 
         return {
-            collaborationId,
+            collaborationId: collaborationId as UUID,
             questionId: session.questionId,
             code,
             codeRevision,
