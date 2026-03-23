@@ -14,6 +14,7 @@ type UserRow = {
     avatar_url: string | null;
     status: UserStatus;
     role: UserRole;
+    score: number;
     preferred_language: string | null;
     last_login_at: Date | null;
     created_at: Date;
@@ -26,6 +27,7 @@ export type UserRecord = {
     avatarUrl: string | null;
     status: UserStatus;
     role: UserRole;
+    score: number;
     preferredLanguage: string | null;
     lastLoginAt: Date | null;
     createdAt: Date;
@@ -39,6 +41,7 @@ function mapUserRow(row: UserRow): UserRecord {
         avatarUrl: row.avatar_url,
         status: row.status,
         role: row.role,
+        score: row.score,
         preferredLanguage: row.preferred_language,
         lastLoginAt: row.last_login_at,
         createdAt: row.created_at,
@@ -53,6 +56,7 @@ class UserRepository {
         avatar_url,
         status,
         role,
+        score,
         preferred_language,
         last_login_at,
         created_at,
@@ -206,6 +210,28 @@ class UserRepository {
                 RETURNING ${this.selectColumns}
             `,
             [clerkUserId, status],
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return mapUserRow(result.rows[0]);
+    }
+
+    async updateScoreByClerkUserId(
+        clerkUserId: string,
+        score: number,
+    ): Promise<UserRecord | null> {
+        const result = await query<UserRow>(
+            `
+                UPDATE users
+                SET score = $2,
+                    updated_at = NOW()
+                WHERE clerk_user_id = $1
+                RETURNING ${this.selectColumns}
+            `,
+            [clerkUserId, score],
         );
 
         if (result.rows.length === 0) {

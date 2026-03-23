@@ -53,6 +53,7 @@ export class AuthService {
                         email: clerkUser.email,
                         status: user.status,
                         role: user.role,
+                        score: user.score,
                         avatarUrl: user.avatarUrl,
                         preferredLanguage: user.preferredLanguage,
                         lastLoginAt: user.lastLoginAt,
