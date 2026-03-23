@@ -479,7 +479,7 @@ export default function AdminListView() {
                         </div>
                         <div>
                             <p className="text-3xl font-extrabold tracking-tight text-slate-950">
-                                Peer2Prep
+                                PeerPrep
                             </p>
                             <p className="text-sm text-slate-500">Admin workspace</p>
                         </div>

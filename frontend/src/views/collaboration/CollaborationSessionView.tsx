@@ -135,7 +135,7 @@ export default function CollaborationSessionView() {
                         <div className="min-w-0">
                             <div className="flex items-center gap-3">
                                 <span className="text-2xl font-bold tracking-tight text-white">
-                                    Peer2Prep
+                                    PeerPrep
                                 </span>
                                 <span className="hidden text-slate-500 md:inline">|</span>
                                 <span className="truncate text-lg font-semibold text-slate-300">

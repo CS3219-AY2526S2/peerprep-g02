@@ -54,7 +54,7 @@ export default function HomeView() {
     const lastSyncedUserIdRef = useRef<string | null>(null);
     const [role, setRole] = useState<UserRole | null>(null);
 
-    const firstName = user?.firstName?.trim() || user?.username || "Peer2Prep";
+    const firstName = user?.firstName?.trim() || user?.username || "PeerPrep";
     const isAdmin = role === "admin" || role === "super_user";
 
     useEffect(() => {
@@ -109,7 +109,7 @@ export default function HomeView() {
                             <span className="text-2xl font-semibold">&lt;/&gt;</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-3 lg:gap-4">
-                            <p className="text-3xl font-extrabold tracking-tight">Peer2Prep</p>
+                            <p className="text-3xl font-extrabold tracking-tight">PeerPrep</p>
 
                             {isAdmin ? (
                                 <div className="flex flex-wrap items-center gap-2">

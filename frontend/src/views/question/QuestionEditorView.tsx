@@ -140,7 +140,7 @@ function Admin(props: AdminProp) {
                             margin: "0",
                         }}
                     >
-                        Peer2Prep
+                        PeerPrep
                     </h1>
                 </div>
                 <div style={{ display: "flex" }}>
