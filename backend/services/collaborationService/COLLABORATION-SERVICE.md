@@ -42,7 +42,7 @@ The Collaboration Service enables real-time collaborative coding sessions betwee
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  Routes                                   Sockets                            │
 │  ┌────────────────────┐                   ┌────────────────────────────┐    │
-│  │ POST /v1/api/sessions │                 │ registerSocketHandlers.ts  │    │
+│  │ POST /sessions │                 │ registerSocketHandlers.ts  │    │
 │  │ (internal only)    │                   │ - session:join/leave       │    │
 │  └────────────────────┘                   │ - code:change/sync         │    │
 │                                           │ - presence events          │    │
@@ -100,7 +100,7 @@ The Collaboration Service enables real-time collaborative coding sessions betwee
 ```
 Matching Service                    Collaboration Service
      │                                      │
-     │ POST /v1/api/sessions                │
+     │ POST /sessions                │
      │ { matchId, userAId, userBId,         │
      │   difficulty, language, topic }      │
      │──────────────────────────────────────▶│
@@ -270,7 +270,7 @@ Both Users Left            Inactivity Timeout              Manual End
 Creates a new collaboration session after a successful match.
 
 ```http
-POST /v1/api/sessions
+POST /sessions
 ```
 
 **Headers:**
@@ -785,9 +785,9 @@ class OTDocumentManager {
 | `CS_INACTIVITY_CHECK_INTERVAL_MS` | 60000 (1m) | Inactivity check interval |
 | `CS_API_GATEWAY_URL` | http://localhost:8080 | API Gateway URL |
 | `CS_INTERNAL_SERVICE_API_KEY` | | Internal service auth key |
-| `CS_USER_AUTH_CONTEXT_PATH` | /v1/api/users/internal/authz/context | User auth context endpoint |
-| `CS_USER_AUTH_BATCH_PATH` | /v1/api/users/internal/validation/batch | User batch validation endpoint |
-| `CS_QUESTION_SELECTION_PATH` | /v1/api/questions/internal/select | Question selection endpoint |
+| `CS_USER_AUTH_CONTEXT_PATH` | /users/internal/authz/context | User auth context endpoint |
+| `CS_USER_AUTH_BATCH_PATH` | /users/internal/validation/batch | User batch validation endpoint |
+| `CS_QUESTION_SELECTION_PATH` | /internal/select | Question selection endpoint |
 | `CS_USE_QUESTION_STUB` | false | Use stub questions |
 | `CS_REDIS_HOST` | 127.0.0.1 | Redis host |
 | `CS_REDIS_PORT` | 6379 | Redis port |

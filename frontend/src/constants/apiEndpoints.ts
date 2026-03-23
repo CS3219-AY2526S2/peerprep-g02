@@ -31,6 +31,6 @@ export const API_ENDPOINTS = {
     },
 
     COLLABORATION: {
-        SOCKET_PATH: `${CS_PREFIX}`,
+        SOCKET_PATH: `${CS_PREFIX}/sessions`,
     },
 } as const;

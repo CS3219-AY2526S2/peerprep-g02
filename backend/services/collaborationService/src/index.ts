@@ -38,7 +38,7 @@ async function startServer(): Promise<void> {
             credentials: true,
         },
         // Match the path used by the frontend through nginx
-        path: "/v1/api/sessions/socket.io/",
+        path: "/sessions/socket.io/",
         // Heartbeat configuration for connection timeout detection
         pingInterval: env.heartbeatIntervalMs, // How often to send ping
         pingTimeout: env.heartbeatTimeoutMs, // How long to wait for pong before disconnect

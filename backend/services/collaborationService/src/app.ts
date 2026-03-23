@@ -22,7 +22,7 @@ app.get("/health", (_req, res) => {
 
 // API routes require internal service authentication
 // Socket.IO paths are handled by Socket.IO on the HTTP server with its own auth middleware
-app.use("/v1/api/sessions", requireInternalServiceAuth, sessionRoutes);
+app.use("/sessions", requireInternalServiceAuth, sessionRoutes);
 app.use(errorHandler);
 
 export default app;

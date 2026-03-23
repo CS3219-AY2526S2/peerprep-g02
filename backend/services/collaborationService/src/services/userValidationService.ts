@@ -41,7 +41,7 @@ export class UserValidationService {
         const timeout = setTimeout(() => controller.abort(), env.dependencyTimeoutMs);
 
         try {
-            const response = await fetch(`${env.apiGatewayUrl}${env.userAuthBatchPath}`, {
+            const response = await fetch(`${env.userServiceUrl}${env.userAuthBatchPath}`, {
                 method: "POST",
                 headers: {
                     "content-type": "application/json",

@@ -173,65 +173,65 @@ services:
     restart: unless-stopped
 
   # Collaboration Service
-  # collaboration-service:
-  #   build: ./backend/services/collaborationService
-  #   container_name: collaboration-service
-  #   env_file:
-  #     - ./backend/services/collaborationService/.env
-  #   environment:
-  #     - CS_SERVER_PORT=3003
-  #     - CS_API_GATEWAY_URL=http://gateway:8080
-  #     - CS_REDIS_HOST=collaboration-redis
-  #     - CS_REDIS_PORT=6379
-  #     - CS_DATABASE_URI=postgresql://postgres:postgres@collaboration-db:5432/collaboration
-  #     - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
-  #   depends_on:
-  #     collaboration-redis:
-  #       condition: service_started
-  #     collaboration-db:
-  #       condition: service_healthy
-  #     user-service:
-  #       condition: service_started
-  #     questions-service:
-  #       condition: service_started
-  #   networks:
-  #     - gateway-network
-  #     - collaboration-redis-network
-  #     - collaboration-db-network
-  #   ports:
-  #     - "3003:3003"
-  #   volumes:
-  #     - ./backend/services/collaborationService:/app
-  #     - /app/node_modules
-  #     - ./secrets:/secrets:ro
-  #   restart: unless-stopped
+  collaboration-service:
+    build: ./backend/services/collaborationService
+    container_name: collaboration-service
+    env_file:
+      - ./backend/services/collaborationService/.env
+    environment:
+      - CS_SERVER_PORT=3003
+      - CS_API_GATEWAY_URL=http://gateway:8080
+      - CS_REDIS_HOST=collaboration-redis
+      - CS_REDIS_PORT=6379
+      - CS_DATABASE_URI=postgresql://postgres:postgres@collaboration-db:5432/collaboration
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
+    depends_on:
+      collaboration-redis:
+        condition: service_started
+      collaboration-db:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      questions-service:
+        condition: service_started
+    networks:
+      - gateway-network
+      - collaboration-redis-network
+      - collaboration-db-network
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./backend/services/collaborationService:/app
+      - /app/node_modules
+      - ./secrets:/secrets:ro
+    restart: unless-stopped
 
-  # collaboration-db:
-  #   image: postgres:16-alpine
-  #   container_name: collaboration-db
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #     POSTGRES_DB: collaboration
-  #   ports:
-  #     - "5434:5432"
-  #   volumes:
-  #     - collaboration_data:/var/lib/postgresql/data
-  #   networks:
-  #     - collaboration-db-network
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres -d collaboration"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 10
-  #   restart: unless-stopped
+  collaboration-db:
+    image: postgres:16-alpine
+    container_name: collaboration-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: collaboration
+    ports:
+      - "5434:5432"
+    volumes:
+      - collaboration_data:/var/lib/postgresql/data
+    networks:
+      - collaboration-db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d collaboration"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
 
-  # collaboration-redis:
-  #   image: redis:latest
-  #   container_name: collaboration-redis
-  #   restart: unless-stopped
-  #   networks:
-  #     - collaboration-redis-network
+  collaboration-redis:
+    image: redis:latest
+    container_name: collaboration-redis
+    restart: unless-stopped
+    networks:
+      - collaboration-redis-network
 
 #   # Attempts Service
 #   attempts-service:

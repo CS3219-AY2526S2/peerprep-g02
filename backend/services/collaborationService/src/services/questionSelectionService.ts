@@ -42,7 +42,7 @@ export class QuestionSelectionService {
         const timeout = setTimeout(() => controller.abort(), env.dependencyTimeoutMs);
 
         try {
-            const response = await fetch(`${env.apiGatewayUrl}${env.questionSelectionPath}`, {
+            const response = await fetch(`${env.questionsServiceUrl}${env.questionSelectionPath}`, {
                 method: "POST",
                 headers: {
                     "content-type": "application/json",
@@ -111,7 +111,7 @@ export class QuestionSelectionService {
         const timeout = setTimeout(() => controller.abort(), env.dependencyTimeoutMs);
 
         try {
-            const response = await fetch(`${env.apiGatewayUrl}${env.questionDetailsPath}`, {
+            const response = await fetch(`${env.questionsServiceUrl}${env.questionDetailsPath}`, {
                 method: "POST",
                 headers: {
                     "content-type": "application/json",

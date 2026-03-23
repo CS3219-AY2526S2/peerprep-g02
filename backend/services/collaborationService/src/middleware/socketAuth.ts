@@ -37,7 +37,7 @@ export async function socketAuthMiddleware(
     }
 
     try {
-        const response = await fetch(`${env.apiGatewayUrl}${env.userAuthContextPath}`, {
+        const response = await fetch(`${env.userServiceUrl}${env.userAuthContextPath}`, {
             headers: {
                 authorization,
                 "x-internal-service-key": env.internalServiceApiKey,
