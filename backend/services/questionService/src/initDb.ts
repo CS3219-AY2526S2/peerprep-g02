@@ -26,7 +26,7 @@ async function ensureDatabaseExists(): Promise<void> {
         port: DB_PORT,
         user: DB_USER,
         password: DB_PASSWORD,
-        database: "questions",
+        database: "postgres",
     });
 
     await maintenanceClient.connect();
@@ -53,7 +53,7 @@ async function initializeSchema(): Promise<void> {
         port: DB_PORT,
         user: DB_USER,
         password: DB_PASSWORD,
-        database: "questions",
+        database: TARGET_DB,
     });
     await client.connect();
     try {
