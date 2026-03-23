@@ -1,5 +1,7 @@
-import { useClerk } from "@clerk/clerk-react";
 import { MouseEvent, PointerEvent, useState } from "react";
+
+import { useClerk } from "@clerk/clerk-react";
+
 import { apiFetch } from "@/utils/apiClient";
 import { pushToast } from "@/utils/toast";
 

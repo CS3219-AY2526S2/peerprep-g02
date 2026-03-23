@@ -1,5 +1,6 @@
+import React, { useEffect } from "react";
+
 import { useAuth } from "@clerk/clerk-react";
-import React, { useEffect, useState } from "react";
 
 import { injectAuthInterceptor } from "@/utils/apiClient";
 
@@ -9,7 +10,6 @@ type Props = {
 
 export function AuthInterceptorProvider({ children }: Props) {
     const { getToken, isLoaded, isSignedIn } = useAuth();
-    const [ready, setReady] = useState(false);
 
     useEffect(() => {
         if (!isLoaded) {
@@ -24,14 +24,12 @@ export function AuthInterceptorProvider({ children }: Props) {
             injectAuthInterceptor(undefined);
         }
 
-        setReady(true);
-
         return () => {
             injectAuthInterceptor(undefined);
         };
     }, [getToken, isLoaded, isSignedIn]);
 
-    if (!ready) {
+    if (!isLoaded || !isSignedIn) {
         return null;
     }
 

@@ -1,9 +1,11 @@
-import { useAuth } from "@clerk/clerk-react";
-import { Navigate, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { apiFetch } from "@/utils/apiClient";
-import { ROUTES } from "@/constants/routes";
+import { Navigate, Outlet } from "react-router-dom";
+
+import { useAuth } from "@clerk/clerk-react";
+
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { ROUTES } from "@/constants/routes";
+import { apiFetch } from "@/utils/apiClient";
 import { pushToast } from "@/utils/toast";
 
 type UserRole = "user" | "admin" | "super_user";
@@ -14,25 +16,22 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     const { isLoaded, isSignedIn, userId } = useAuth();
-    const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
-    const [isCheckingRole, setIsCheckingRole] = useState(Boolean(allowedRoles?.length));
+
     const requiresRoleCheck = Boolean(allowedRoles?.length);
+
+    const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
+    const [hasFetchedRole, setHasFetchedRole] = useState(false);
 
     useEffect(() => {
         if (!requiresRoleCheck || !isLoaded || !isSignedIn) {
-            setCurrentRole(null);
-            setIsCheckingRole(false);
             return;
         }
 
         let isCancelled = false;
-        setIsCheckingRole(true);
 
         void apiFetch(API_ENDPOINTS.USERS.ME, { method: "GET" })
             .then(async (response) => {
-                if (isCancelled) {
-                    return;
-                }
+                if (isCancelled) return;
 
                 const payload = await response.json().catch(() => null);
 
@@ -49,14 +48,13 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
 
                 if (role === "user" || role === "admin" || role === "super_user") {
                     setCurrentRole(role);
-                    return;
+                } else {
+                    setCurrentRole(null);
+                    pushToast({
+                        tone: "error",
+                        message: "Unable to determine your account role.",
+                    });
                 }
-
-                setCurrentRole(null);
-                pushToast({
-                    tone: "error",
-                    message: "Unable to determine your account role.",
-                });
             })
             .catch(() => {
                 if (!isCancelled) {
@@ -69,16 +67,18 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
             })
             .finally(() => {
                 if (!isCancelled) {
-                    setIsCheckingRole(false);
+                    setHasFetchedRole(true);
                 }
             });
 
         return () => {
             isCancelled = true;
         };
-    }, [isLoaded, isSignedIn, userId, requiresRoleCheck, allowedRoles]);
+    }, [isLoaded, isSignedIn, userId, requiresRoleCheck]);
 
-    if (!isLoaded || (requiresRoleCheck && isSignedIn && isCheckingRole)) {
+    const isCheckingRole = requiresRoleCheck && isSignedIn && isLoaded && !hasFetchedRole;
+
+    if (!isLoaded || isCheckingRole) {
         return null;
     }
 

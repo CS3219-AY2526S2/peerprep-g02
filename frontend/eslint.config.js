@@ -1,49 +1,86 @@
 import js from "@eslint/js";
-import globals from "globals";
+import { defineConfig } from "eslint/config";
+import eslintConfigPrettier from "eslint-config-prettier";
+import importPlugin from "eslint-plugin-import";
+import prettierPlugin from "eslint-plugin-prettier";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
-import { defineConfig, globalIgnores } from "eslint/config";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
+import unusedImports from "eslint-plugin-unused-imports";
+import globals from "globals";
+import tseslint from "typescript-eslint";
 
-export default defineConfig([
-    globalIgnores(["dist"]),
+export default defineConfig(
     {
-        files: ["**/*.{js,jsx}"],
-        extends: [
-            js.configs.recommended,
-            reactHooks.configs.flat.recommended,
-            reactRefresh.configs.vite,
-        ],
+        ignores: ["dist", "coverage", "src/components/ui/**/*", "src/lib/**/*"],
+    },
+    js.configs.recommended,
+    ...tseslint.configs.recommended,
+    {
+        files: ["**/*.{js,jsx,ts,tsx}"],
+        plugins: {
+            "react-hooks": reactHooks,
+            "react-refresh": reactRefresh,
+            "simple-import-sort": simpleImportSort,
+            "unused-imports": unusedImports,
+            import: importPlugin,
+            prettier: prettierPlugin,
+        },
         languageOptions: {
             ecmaVersion: 2020,
-            globals: globals.browser,
-            parserOptions: {
-                ecmaVersion: "latest",
-                ecmaFeatures: { jsx: true },
-                sourceType: "module",
+            sourceType: "module",
+            globals: {
+                ...globals.browser,
+                ...globals.node,
+                ...globals.es2021,
+                ...globals.vitest,
             },
         },
         rules: {
-            "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
+            ...reactHooks.configs.recommended.rules,
+            "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+
+            "no-var": "error",
+            "prefer-const": "error",
+            "no-console": "warn",
+            "no-debugger": "error",
+
+            "import/first": "error",
+            "import/newline-after-import": "error",
+            "import/no-duplicates": "error",
+            "import/no-unresolved": "off",
+
+            "simple-import-sort/exports": "error",
+            "simple-import-sort/imports": [
+                "error",
+                {
+                    groups: [
+                        ["^react", "^@react"],
+                        ["^@?\\w"],
+                        ["^@/components"],
+                        ["^@/constants", "^@/lib", "^@/utils", "^@/models", "^@/hooks"],
+                        ["^@/views"],
+                        ["^\\.\\."],
+                        ["^\\u0000"],
+                    ],
+                },
+            ],
+
+            "no-unused-vars": "off",
+            "@typescript-eslint/no-unused-vars": "off",
+            "unused-imports/no-unused-imports": "error",
+            "unused-imports/no-unused-vars": [
+                "warn",
+                {
+                    vars: "all",
+                    varsIgnorePattern: "^_",
+                    args: "after-used",
+                    argsIgnorePattern: "^_",
+                },
+            ],
+
+            "prettier/prettier": ["error", {}, { usePrettierrc: true }],
         },
     },
-]);
-
-module.exports = {
-    root: true,
-    env: { browser: true, es2020: true },
-    extends: [
-        "eslint:recommended",
-        "plugin:react/recommended",
-        "plugin:react/jsx-runtime",
-        "plugin:react-hooks/recommended",
-        "prettier", // Add this
-    ],
-    ignorePatterns: ["dist", ".eslintrc.cjs"],
-    parserOptions: { ecmaVersion: "latest", sourceType: "module" },
-    settings: { react: { version: "18.2" } },
-    plugins: ["react-refresh", "prettier"], // Add prettier
-    rules: {
-        "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-        "prettier/prettier": "warn", // Add this
-    },
-};
+    eslintConfigPrettier,
+);

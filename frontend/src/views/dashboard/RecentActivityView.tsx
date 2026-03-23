@@ -1,6 +1,8 @@
 import { Check, Trophy } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
 import { cn } from "@/lib/utils";
 
 const activityItems = [
@@ -35,8 +37,8 @@ export function RecentActivityView() {
                     <h2 className="text-3xl font-extrabold tracking-tight text-slate-950">
                         Recent Activity
                     </h2>
-                    <Button 
-                        variant="link" 
+                    <Button
+                        variant="link"
                         className="h-auto px-0 text-base font-semibold text-indigo-600 hover:text-indigo-700"
                     >
                         View All
@@ -67,9 +69,7 @@ export function RecentActivityView() {
                                     <p className="text-xl font-bold tracking-tight text-slate-900">
                                         {item.title}
                                     </p>
-                                    <p className="mt-1 text-base text-slate-600">
-                                        {item.subtitle}
-                                    </p>
+                                    <p className="mt-1 text-base text-slate-600">{item.subtitle}</p>
                                 </div>
                             </div>
 

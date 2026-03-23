@@ -1,10 +1,10 @@
 import type { Socket } from "socket.io-client";
 
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { OTOperation } from "@/models/collaboration/collaborationType";
+import { createAuthenticatedSocket } from "@/utils/socketClient";
 import type { CollaborationJoinAck } from "@/models/collaboration/collaborationSocketType";
 import { COLLABORATION_SOCKET_EVENTS } from "@/models/collaboration/collaborationSocketType";
-import { createAuthenticatedSocket } from "@/utils/socketClient";
+import type { OTOperation } from "@/models/collaboration/collaborationType";
 
 type CodeAck = {
     ok: boolean;
@@ -49,14 +49,14 @@ class CollaborationService {
     async sendCodeChange(
         collaborationId: string,
         revision: number,
-        operations: OTOperation[]
+        operations: OTOperation[],
     ): Promise<CodeAck> {
         const socket = await this.connect();
         return new Promise((resolve) => {
             socket.emit(
                 COLLABORATION_SOCKET_EVENTS.CODE_CHANGE,
                 { collaborationId, revision, operations },
-                resolve
+                resolve,
             );
         });
     }

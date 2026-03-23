@@ -1,14 +1,17 @@
-import { useAuth } from "@clerk/clerk-react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
+import { useAuth } from "@clerk/clerk-react";
+
 import { ProtectedRoute } from "@/components/authRoute/ProtectedRoute";
+
 import { ROUTES } from "@/constants/routes";
 
-import LoginView from "@/views/user/LoginView";
-import RegisterView from "@/views/user/RegisterView";
-import AdminListView from "@/views/user/AdminListView";
+import CollaborationSessionView from "@/views/collaboration/CollaborationSessionView";
 import HomeView from "@/views/HomeView";
 import QuestionMainView from "@/views/question/QuestionMainView";
-import CollaborationSessionView from "@/views/collaboration/CollaborationSessionView";
+import AdminListView from "@/views/user/AdminListView";
+import LoginView from "@/views/user/LoginView";
+import RegisterView from "@/views/user/RegisterView";
 
 const ADMIN_ALLOWED_ROLES: Array<"admin" | "super_user"> = ["admin", "super_user"];
 

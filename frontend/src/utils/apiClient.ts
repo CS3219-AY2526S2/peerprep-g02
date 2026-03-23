@@ -39,7 +39,7 @@ export async function apiFetch(url: string, init: ApiRequestInit = {}): Promise<
         }
     }
 
-    // Since API_ENDPOINTS already contain the full gateway URL, 
+    // Since API_ENDPOINTS already contain the full gateway URL,
     // we just fetch the URL directly.
     return fetch(url, {
         ...rest,

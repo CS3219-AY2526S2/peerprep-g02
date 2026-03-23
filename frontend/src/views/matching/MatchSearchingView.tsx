@@ -1,6 +1,8 @@
-import { BookOpen, Brain, Code, Loader2, X, Sparkles } from "lucide-react";
-import { CardContent } from "@/components/ui/card";
+import { BookOpen, Brain, Code, Loader2, Sparkles, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import { CardContent } from "@/components/ui/card";
+
 import { MatchSearchingViewProps } from "@/models/matching/matchingViewType";
 
 export default function MatchSearchingView({

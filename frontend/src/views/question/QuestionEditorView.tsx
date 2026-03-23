@@ -1,7 +1,10 @@
-import { getPopularQuestions, getQuestions } from "@/services/question/questionService";
+import { useEffect, useState } from "react";
+
 import { UUID } from "crypto";
-import { useState, useEffect } from "react";
+
 import { QuestionInfo } from "@/models/question/questionType";
+
+import { getPopularQuestions, getQuestions } from "@/services/question/questionService";
 
 interface QuestionProp {
     toggler: React.Dispatch<React.SetStateAction<boolean>>;
@@ -90,7 +93,7 @@ function Admin(props: AdminProp) {
     ]);
     const [loading, setLoading] = useState(true);
 
-    const [popularQuestions, setPopularQuestions] = useState<String[]>([]);
+    const [popularQuestions, setPopularQuestions] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchQuestions = async () => {

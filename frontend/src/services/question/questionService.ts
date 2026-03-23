@@ -1,7 +1,8 @@
-import { QuestionData, QuestionInfo, TestCase } from "@/models/question/questionType";
-import { apiFetch } from "@/utils/apiClient";
-import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { UUID } from "node:crypto";
+
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { apiFetch } from "@/utils/apiClient";
+import { QuestionData, QuestionInfo, TestCase } from "@/models/question/questionType";
 
 export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
     try {
@@ -14,14 +15,14 @@ export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
         const data = await res.json();
         if (!data || !data.body) return null;
 
-        const questions: QuestionInfo[] = data.body.map((item: any) => ({
+        const questions: QuestionInfo[] = data.body.map((item: QuestionInfo) => ({
             quid: item.quid,
             title: item.title,
             topics: item.topics,
             difficulty: item.difficulty,
         }));
         return questions;
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
         return null;
     }
@@ -38,8 +39,8 @@ export const getPopularQuestions = async (): Promise<string[] | null> => {
         const data = await res.json();
         if (!data || !data.body) return null;
 
-        return data.body.map((item: any) => item.title);
-    } catch (e: any) {
+        return data.body.map((item: QuestionInfo) => item.title);
+    } catch (e) {
         console.error(e);
         return null;
     }
@@ -60,7 +61,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
 
         if (!data) return null;
 
-        const cases: TestCase[] = data.test_case.map((item: any) => ({
+        const cases: TestCase[] = data.test_case.map((item: TestCase) => ({
             // Matching your .slice(1, -1) logic to strip quotes from stringified JSON
             input: JSON.stringify(item.input).slice(1, -1),
             output: JSON.stringify(item.output).slice(1, -1),
@@ -74,7 +75,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
             testCase: cases,
             description: data.description,
         };
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
         return null;
     }

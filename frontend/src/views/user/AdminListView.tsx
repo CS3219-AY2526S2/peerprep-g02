@@ -1,7 +1,15 @@
-import { type ComponentType, type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+    type ComponentType,
+    type ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+import { Link } from "react-router-dom";
+
 import { useAuth } from "@clerk/clerk-react";
 import { ArrowLeft, RefreshCw, Search, ShieldAlert, ShieldCheck, Users } from "lucide-react";
-import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +23,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
@@ -309,7 +318,7 @@ export default function AdminListView() {
     const [error, setError] = useState("");
     const [updatingUserIds, setUpdatingUserIds] = useState<string[]>([]);
 
-    const loadUsers = async () => {
+    const loadUsers = useCallback(async () => {
         if (!isAuthLoaded) {
             return;
         }
@@ -344,15 +353,11 @@ export default function AdminListView() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [isAuthLoaded, userId]);
 
     useEffect(() => {
-        if (!isAuthLoaded) {
-            return;
-        }
-
         void loadUsers();
-    }, [isAuthLoaded, userId]);
+    }, [loadUsers]);
 
     const filteredUsers = useMemo(() => {
         const normalizedSearch = search.trim().toLowerCase();

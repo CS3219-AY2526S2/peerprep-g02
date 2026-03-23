@@ -1,7 +1,8 @@
 import { Socket } from "socket.io-client";
-import { createAuthenticatedSocket } from "@/utils/socketClient";
+
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import { MatchDetails, MATCH_EVENTS } from "@/models/matching/matchingDetailsType";
+import { createAuthenticatedSocket } from "@/utils/socketClient";
+import { MATCH_EVENTS, MatchDetails } from "@/models/matching/matchingDetailsType";
 
 class MatchingService {
     private socket: Socket | null = null;

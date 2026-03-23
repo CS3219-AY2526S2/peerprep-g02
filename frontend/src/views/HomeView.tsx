@@ -1,20 +1,22 @@
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { useEffect, useRef, useState } from "react";
-import { Bell, Check, Clock3, Flame, Trophy, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import AccountUserButton from "@/components/user/AccountUserButton";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import { Bell, Check, Clock3, Flame, Trophy, Zap } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import AccountUserButton from "@/components/user/AccountUserButton";
+
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
-import { StatCardProps } from "@/models/dashboard/dashboardType";
 import { apiFetch } from "@/utils/apiClient";
 import { pushToast } from "@/utils/toast";
+import { StatCardProps } from "@/models/dashboard/dashboardType";
 
-import { MatchingView } from "@/views/matching/MatchingView";
 import { RecentActivityView } from "@/views/dashboard/RecentActivityView";
+import { MatchingView } from "@/views/matching/MatchingView";
 
 type UserRole = "user" | "admin" | "super_user";
 
@@ -55,12 +57,11 @@ export default function HomeView() {
     const [role, setRole] = useState<UserRole | null>(null);
 
     const firstName = user?.firstName?.trim() || user?.username || "PeerPrep";
-    const isAdmin = role === "admin" || role === "super_user";
+    const isAdmin = isSignedIn && (role === "admin" || role === "super_user");
 
     useEffect(() => {
         if (!isAuthLoaded || !isSignedIn || !userId) {
             lastSyncedUserIdRef.current = null;
-            setRole(null);
             return;
         }
 

@@ -1,9 +1,18 @@
-import { useState, useEffect, useRef } from "react";
-import { matchingService } from "@/services/matching/matchingService";
+import { useEffect, useRef, useState } from "react";
+
+import { Socket } from "socket.io-client";
+
 import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
-import { SocketEvents } from "@/models/matching/matchingSocketType";
-import { Difficulty } from "@/models/question/questionType";
 import { pushToast } from "@/utils/toast";
+import {
+    MatchCancelledPayload,
+    MatchErrorPayload,
+    MatchWaitingPayload,
+    SocketEvents,
+} from "@/models/matching/matchingSocketType";
+import { Difficulty } from "@/models/question/questionType";
+
+import { matchingService } from "@/services/matching/matchingService";
 
 type MatchSuccessPayload = {
     collaborationId?: string;
@@ -39,7 +48,7 @@ export function useMatchingQueue(
     }, [isSearching]);
 
     useEffect(() => {
-        let socketInstance: any = null;
+        let socketInstance: Socket | null = null;
 
         const setupListeners = async () => {
             socketInstance = await matchingService.connect();
@@ -55,7 +64,7 @@ export function useMatchingQueue(
                 }
             });
 
-            socketInstance.on(SocketEvents.MATCH_WAITING, (data: any) => {
+            socketInstance.on(SocketEvents.MATCH_WAITING, (data: MatchWaitingPayload) => {
                 setIsSearching(true);
                 if (data.startTime) searchStartTime.current = parseInt(data.startTime, 10);
             });
@@ -67,12 +76,12 @@ export function useMatchingQueue(
                 setActiveTier(0);
             };
 
-            socketInstance.on(SocketEvents.MATCH_CANCELLED, (data: any) => {
+            socketInstance.on(SocketEvents.MATCH_CANCELLED, (data: MatchCancelledPayload) => {
                 console.log(data.message);
                 resetSearchState();
             });
 
-            socketInstance.on(SocketEvents.MATCH_ERROR, (data: any) => {
+            socketInstance.on(SocketEvents.MATCH_ERROR, (data: MatchErrorPayload) => {
                 console.error("Match Error:", data.message);
                 resetSearchState();
             });

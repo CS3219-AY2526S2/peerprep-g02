@@ -1,14 +1,17 @@
 import { JSX, useEffect, useState } from "react";
-import { Difficulty, FormData } from "@/models/question/questionType";
+
 import { UUID } from "node:crypto";
+
+import { Difficulty, FormData } from "@/models/question/questionType";
+
+import "./QuestionPageStyle.css";
+
 import {
     createQuestion,
     deleteQuestion,
     editQuestion,
     getQuestion,
 } from "@/services/question/questionService";
-
-import "./QuestionPageStyle.css";
 
 interface ITestCase {
     input: string;
@@ -97,6 +100,25 @@ function QuestionForm(props: FormProp): JSX.Element {
 
     const [loading, setLoading] = useState(true);
 
+    function DelayedDifficultyUpdate(difficulty: string) {
+        const timer = setTimeout(() => {
+            const selectDifficulty = document.getElementById("difficulty") as HTMLSelectElement;
+            if (selectDifficulty) {
+                selectDifficulty.value = difficulty;
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }
+
+    function DelayedPageUpdate() {
+        const timer = setTimeout(() => {
+            props.toggler(true);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }
+
     useEffect(() => {
         const fetchQuestions = async () => {
             if (props.useCase == null) {
@@ -112,7 +134,9 @@ function QuestionForm(props: FormProp): JSX.Element {
                 setLoading(false);
                 return;
             }
+
             const newQuestions = await getQuestion(props.useCase);
+
             if (newQuestions != null) {
                 setFormData((prev) => ({
                     ...prev,
@@ -122,36 +146,22 @@ function QuestionForm(props: FormProp): JSX.Element {
                     qnTopics: newQuestions.topics.toString(),
                     testCase: newQuestions.testCase,
                 }));
+
                 DelayedDifficultyUpdate(newQuestions.difficulty);
             }
+
             setLoading(false);
         };
+
         fetchQuestions();
-    }, []);
+    }, [props.useCase]);
+
     if (loading) {
         return <div></div>;
     }
 
-    function DelayedDifficultyUpdate(difficulty: string) {
-        const timer = setTimeout(() => {
-            const selectDifficulty = document.getElementById("difficulty") as HTMLSelectElement;
-            selectDifficulty.value = difficulty;
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }
-
-    function DelayedPageUpdate() {
-        const timer = setTimeout(() => {
-            props.toggler(true);
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }
-
     function handleSubmit() {
         if (discard) {
-            //delete
             if (props.useCase == null) {
                 setDiscard(false);
                 return;
@@ -163,18 +173,13 @@ function QuestionForm(props: FormProp): JSX.Element {
         }
 
         if (props.useCase == null) {
-            //create
             const data = JSON.stringify(formData);
-            console.log(data);
             createQuestion(data);
         } else {
-            //edit
             const data = JSON.stringify({
                 quid: props.useCase,
                 ...formData,
             });
-            console.log(data);
-
             editQuestion(data);
         }
 
@@ -230,13 +235,13 @@ function QuestionForm(props: FormProp): JSX.Element {
                     Back to questions
                 </button>
             </header>
+
             <form action={handleSubmit} style={{ margin: "2rem" }}>
                 <div style={{ margin: "2rem 0rem", padding: "25px" }}>
                     <h2 style={{ fontWeight: "bold" }}>Create New Question</h2>
                     <p>Fill in the details below to create a new question</p>
                 </div>
 
-                {/* Question title */}
                 <div className="sectionBorder">
                     <label style={{ fontWeight: "bold", display: "block" }}>Question Title</label>
                     <textarea
@@ -257,7 +262,6 @@ function QuestionForm(props: FormProp): JSX.Element {
                     />
                 </div>
 
-                {/* Description */}
                 <div className="sectionBorder">
                     <label style={{ fontWeight: "bold", display: "block" }}>
                         Question Description
@@ -274,18 +278,16 @@ function QuestionForm(props: FormProp): JSX.Element {
                         }}
                         id="qnDesc"
                         name="qnDesc"
-                        placeholder="Describe the challenge in detail. Include the problem statement, constraints and any examples..."
                         value={formData.qnDesc}
                         onChange={handleInputChange}
                     />
                 </div>
 
-                {/* Test cases */}
                 <div className="sectionBorder">
-                    <p style={{ fontWeight: "bold", display: "block" }}>Test Cases</p>
+                    <p style={{ fontWeight: "bold" }}>Test Cases</p>
                     {formData.testCase.map((tc, index) => (
                         <TestCases
-                            key={index.toString() + "case"}
+                            key={index}
                             input={tc.input}
                             output={tc.output}
                             handleChange={(field, value) =>
@@ -295,30 +297,16 @@ function QuestionForm(props: FormProp): JSX.Element {
                     ))}
                 </div>
 
-                {/* Supporting Diagram */}
                 <div className="sectionBorder">
-                    <label style={{ fontWeight: "bold", display: "block" }}>
-                        Supporting Diagram
-                    </label>
-                    <input
-                        style={{
-                            border: "2px solid #E7E9EC",
-                            borderRadius: "15px",
-                            paddingLeft: "10px",
-                            width: "100%",
-                        }}
-                        type="file"
-                        id="questionFile"
-                        name="questionFile"
-                    ></input>
+                    <label style={{ fontWeight: "bold" }}>Supporting Diagram</label>
+                    <input type="file" id="questionFile" name="questionFile" />
                 </div>
 
-                {/* Question Tag */}
                 <div className="sectionBorder">
-                    <p style={{ fontWeight: "bold", display: "block" }}>Question Tag</p>
+                    <p style={{ fontWeight: "bold" }}>Question Tag</p>
                     <div style={{ display: "Flex", width: "100" }}>
                         <div style={{ margin: "1rem", flexGrow: "1" }}>
-                            <label style={{ fontWeight: "bold", display: "block" }}>Input</label>
+                            <label style={{ fontWeight: "bold" }}>Input</label>
                             <select
                                 id="difficulty"
                                 className="difficultySelect"
@@ -339,10 +327,9 @@ function QuestionForm(props: FormProp): JSX.Element {
                                 ))}
                             </select>
                         </div>
+
                         <div style={{ margin: "1rem", flexGrow: "1" }}>
-                            <label style={{ fontWeight: "bold", display: "block" }}>
-                                Question Topics
-                            </label>
+                            <label style={{ fontWeight: "bold" }}>Question Topics</label>
                             <textarea
                                 style={{
                                     border: "2px solid #E7E9EC",
@@ -355,7 +342,6 @@ function QuestionForm(props: FormProp): JSX.Element {
                                 }}
                                 id="qnTopics"
                                 name="qnTopics"
-                                placeholder="Describe the challenge in detail. Include the problem statement, constraints and any examples..."
                                 value={formData.qnTopics}
                                 onChange={handleInputChange}
                             />
@@ -386,6 +372,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                     >
                         Discard Question
                     </button>
+
                     <input
                         style={{
                             background: "#5046E6",

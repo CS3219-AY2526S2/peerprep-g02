@@ -1,4 +1,5 @@
 import { UserButton } from "@clerk/clerk-react";
+
 import DefaultLanguage from "@/components/user/DefaultLanguage";
 import DeleteAccount from "@/components/user/DeleteAccount";
 

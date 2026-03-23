@@ -1,8 +1,8 @@
 import { Rocket, Users } from "lucide-react";
-import { CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 
+import { Button } from "@/components/ui/button";
+import { CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
     Select,
     SelectContent,
@@ -10,11 +10,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { Difficulty } from "@/models/question/questionType";
 
-import { topicOptions, languageOptions, difficultyOptions } from "@/models/question/tempStubType";
+import { cn } from "@/lib/utils";
 import { MatchFormViewProps } from "@/models/matching/matchingViewType";
+import { Difficulty } from "@/models/question/questionType";
+import { difficultyOptions, languageOptions, topicOptions } from "@/models/question/tempStubType";
 
 export default function MatchFormView({
     topic,

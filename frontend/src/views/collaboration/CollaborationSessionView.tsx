@@ -1,4 +1,6 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+
 import {
     ArrowLeftRight,
     CheckCircle2,
@@ -15,20 +17,15 @@ import {
     WifiOff,
     XCircle,
 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
+
 import { useCollaborationSession } from "@/services/collaboration/useCollaborationSession";
 
 function formatElapsed(createdAt: string | undefined, now: number): string {
@@ -68,7 +65,7 @@ function getEditorPlaceholder(language: string): string {
 export default function CollaborationSessionView() {
     const { collaborationId } = useParams<{ collaborationId: string }>();
     const navigate = useNavigate();
-    const [now, setNow] = useState(Date.now());
+    const [now, setNow] = useState(() => Date.now());
     const {
         connectionState,
         joinState,
@@ -198,7 +195,11 @@ export default function CollaborationSessionView() {
                                 {connectionBadge}
                                 <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-300">
                                     <UsersRound className="size-4 text-cyan-300" />
-                                    {participants.filter((participant) => participant.status === "connected").length}
+                                    {
+                                        participants.filter(
+                                            (participant) => participant.status === "connected",
+                                        ).length
+                                    }
                                     /2 present
                                 </div>
                                 {partnerNotification && (
@@ -215,7 +216,11 @@ export default function CollaborationSessionView() {
                                     <p className="font-semibold">Unable to join session</p>
                                     <p className="mt-2 text-sm text-red-100/80">{joinError}</p>
                                     <div className="mt-4">
-                                        <Button asChild variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10">
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            className="border-white/20 bg-transparent text-white hover:bg-white/10"
+                                        >
                                             <Link to={ROUTES.DASHBOARD}>Back to dashboard</Link>
                                         </Button>
                                     </div>
@@ -234,7 +239,9 @@ export default function CollaborationSessionView() {
                                     .split(/\n+/)
                                     .filter(Boolean)
                                     .map((paragraph, index) => (
-                                        <p key={`${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>
+                                        <p key={`${index}-${paragraph.slice(0, 16)}`}>
+                                            {paragraph}
+                                        </p>
                                     ))}
                             </CardContent>
                         </Card>
@@ -252,11 +259,15 @@ export default function CollaborationSessionView() {
                                                 Example {testRow.id}
                                             </p>
                                             <p>
-                                                <span className="font-semibold text-slate-200">Input:</span>{" "}
+                                                <span className="font-semibold text-slate-200">
+                                                    Input:
+                                                </span>{" "}
                                                 {testRow.input}
                                             </p>
                                             <p>
-                                                <span className="font-semibold text-slate-200">Output:</span>{" "}
+                                                <span className="font-semibold text-slate-200">
+                                                    Output:
+                                                </span>{" "}
                                                 {testRow.output}
                                             </p>
                                         </CardContent>
@@ -265,7 +276,8 @@ export default function CollaborationSessionView() {
                             ) : (
                                 <Card className="border border-dashed border-white/10 bg-white/[0.02] py-0 shadow-none ring-0">
                                     <CardContent className="px-6 py-5 text-slate-400">
-                                        Example cases will appear here once the problem details are loaded.
+                                        Example cases will appear here once the problem details are
+                                        loaded.
                                     </CardContent>
                                 </Card>
                             )}
@@ -370,14 +382,18 @@ export default function CollaborationSessionView() {
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-slate-400">
                                         <Radio className="size-4 text-emerald-400" />
-                                        {executionOutput ? "Output received" : "Execution shell ready"}
+                                        {executionOutput
+                                            ? "Output received"
+                                            : "Execution shell ready"}
                                     </div>
                                 </div>
 
                                 {/* F4.4.4 - Shared execution output visible to all users */}
                                 {executionOutput && (
                                     <div className="border-b border-white/10 bg-black/50 p-4">
-                                        <p className="mb-2 text-sm font-medium text-slate-400">Execution Output:</p>
+                                        <p className="mb-2 text-sm font-medium text-slate-400">
+                                            Execution Output:
+                                        </p>
                                         <pre className="whitespace-pre-wrap font-mono text-sm text-slate-200">
                                             {executionOutput}
                                         </pre>
@@ -403,8 +419,12 @@ export default function CollaborationSessionView() {
                                                         className="border-t border-white/5 text-slate-200"
                                                     >
                                                         <td className="px-5 py-4">{testRow.id}</td>
-                                                        <td className="px-5 py-4">{testRow.input}</td>
-                                                        <td className="px-5 py-4">{testRow.output}</td>
+                                                        <td className="px-5 py-4">
+                                                            {testRow.input}
+                                                        </td>
+                                                        <td className="px-5 py-4">
+                                                            {testRow.output}
+                                                        </td>
                                                         <td className="px-5 py-4">
                                                             {testRow.expectedOutput}
                                                         </td>
@@ -450,7 +470,9 @@ export default function CollaborationSessionView() {
                                         <MessageSquareText className="size-5 text-blue-300" />
                                         <h2 className="text-2xl font-semibold text-white">Chat</h2>
                                     </div>
-                                    <p className="text-sm text-slate-400">Live collaboration shell</p>
+                                    <p className="text-sm text-slate-400">
+                                        Live collaboration shell
+                                    </p>
                                 </div>
 
                                 <div className="flex-1 space-y-4 overflow-auto px-5 py-5">
@@ -471,7 +493,8 @@ export default function CollaborationSessionView() {
                                                         variant={
                                                             participant.status === "connected"
                                                                 ? "success"
-                                                                : participant.status === "disconnected"
+                                                                : participant.status ===
+                                                                    "disconnected"
                                                                   ? "warning"
                                                                   : "destructive"
                                                         }
@@ -505,7 +528,8 @@ export default function CollaborationSessionView() {
                                         </Button>
                                     </div>
                                     <CardDescription className="mt-3 text-slate-500">
-                                        Messaging UI is ready; live chat transport will be wired in the next realtime step.
+                                        Messaging UI is ready; live chat transport will be wired in
+                                        the next realtime step.
                                     </CardDescription>
                                 </div>
                             </div>

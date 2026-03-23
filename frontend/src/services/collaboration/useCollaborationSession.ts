@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { collaborationService } from "@/services/collaboration/collaborationService";
-import { OTClient, textChangeToOperations, type OfflineChanges } from "@/services/collaboration/otClient";
 import { pushToast } from "@/utils/toast";
+import { COLLABORATION_SOCKET_EVENTS } from "@/models/collaboration/collaborationSocketType";
 import type {
     CodeChangePayload,
     CodeSyncPayload,
@@ -16,7 +15,13 @@ import type {
     UserJoinedPayload,
     UserLeftPayload,
 } from "@/models/collaboration/collaborationType";
-import { COLLABORATION_SOCKET_EVENTS } from "@/models/collaboration/collaborationSocketType";
+
+import { collaborationService } from "@/services/collaboration/collaborationService";
+import {
+    type OfflineChanges,
+    OTClient,
+    textChangeToOperations,
+} from "@/services/collaboration/otClient";
 
 type ConnectionState = "connecting" | "connected" | "reconnecting" | "error";
 
@@ -46,33 +51,30 @@ export function useCollaborationSession(collaborationId: string | undefined) {
     }, [collaborationId]);
 
     // Handle local text changes with OT
-    const handleEditorChange = useCallback(
-        (newValue: string) => {
-            if (isRemoteChangeRef.current) {
-                // This change came from a remote operation, don't send it back
-                setEditorValue(newValue);
-                return;
-            }
+    const handleEditorChange = useCallback((newValue: string) => {
+        if (isRemoteChangeRef.current) {
+            // This change came from a remote operation, don't send it back
+            setEditorValue(newValue);
+            return;
+        }
 
-            const otClient = otClientRef.current;
-            if (!otClient || !collaborationIdRef.current) {
-                setEditorValue(newValue);
-                return;
-            }
+        const otClient = otClientRef.current;
+        if (!otClient || !collaborationIdRef.current) {
+            setEditorValue(newValue);
+            return;
+        }
 
-            const oldValue = otClient.getDocument();
-            const operations = textChangeToOperations(oldValue, newValue, 0, 0);
+        const oldValue = otClient.getDocument();
+        const operations = textChangeToOperations(oldValue, newValue, 0, 0);
 
-            if (operations.length === 0) {
-                return;
-            }
+        if (operations.length === 0) {
+            return;
+        }
 
-            // Apply locally and send to server
-            const updatedDoc = otClient.applyLocalOperation(operations);
-            setEditorValue(updatedDoc);
-        },
-        []
-    );
+        // Apply locally and send to server
+        const updatedDoc = otClient.applyLocalOperation(operations);
+        setEditorValue(updatedDoc);
+    }, []);
 
     // Leave session intentionally
     const leaveSession = useCallback(async () => {
@@ -149,7 +151,7 @@ export function useCollaborationSession(collaborationId: string | undefined) {
 
         const joinSession = async () => {
             setConnectionState((current) =>
-                current === "connected" ? "reconnecting" : "connecting"
+                current === "connected" ? "reconnecting" : "connecting",
             );
 
             try {
@@ -286,11 +288,12 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 return;
             }
 
-            const reasonText = payload.reason === "ping timeout"
-                ? " (connection timed out)"
-                : payload.reason === "transport close"
-                  ? " (connection lost)"
-                  : "";
+            const reasonText =
+                payload.reason === "ping timeout"
+                    ? " (connection timed out)"
+                    : payload.reason === "transport close"
+                      ? " (connection lost)"
+                      : "";
 
             const message = `${payload.userId} has disconnected${reasonText}`;
             setPartnerNotification(message);
@@ -394,7 +397,10 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.CONNECT_ERROR, handleConnectError);
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.PRESENCE_UPDATED, handlePresenceUpdated);
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.USER_JOINED, handleUserJoined);
-                socketRef.off(COLLABORATION_SOCKET_EVENTS.USER_DISCONNECTED, handleUserDisconnected);
+                socketRef.off(
+                    COLLABORATION_SOCKET_EVENTS.USER_DISCONNECTED,
+                    handleUserDisconnected,
+                );
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.USER_LEFT, handleUserLeft);
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.CODE_CHANGE, handleCodeChange);
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.CODE_SYNC, handleCodeSync);

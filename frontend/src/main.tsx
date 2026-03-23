@@ -1,11 +1,14 @@
-import { ClerkProvider } from "@clerk/clerk-react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import App from "@/App";
-import "./index.css";
-import { AuthInterceptorProvider } from "@/context/AuthInterceptorProvider";
+import { ClerkProvider } from "@clerk/clerk-react";
+
 import ToastHost from "@/components/toast/ToastHost";
+
+import "./index.css";
+
+import App from "@/App";
+import { AuthInterceptorProvider } from "@/context/AuthInterceptorProvider";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
