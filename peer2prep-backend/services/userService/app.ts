@@ -7,6 +7,7 @@ import { swaggerOptions } from "./config/swagger.js";
 import { clerkMiddleware } from "@clerk/express";
 import authRoutes from "./routes/authRoutes.js";
 import internalAuthRoutes from "./routes/internalAuthRoutes.js";
+import internalUserRoutes from "./routes/internalUserRoutes.js";
 import clerkWebhookRoutes from "./routes/clerkWebhookRoutes.js";
 import { AppConstants } from "./constants.js";
 const app = express();
@@ -35,6 +36,7 @@ app.use(helmet());
 // Mount controllers
 app.use("/v1/api/users", authRoutes);
 app.use("/v1/api/users/internal/authz", internalAuthRoutes);
+app.use("/v1/api/users/internal", internalUserRoutes);
 app.get("/v1/api/health", (_req, res) => {
     res.status(200).json({ status: "ok", message: "API is running" });
 });

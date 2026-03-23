@@ -1,39 +1,38 @@
-import type { CreateSessionRequest } from "@/models/model.js";
+import type { UUID } from "node:crypto";
 
-const nonEmptyString = (value: unknown): value is string =>
-    typeof value === "string" && value.trim().length > 0;
-const allowedDifficulties = new Set<CreateSessionRequest["difficulty"]>([
-    "Easy",
-    "Medium",
-    "Hard",
-]);
-const isAllowedDifficulty = (
-    value: string,
-): value is CreateSessionRequest["difficulty"] =>
-    allowedDifficulties.has(value as CreateSessionRequest["difficulty"]);
+import type { CreateSessionRequest } from "@/models/session.js";
 
-type CreateSessionValidationResult =
+function isNonEmptyString(value: unknown): value is string {
+    return typeof value === "string" && value.trim().length > 0;
+}
+
+function isDifficulty(
+    value: unknown,
+): value is CreateSessionRequest["difficulty"] {
+    return value === "Easy" || value === "Medium" || value === "Hard";
+}
+
+type ValidationResult =
     | { valid: true; value: CreateSessionRequest }
     | { valid: false; error: string };
 
-export function validateCreateSessionPayload(
-    payload: unknown,
-): CreateSessionValidationResult {
+export function validateCreateSessionPayload(payload: unknown): ValidationResult {
     if (!payload || typeof payload !== "object") {
-        return {
-            valid: false,
-            error: "Request body must be a JSON object.",
-        };
+        return { valid: false, error: "Request body must be a JSON object." };
     }
 
     const candidate = payload as Record<string, unknown>;
-    const { userAId, userBId, difficulty, language, topic } = candidate;
+    const { matchId, userAId, userBId, difficulty, language, topic } = candidate;
 
-    if (!nonEmptyString(userAId)) {
+    if (matchId !== undefined && !isNonEmptyString(matchId)) {
+        return { valid: false, error: "matchId must be a non-empty string when provided." };
+    }
+
+    if (!isNonEmptyString(userAId)) {
         return { valid: false, error: "userAId is required." };
     }
 
-    if (!nonEmptyString(userBId)) {
+    if (!isNonEmptyString(userBId)) {
         return { valid: false, error: "userBId is required." };
     }
 
@@ -41,33 +40,30 @@ export function validateCreateSessionPayload(
         return { valid: false, error: "userAId and userBId must be different." };
     }
 
-    if (!nonEmptyString(difficulty)) {
-        return { valid: false, error: "difficulty is required." };
-    }
-
-    if (!isAllowedDifficulty(difficulty)) {
+    if (!isDifficulty(difficulty)) {
         return {
             valid: false,
             error: "difficulty must be one of: Easy, Medium, Hard.",
         };
     }
 
-    if (!nonEmptyString(language)) {
+    if (!isNonEmptyString(language)) {
         return { valid: false, error: "language is required." };
     }
 
-    if (!nonEmptyString(topic)) {
+    if (!isNonEmptyString(topic)) {
         return { valid: false, error: "topic is required." };
     }
 
     return {
         valid: true,
         value: {
-            userAId,
-            userBId,
+            matchId: matchId?.trim() as UUID | undefined,
+            userAId: userAId.trim() as UUID,
+            userBId: userBId.trim() as UUID,
             difficulty,
-            language,
-            topic,
+            language: language.trim(),
+            topic: topic.trim(),
         },
     };
 }

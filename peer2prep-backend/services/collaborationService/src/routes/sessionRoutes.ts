@@ -1,46 +1,45 @@
 import { Router } from "express";
 
-import { sessionStore } from "@/services/sessionStore.js";
+import { ERROR_CODES, HTTP_STATUS } from "@/config/constants.js";
+import { collaborationSessionService } from "@/services/collaborationSessionService.js";
 import { validateCreateSessionPayload } from "@/services/validation.js";
 import { logger } from "@/utils/logger.js";
 
 const router = Router();
 
-router.post("/sessions", (req, res) => {
+router.post("/", async (req, res, next) => {
     const validationResult = validateCreateSessionPayload(req.body);
 
     if (!validationResult.valid) {
-        return res.status(400).json({
-            error: "INVALID_SESSION_REQUEST",
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            error: ERROR_CODES.INVALID_SESSION_REQUEST,
             message: validationResult.error,
         });
     }
 
-    const { session, created, conflict } = sessionStore.createOrGetSession(validationResult.value!);
+    try {
+        const result = await collaborationSessionService.createSession(validationResult.value);
 
-    if (conflict) {
-        return res.status(409).json({
-            error: "ACTIVE_SESSION_CONFLICT",
-            message:
-                "An active session already exists for this user pair with different difficulty, language, or topic.",
-            session,
+        logger.info(
+            {
+                collaborationId: result.session.collaborationId,
+                userAId: result.session.userAId,
+                userBId: result.session.userBId,
+                questionId: result.session.questionId,
+                idempotentHit: result.idempotentHit,
+                cacheWriteSucceeded: result.cacheWriteSucceeded,
+            },
+            "Processed collaboration session creation request",
+        );
+
+        return res.status(result.idempotentHit ? HTTP_STATUS.OK : HTTP_STATUS.CREATED).json({
+            session: result.session,
+            idempotentHit: result.idempotentHit,
+            cacheWriteSucceeded: result.cacheWriteSucceeded,
         });
+    } catch (error) {
+        next(error);
     }
-
-    logger.info(
-        {
-            sessionId: session.sessionId,
-            userAId: session.userAId,
-            userBId: session.userBId,
-            created,
-        },
-        "Processed session creation request",
-    );
-
-    return res.status(created ? 201 : 200).json({
-        session,
-        idempotentHit: !created,
-    });
 });
 
 export default router;

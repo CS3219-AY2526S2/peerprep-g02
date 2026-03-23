@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { UUID } from "node:crypto";
 
-import Admin from "./QuestionEditorView";
-import QuestionForm from "../../components/question/QuestionForm";
+import Admin from "@/views/question/QuestionEditorView";
+import QuestionForm from "@/components/question/QuestionForm";
 
 export default function QuestionMainView() {
     return <AdminPage />;

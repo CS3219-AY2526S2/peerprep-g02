@@ -28,7 +28,7 @@ services:
       - user-service
       # - matching-service
       - questions-service
-      # - collaboration-service
+      - collaboration-service
       # - attempts-service
     networks:
       - gateway-network
@@ -99,6 +99,8 @@ services:
     depends_on:
       matching-redis:
         condition: service_started
+      collaboration-service:
+        condition: service_started
     networks:
       - gateway-network
       - matching-redis-network
@@ -109,6 +111,10 @@ services:
       - MS_ENV=development
       - MS_REDIS_URL=redis://matching-redis:6379
       - US_INTERNAL_SERVICE_URL=http://user-service:3001
+      - MS_COLLABORATION_SERVICE_URL=http://collaboration-service:3003
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
+    volumes:
+      - ./secrets:/secrets:ro
     restart: unless-stopped
 
   matching-redis:
@@ -166,33 +172,66 @@ services:
       - questions-db-network
     restart: unless-stopped
 
-#   # Collaboration Service
-#   collaboration-service:
-#     build: ./peer2prep-backend/services/collaborationService
-#     container_name: collaboration-service
-#     env_file:
-#       - ./peer2prep-backend/services/collaborationService/.env
-#     depends_on:
-#       rabbitmq:
-#         condition: service_healthy
-#       collaboration-db:
-#         condition: service_started
-#     networks:
-#       - gateway-network
-#       - collaboration-db-network
-#     volumes:
-#       - ./peer2prep-backend/services/collaborationService:/app
-#       - /app/node_modules
-#     restart: unless-stopped
+  # Collaboration Service
+  collaboration-service:
+    build: ./peer2prep-backend/services/collaborationService
+    container_name: collaboration-service
+    env_file:
+      - ./peer2prep-backend/services/collaborationService/.env
+    environment:
+      - CS_SERVER_PORT=3003
+      - CS_API_GATEWAY_URL=http://gateway:8080
+      - CS_REDIS_HOST=collaboration-redis
+      - CS_REDIS_PORT=6379
+      - CS_DATABASE_URI=postgresql://postgres:postgres@collaboration-db:5432/collaboration
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
+    depends_on:
+      collaboration-redis:
+        condition: service_started
+      collaboration-db:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      questions-service:
+        condition: service_started
+    networks:
+      - gateway-network
+      - collaboration-redis-network
+      - collaboration-db-network
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./peer2prep-backend/services/collaborationService:/app
+      - /app/node_modules
+      - ./secrets:/secrets:ro
+    restart: unless-stopped
 
-#   collaboration-db:
-#     image: mongo:latest
-#     container_name: collaboration-db
-#     volumes:
-#       - collaboration_data:/data/db
-#     networks:
-#       - collaboration-db-network
-#     restart: unless-stopped
+  collaboration-db:
+    image: postgres:16-alpine
+    container_name: collaboration-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: collaboration
+    ports:
+      - "5434:5432"
+    volumes:
+      - collaboration_data:/var/lib/postgresql/data
+    networks:
+      - collaboration-db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d collaboration"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  collaboration-redis:
+    image: redis:latest
+    container_name: collaboration-redis
+    restart: unless-stopped
+    networks:
+      - collaboration-redis-network
 
 #   # Attempts Service
 #   attempts-service:
@@ -226,7 +265,7 @@ volumes:
   user_data:
 #   matching_data:
   questions_data:
-#   collaboration_data:
+  collaboration_data:
 #   attempts_data:
 #   redis_data:
 
@@ -239,7 +278,9 @@ networks:
     driver: bridge
   questions-db-network:
     driver: bridge
-#   collaboration-db-network:
-#     driver: bridge
+  collaboration-redis-network:
+    driver: bridge
+  collaboration-db-network:
+    driver: bridge
 #   attempts-db-network:
 #     driver: bridge

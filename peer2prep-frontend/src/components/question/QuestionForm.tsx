@@ -1,5 +1,5 @@
 import { JSX, useEffect, useState } from "react";
-import { Difficulty, FormData } from "../../models/question/questionType";
+import { Difficulty, FormData } from "@/models/question/questionType";
 import { UUID } from "node:crypto";
 import {
     createQuestion,

@@ -1,5 +1,5 @@
 import { UUID } from "node:crypto";
-import pool from "@/database";
+import pool from "../database";
 
 type TestCase = {
     input: string;
@@ -123,8 +123,13 @@ async function randomQuestion(questions: UUID[]) {
 
 export async function SearchQuestion(topic: string, difficulty: string, userA: UUID | null, userB: UUID | null) {
     try {
-        //Default random question
-        const result = await pool.query('SELECT quid FROM qn_topics WHERE tid = $1 AND difficulty = $2', [topic, difficulty]);
+        // Query qn_topics with JOIN to topics table to search by topic name
+        const result = await pool.query(
+            `SELECT qt.quid FROM qn_topics qt
+             JOIN topics t ON qt.tid = t.tid
+             WHERE t.topic = $1 AND qt.difficulty = $2`,
+            [topic, difficulty]
+        );
         if (result == undefined || result.rows.length == 0) return null;
         const allQuestions: UUID[] = result.rows.map((r: any) => r.quid);
         const defaultQuestion = await randomQuestion(allQuestions);

@@ -6,5 +6,5 @@ export const difficultyOptions = [
     { value: Difficulty.HARD, label: "Hard", icon: Zap, activeClassName: "border-slate-900 bg-slate-900 text-white" },
 ] as const;
 
-export const topicOptions = ["Arrays & Strings", "Trees & Graphs", "Dynamic Programming", "System Design"];
+export const topicOptions = ["Algorithms", "Array", "Data Structures", "Strings", "Bit Manipulation", "Recursion", "Databases"];
 export const languageOptions = ["JavaScript", "TypeScript", "Python", "Java"];
