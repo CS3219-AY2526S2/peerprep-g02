@@ -15,7 +15,7 @@ export class UserScoreService {
 
     async getScore(clerkUserId: string): Promise<number> {
         const payload = await this.fetchUserScore<UserScorePayload>(
-            `${this.userInternalBaseUrl}/${encodeURIComponent(clerkUserId)}/score`,
+            `${this.userInternalBaseUrl}/${clerkUserId}/score`,
             {
                 method: "GET",
                 headers: {
@@ -35,7 +35,7 @@ export class UserScoreService {
 
     async updateScore(clerkUserId: string, score: number): Promise<number> {
         const payload = await this.fetchUserScore<UserScorePayload>(
-            `${this.userInternalBaseUrl}/${encodeURIComponent(clerkUserId)}/score`,
+            `${this.userInternalBaseUrl}/${clerkUserId}/score`,
             {
                 method: "PUT",
                 headers: {
