@@ -13,10 +13,10 @@ const res = await apiFetch("/users/me", { method: "GET" });
 
 ## Backend (Service-to-Service)
 
-For protected cross-service checks, call user service internal auth endpoint:
+For protected cross-service checks, call user service auth endpoint through API gateway:
 
 ```ts
-const r = await fetch("http://localhost:3001/v1/api/users/internal/authz/context", {
+const r = await fetch("http://localhost:8080/v1/api/users/internal/authz/context", {
     headers: {
         authorization: req.headers.authorization ?? "",
         "x-internal-service-key": process.env.INTERNAL_SERVICE_API_KEY ?? "",

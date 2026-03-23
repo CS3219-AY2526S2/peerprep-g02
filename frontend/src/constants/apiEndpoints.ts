@@ -1,25 +1,31 @@
-const backendApiBase = import.meta.env.VITE_BACKEND_API_ENDPOINT;
-const gatewayBase = backendApiBase.endsWith("/v1/api")
-    ? backendApiBase.slice(0, -"/v1/api".length)
-    : backendApiBase;
+const gatewayBase = (() => {
+  const raw = import.meta.env.VITE_GATEWAY_ENDPOINT as string | undefined;
+  if (!raw) {
+    throw new Error("VITE_GATEWAY_ENDPOINT is not defined");
+  }
+  return raw.endsWith("/") ? raw.slice(0, -1) : raw;
+})();
 
 export const API_ENDPOINTS = {
-    USERS: {
-        ME: "/users/me", // GET (info), DELETE (account)
-        ADMIN_LIST: "/users/admin/users", // GET all users
-        UPDATE_ROLE: (clerkId: string) => `/users/admin/users/${clerkId}/role`, // PATCH
-        UPDATE_STATUS: (clerkId: string) => `/users/admin/users/${clerkId}/status`, // PATCH
-    },
-    MATCHING: {
-        GATEWAY_PATH: `${gatewayBase}/v1/api/matching`,
-    },
-    COLLABORATION: {
-        SOCKET_PATH: `${gatewayBase}/v1/api/sessions`,
-    },
-    QUESTIONS: {
-        BASE: "http://localhost:3005/v1/api/questions", // GET (all), POST (create), PUT (edit)
-        POPULAR: "http://localhost:3005/v1/api/questions/popular", // GET
-        GET_ONE: "http://localhost:3005/v1/api/questions/get", // POST with {quid}
-        DELETE: "http://localhost:3005/v1/api/questions/delete", // POST with {quid}
-    },
-};
+  USERS: {
+    ME: `${gatewayBase}/users/me`, // GET, DELETE
+    ADMIN_LIST: `${gatewayBase}/users/admin/users`, // GET
+    UPDATE_ROLE: (clerkId: string) => `${gatewayBase}/users/admin/users/${clerkId}/role`, // PATCH
+    UPDATE_STATUS: (clerkId: string) => `${gatewayBase}/users/admin/users/${clerkId}/status`, // PATCH
+  },
+
+  MATCHING: {
+    GATEWAY_PATH: `${gatewayBase}/matching`,
+  },
+
+  COLLABORATION: {
+    SOCKET_PATH: `${gatewayBase}/sessions`,
+  },
+
+  QUESTIONS: {
+    BASE: `${gatewayBase}/questions`,
+    POPULAR: `${gatewayBase}/questions/popular`,
+    GET_ONE: `${gatewayBase}/questions/get`,
+    DELETE: `${gatewayBase}/questions/delete`,
+  },
+} as const;

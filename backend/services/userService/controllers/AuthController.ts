@@ -9,7 +9,7 @@ export class AuthController {
 
     /**
      * @swagger
-     * /v1/api/users/me:
+     * /users/me:
      *   get:
      *     summary: Get authenticated user profile and sync local user record.
      */
@@ -30,7 +30,7 @@ export class AuthController {
 
     /**
      * @swagger
-     * /v1/api/users/me:
+     * /users/me:
      *   delete:
      *     summary: Delete authenticated user's account with admin-safety checks.
      */
@@ -51,7 +51,7 @@ export class AuthController {
 
     /**
      * @swagger
-     * /v1/api/users/admin/users:
+     * /users/admin/users:
      *   get:
      *     summary: Get all active and suspended users for admin management.
      */
@@ -72,7 +72,7 @@ export class AuthController {
 
     /**
      * @swagger
-     * /v1/api/users/admin/users/{clerkUserId}/role:
+     * /users/admin/users/{clerkUserId}/role:
      *   patch:
      *     summary: Promote or demote user role.
      */
@@ -107,7 +107,7 @@ export class AuthController {
 
     /**
      * @swagger
-     * /v1/api/users/admin/users/{clerkUserId}/status:
+     * /users/admin/users/{clerkUserId}/status:
      *   patch:
      *     summary: Suspend or unsuspend user account.
      */

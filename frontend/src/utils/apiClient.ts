@@ -11,19 +11,8 @@ export function injectAuthInterceptor(getToken?: TokenGetter): void {
     getTokenRef = getToken;
 }
 
-function resolveUrl(path: string): string {
-    const gatewayUrl = import.meta.env.VITE_GATEWAY_ENDPOINT;
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-        return path;
-    }
-
-    const normalizedGateway = gatewayUrl.endsWith("/") ? gatewayUrl.slice(0, -1) : gatewayUrl;
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return `${normalizedGateway}/v1/api${normalizedPath}`;
-}
-
 // automatically injects auth token from Clerk
-export async function apiFetch(path: string, init: ApiRequestInit = {}): Promise<Response> {
+export async function apiFetch(url: string, init: ApiRequestInit = {}): Promise<Response> {
     const {
         tokenTemplate = "jwt",
         skipAuth = false,
@@ -31,12 +20,18 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}): Promise
         credentials,
         ...rest
     } = init;
+
     const headers = new Headers(rawHeaders);
 
+    // Standardize Content-Type and Accept headers
     if (!headers.has("Accept")) {
         headers.set("Accept", "application/json");
     }
+    if (!headers.has("Content-Type") && rest.body) {
+        headers.set("Content-Type", "application/json");
+    }
 
+    // Inject Authorization header if not skipped
     if (!skipAuth && getTokenRef && !headers.has("Authorization")) {
         const token = await getTokenRef({ template: tokenTemplate });
         if (token) {
@@ -44,7 +39,9 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}): Promise
         }
     }
 
-    return fetch(resolveUrl(path), {
+    // Since API_ENDPOINTS already contain the full gateway URL, 
+    // we just fetch the URL directly.
+    return fetch(url, {
         ...rest,
         headers,
         credentials: credentials ?? "include",

@@ -14,12 +14,12 @@ const app = express();
 
 if (AppConstants.MODE === "dev") {
     const swaggerSpec = swaggerJsdoc(swaggerOptions);
-    app.use("/v1/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 }
 
 app.use(clerkMiddleware());
 app.use(
-    "/v1/api/users/webhooks/clerk",
+    "/users/webhooks/clerk",
     express.raw({ type: "application/json" }),
     clerkWebhookRoutes,
 );
@@ -34,10 +34,10 @@ app.use(
 app.use(helmet());
 
 // Mount controllers
-app.use("/v1/api/users", authRoutes);
-app.use("/v1/api/users/internal/authz", internalAuthRoutes);
-app.use("/v1/api/users/internal", internalUserRoutes);
-app.get("/v1/api/health", (_req, res) => {
+app.use("/users", authRoutes);
+app.use("/users/internal/authz", internalAuthRoutes);
+app.use("/users/internal", internalUserRoutes);
+app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok", message: "API is running" });
 });
 

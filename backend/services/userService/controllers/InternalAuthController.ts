@@ -22,7 +22,7 @@ export class InternalAuthController {
 
     /**
      * @swagger
-     * /v1/api/users/internal/authz/context:
+     * /users/internal/authz/context:
      *   get:
      *     summary: Get internal authorization context for the authenticated user.
      *     description: Requires internal service key and a valid Clerk bearer token.

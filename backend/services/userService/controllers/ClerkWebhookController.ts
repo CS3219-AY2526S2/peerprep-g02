@@ -10,7 +10,7 @@ export class ClerkWebhookController {
 
     /**
      * @swagger
-     * /v1/api/users/webhooks/clerk:
+     * /users/webhooks/clerk:
      *   post:
      *     summary: Receive Clerk webhook events and sync local user records.
      *     security: []
