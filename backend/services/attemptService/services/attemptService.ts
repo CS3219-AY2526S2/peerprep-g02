@@ -4,7 +4,6 @@ import {
     attemptRepository,
     type AttemptDifficulty,
     type AttemptRecord,
-    type AttemptResult,
 } from "../models/Attempt.js";
 import { ServiceError } from "../utils/ResponseHelpers.js";
 import { UserScoreService } from "./userScoreService.js";
@@ -15,7 +14,7 @@ export type RecordAttemptInput = {
     questionId: string;
     language: string;
     difficulty: string;
-    result: string | boolean;
+    success: boolean;
     duration: number;
     attemptedAt?: string;
 };
@@ -37,23 +36,6 @@ function normalizeDifficulty(difficulty: string): AttemptDifficulty {
     throw new ServiceError(400, "difficulty must be one of: easy, medium, hard.");
 }
 
-function normalizeResult(result: string | boolean): AttemptResult {
-    if (typeof result === "boolean") {
-        return result ? "success" : "fail";
-    }
-
-    const normalized = result.trim().toLowerCase();
-    if (normalized === "success") {
-        return "success";
-    }
-
-    if (normalized === "fail" || normalized === "failed") {
-        return "fail";
-    }
-
-    throw new ServiceError(400, "result must be either 'success' or 'fail'.");
-}
-
 function parseAttemptedAt(attemptedAt?: string): Date {
     if (!attemptedAt) {
         return new Date();
@@ -69,9 +51,9 @@ function parseAttemptedAt(attemptedAt?: string): Date {
 
 export function calculateScoreDelta(
     difficulty: AttemptDifficulty,
-    result: AttemptResult,
+    success: boolean,
 ): number {
-    if (result === "fail") {
+    if (!success) {
         return -10;
     }
 
@@ -122,9 +104,8 @@ export class AttemptService {
         }
 
         const difficulty = normalizeDifficulty(input.difficulty);
-        const result = normalizeResult(input.result);
         const attemptedAt = parseAttemptedAt(input.attemptedAt);
-        const scoreDelta = calculateScoreDelta(difficulty, result);
+        const scoreDelta = calculateScoreDelta(difficulty, input.success);
         const userIds = [userAId, userBId];
 
         const attempts = await Promise.all(
@@ -135,7 +116,7 @@ export class AttemptService {
                     questionId,
                     language,
                     difficulty,
-                    result,
+                    success: input.success,
                     duration: input.duration,
                     attemptedAt,
                 }),

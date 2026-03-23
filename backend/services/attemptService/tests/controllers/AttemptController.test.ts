@@ -21,7 +21,7 @@ describe("AttemptController", () => {
                 userBId: "user_b",
                 language: "typescript",
                 difficulty: "Medium",
-                result: "success",
+                success: true,
                 duration: 1200,
             },
         });
@@ -50,7 +50,7 @@ describe("AttemptController", () => {
                 questionId: "question-1",
                 language: "typescript",
                 difficulty: "Medium",
-                result: "success",
+                success: true,
                 duration: 1200,
             },
         });

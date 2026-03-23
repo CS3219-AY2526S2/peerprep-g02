@@ -1,7 +1,6 @@
 import { query } from "../utils/postgres.js";
 
 export type AttemptDifficulty = "easy" | "medium" | "hard";
-export type AttemptResult = "success" | "fail";
 
 type AttemptRow = {
     id: string;
@@ -9,7 +8,7 @@ type AttemptRow = {
     question_id: string;
     language: string;
     difficulty: AttemptDifficulty;
-    result: AttemptResult;
+    success: boolean;
     duration: number;
     attempted_at: Date;
     created_at: Date;
@@ -21,7 +20,7 @@ export type AttemptRecord = {
     questionId: string;
     language: string;
     difficulty: AttemptDifficulty;
-    result: AttemptResult;
+    success: boolean;
     duration: number;
     attemptedAt: Date;
     createdAt: Date;
@@ -33,7 +32,7 @@ export type CreateAttemptInput = {
     questionId: string;
     language: string;
     difficulty: AttemptDifficulty;
-    result: AttemptResult;
+    success: boolean;
     duration: number;
     attemptedAt: Date;
 };
@@ -45,7 +44,7 @@ function mapAttemptRow(row: AttemptRow): AttemptRecord {
         questionId: row.question_id,
         language: row.language,
         difficulty: row.difficulty,
-        result: row.result,
+        success: row.success,
         duration: row.duration,
         attemptedAt: row.attempted_at,
         createdAt: row.created_at,
@@ -59,7 +58,7 @@ class AttemptRepository {
         question_id,
         language,
         difficulty,
-        result,
+        success,
         duration,
         attempted_at,
         created_at
@@ -74,7 +73,7 @@ class AttemptRepository {
                     question_id,
                     language,
                     difficulty,
-                    result,
+                    success,
                     duration,
                     attempted_at
                 )
@@ -87,7 +86,7 @@ class AttemptRepository {
                 input.questionId,
                 input.language,
                 input.difficulty,
-                input.result,
+                input.success,
                 input.duration,
                 input.attemptedAt,
             ],

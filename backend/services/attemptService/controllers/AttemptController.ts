@@ -9,7 +9,6 @@ type RecordAttemptRequest = {
     questionId?: string;
     language?: string;
     difficulty?: string;
-    result?: string;
     success?: boolean;
     duration?: number;
     attemptedAt?: string;
@@ -38,9 +37,8 @@ export class AttemptController {
             return badRequest(res, "difficulty is required.");
         }
 
-        const result = body?.result ?? body?.success;
-        if (typeof result !== "string" && typeof result !== "boolean") {
-            return badRequest(res, "result is required.");
+        if (typeof body?.success !== "boolean") {
+            return badRequest(res, "success must be either true or false.");
         }
 
         if (typeof body?.duration !== "number") {
@@ -54,7 +52,7 @@ export class AttemptController {
                 questionId: body.questionId,
                 language: body.language,
                 difficulty: body.difficulty,
-                result,
+                success: body.success,
                 duration: body.duration,
                 attemptedAt:
                     typeof body.attemptedAt === "string"
