@@ -6,26 +6,31 @@ const gatewayBase = (() => {
     return raw.endsWith("/") ? raw.slice(0, -1) : raw;
 })();
 
+const US_PREFIX = `${gatewayBase}/us`;
+const MS_PREFIX = `${gatewayBase}/ms`;
+const QS_PREFIX = `${gatewayBase}/qs`;
+const CS_PREFIX = `${gatewayBase}/cs`;
+
 export const API_ENDPOINTS = {
     USERS: {
-        ME: `${gatewayBase}/users/me`, // GET, DELETE
-        ADMIN_LIST: `${gatewayBase}/users/admin/users`, // GET
-        UPDATE_ROLE: (clerkId: string) => `${gatewayBase}/users/admin/users/${clerkId}/role`, // PATCH
-        UPDATE_STATUS: (clerkId: string) => `${gatewayBase}/users/admin/users/${clerkId}/status`, // PATCH
+        ME: `${US_PREFIX}/users/me`, 
+        ADMIN_LIST: `${US_PREFIX}/users/admin/users`,
+        UPDATE_ROLE: (clerkId: string) => `${US_PREFIX}/users/admin/users/${clerkId}/role`,
+        UPDATE_STATUS: (clerkId: string) => `${US_PREFIX}/users/admin/users/${clerkId}/status`,
     },
 
     MATCHING: {
-        GATEWAY_PATH: `${gatewayBase}/matching`,
-    },
-
-    COLLABORATION: {
-        SOCKET_PATH: `${gatewayBase}/sessions`,
+        BASE: `${MS_PREFIX}`,
     },
 
     QUESTIONS: {
-        BASE: `${gatewayBase}/questions`,
-        POPULAR: `${gatewayBase}/questions/popular`,
-        GET_ONE: `${gatewayBase}/questions/get`,
-        DELETE: `${gatewayBase}/questions/delete`,
+        BASE: `${QS_PREFIX}/`,
+        POPULAR: `${QS_PREFIX}/popular`,
+        GET_ONE: `${QS_PREFIX}/get`,
+        DELETE: `${QS_PREFIX}/delete`,
+    },
+
+    COLLABORATION: {
+        SOCKET_PATH: `${CS_PREFIX}`,
     },
 } as const;

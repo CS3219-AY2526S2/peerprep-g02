@@ -9,7 +9,7 @@ class MatchingService {
 
     async connect() {
         if (this.socket?.connected) return this.socket;
-        this.socket = await createAuthenticatedSocket(API_ENDPOINTS.MATCHING.GATEWAY_PATH);
+        this.socket = await createAuthenticatedSocket(API_ENDPOINTS.MATCHING.BASE);
         return this.socket;
     }
 

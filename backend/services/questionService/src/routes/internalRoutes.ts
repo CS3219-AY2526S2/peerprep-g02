@@ -9,7 +9,7 @@ const router = Router();
 router.use(requireInternalAuth);
 
 // Get question details by ID (for collaboration service)
-router.post("/questions/internal/get", async (req, res) => {
+router.post("/get", async (req, res) => {
     const { questionId } = req.body ?? {};
 
     if (typeof questionId !== "string" || questionId.trim().length === 0) {
@@ -42,7 +42,7 @@ router.post("/questions/internal/get", async (req, res) => {
     });
 });
 
-router.post("/questions/internal/select", async (req, res) => {
+router.post("/select", async (req, res) => {
     const { topic, difficulty, userAId, userBId } = req.body ?? {};
 
     if (

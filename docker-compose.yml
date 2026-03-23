@@ -26,8 +26,8 @@ services:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - user-service
-      # - matching-service
-      # - questions-service
+      - matching-service
+      - questions-service
       # - collaboration-service
       # - attempts-service
     networks:
@@ -123,54 +123,54 @@ services:
       - matching-redis-network
 
   # Questions Service
-  # questions-service:
-  #   build: ./backend/services/questionService
-  #   container_name: questions-service
-  #   env_file:
-  #     - ./backend/services/questionService/.env
-  #   environment:
-  #     - DB_HOST=questions-db
-  #   ports:
-  #   - "3005:3005"
-  #   depends_on:
-  #     questions-db:
-  #       condition: service_started
-  #   networks:
-  #     - gateway-network
-  #     - questions-db-network
-  #   volumes:
-  #     - ./backend/services/questionService:/app
-  #     - /app/node_modules
-  #   restart: unless-stopped
+  questions-service:
+    build: ./backend/services/questionService
+    container_name: questions-service
+    env_file:
+      - ./backend/services/questionService/.env
+    environment:
+      - DB_HOST=questions-db
+    ports:
+    - "3005:3005"
+    depends_on:
+      questions-db:
+        condition: service_started
+    networks:
+      - gateway-network
+      - questions-db-network
+    volumes:
+      - ./backend/services/questionService:/app
+      - /app/node_modules
+    restart: unless-stopped
 
-  # questions-db:
-  #   image: postgres:16-alpine
-  #   container_name: questions-db
-  #   ports:
-  #     - "5435:5432"
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: postgres
-  #     POSTGRES_DB: questions
-  #   volumes:
-  #     - questions_data:/var/lib/postgresql
-  #   networks:
-  #     - questions-db-network
-  #   restart: unless-stopped
+  questions-db:
+    image: postgres:16-alpine
+    container_name: questions-db
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: questions
+    volumes:
+      - questions_data:/var/lib/postgresql
+    networks:
+      - questions-db-network
+    restart: unless-stopped
 
-  # pgadmin:
-  #   container_name: container-pgadmin
-  #   image: dpage/pgadmin4
-  #   depends_on:
-  #     - questions-db
-  #   ports:
-  #     - "5050:80"
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: postgres@gmail.com
-  #     PGADMIN_DEFAULT_PASSWORD: postgres
-  #   networks:
-  #     - questions-db-network
-  #   restart: unless-stopped
+  pgadmin:
+    container_name: container-pgadmin
+    image: dpage/pgadmin4
+    depends_on:
+      - questions-db
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: postgres@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: postgres
+    networks:
+      - questions-db-network
+    restart: unless-stopped
 
   # Collaboration Service
   # collaboration-service:
@@ -263,7 +263,7 @@ services:
 
 volumes:
   user_data:
-#   matching_data:
+  matching_data:
   questions_data:
   collaboration_data:
 #   attempts_data:

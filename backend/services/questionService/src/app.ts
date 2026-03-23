@@ -17,8 +17,8 @@ app.use(
 app.use(express.json());
 // Internal routes must be mounted BEFORE question routes
 // to avoid requireAdminAuth middleware blocking internal service calls
-app.use("/v1/api", internalRoute);
-app.use("/v1/api", questionRoute);
+app.use("/internal", internalRoute);
+app.use("/", questionRoute);
 
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);

@@ -50,7 +50,8 @@ export async function apiFetch(url: string, init: ApiRequestInit = {}): Promise<
 
 export async function getAuthToken(): Promise<string | null> {
     if (!getTokenRef) {
-        throw new Error("Auth interceptor not initialized");
+        console.warn("Auth interceptor not yet initialized. Retrying...");
+        return null;
     }
     return await getTokenRef({ template: "jwt" });
 }

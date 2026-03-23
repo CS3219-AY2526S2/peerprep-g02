@@ -18,7 +18,7 @@ const router = Router();
 router.use(requireAdminAuth);
 
 //Get all question
-router.get("/questions", async (req, res) => {
+router.get("/", async (req, res) => {
     const result = await GetQuestions();
 
     if (!result) {
@@ -34,7 +34,7 @@ router.get("/questions", async (req, res) => {
 });
 
 //Get popular questions
-router.get("/questions/popular", async (req, res) => {
+router.get("/popular", async (req, res) => {
     const result = await GetPopularQuestions();
 
     if (!result) {
@@ -49,7 +49,7 @@ router.get("/questions/popular", async (req, res) => {
 });
 
 //Get specified question
-router.post("/questions/get", async (req, res) => {
+router.post("/get", async (req, res) => {
     var result = await GetQuestion(req.body.quid);
 
     if (!result) {
@@ -65,7 +65,7 @@ router.post("/questions/get", async (req, res) => {
 });
 
 //Save question
-router.post("/questions", async (req, res) => {
+router.post("", async (req, res) => {
     var result = await CreateQuestion(req.body);
     var result = true;
     if (!result) {
@@ -80,7 +80,7 @@ router.post("/questions", async (req, res) => {
 });
 
 //Edit question
-router.put("/questions", async (req, res) => {
+router.put("", async (req, res) => {
     var result = false;
     var result = await EditQuestion(req.body);
 
@@ -96,7 +96,7 @@ router.put("/questions", async (req, res) => {
 });
 
 //Delete question
-router.delete("/questions/:id", async (req, res) => {
+router.delete("/:id", async (req, res) => {
     const result = await DeleteQuestion(req.params.id as UUID);
 
     if (!result) {
@@ -111,7 +111,7 @@ router.delete("/questions/:id", async (req, res) => {
 })
 
 //Search for matching question
-router.post("/questions/search", async (req, res) => {
+router.post("/search", async (req, res) => {
     const { topic, difficulty, userA, userB } = req.body;
     var result = await SearchQuestion(topic, difficulty, userA, userB);
 
@@ -128,7 +128,7 @@ router.post("/questions/search", async (req, res) => {
 })
 
 //Get leetcode question
-router.post('/questions/leetcode', async (req, res) => {
+router.post('/leetcode', async (req, res) => {
     const result = await getLeetCode(req.body.topic);
 
     if (!result) {

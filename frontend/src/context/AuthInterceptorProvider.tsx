@@ -29,7 +29,7 @@ export function AuthInterceptorProvider({ children }: Props) {
         };
     }, [getToken, isLoaded, isSignedIn]);
 
-    if (!isLoaded || !isSignedIn) {
+    if (!isLoaded) {
         return null;
     }
 

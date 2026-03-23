@@ -5,19 +5,6 @@ import { Socket } from "socket.io";
 import type { InternalAuthResponse } from "@/types/auth.js";
 import { socketLogger } from "@/utils/logger.js";
 
-// stub method
-// export const socketAuthMiddleware = (socket: Socket, next: (err?: Error) => void) => {
-//     const userId = socket.handshake.auth?.userId || socket.handshake.headers?.['x-user-id'];
-
-//     if (!userId) {
-//         console.error("Connection rejected: No userId provided in stub mode.");
-//         return next(new Error("Authentication failed: userId required"));
-//     }
-
-//     socket.data.userId = userId;
-//     next();
-// };
-
 export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) => void) => {
     const authHeader = socket.handshake.headers["authorization"] || socket.handshake.auth?.token;
     const serviceKey = process.env.US_INTERNAL_SERVICE_API_KEY || "";
@@ -28,7 +15,7 @@ export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) =
 
     try {
         const response = await fetch(
-            `${process.env.API_GATEWAY_SERVER}/users/internal/authz/context`,
+            `http://api-gateway:8080/v1/api/us/users/internal/authz/context`,
             {
                 headers: {
                     authorization: authHeader,

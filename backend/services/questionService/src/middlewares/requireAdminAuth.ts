@@ -11,9 +11,7 @@ type InternalAuthContextResponse = {
     error?: string;
 };
 
-const INTERNAL_AUTHZ_URL =
-    process.env.USER_SERVICE_INTERNAL_AUTHZ_URL ??
-    "http://user-service:3001/v1/api/users/internal/authz/context";
+const INTERNAL_AUTHZ_URL = `http://api-gateway:8080/v1/api/us/users/internal/authz/context`;
 
 export async function requireAdminAuth(
     req: Request,
