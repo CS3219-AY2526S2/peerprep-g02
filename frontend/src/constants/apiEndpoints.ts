@@ -13,7 +13,7 @@ const CS_PREFIX = `${gatewayBase}/cs`;
 
 export const API_ENDPOINTS = {
     USERS: {
-        ME: `${US_PREFIX}/users/me`, 
+        ME: `${US_PREFIX}/users/me`,
         ADMIN_LIST: `${US_PREFIX}/users/admin/users`,
         UPDATE_ROLE: (clerkId: string) => `${US_PREFIX}/users/admin/users/${clerkId}/role`,
         UPDATE_STATUS: (clerkId: string) => `${US_PREFIX}/users/admin/users/${clerkId}/status`,
