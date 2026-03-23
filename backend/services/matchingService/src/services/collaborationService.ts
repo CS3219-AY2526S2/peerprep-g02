@@ -43,7 +43,7 @@ export async function createCollaborationSession(
     }
 
     try {
-        const response = await fetch(`${collaborationServiceUrl}/v1/api/sessions`, {
+        const response = await fetch(`http://collaboration-service:3003/sessions`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

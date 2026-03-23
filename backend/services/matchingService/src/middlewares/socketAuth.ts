@@ -15,7 +15,7 @@ export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) =
 
     try {
         const response = await fetch(
-            `http://api-gateway:8080/v1/api/us/users/internal/authz/context`,
+            `http://user-service:3001/users/internal/authz/context`,
             {
                 headers: {
                     authorization: authHeader,
