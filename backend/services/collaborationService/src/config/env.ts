@@ -41,17 +41,12 @@ export const env = {
     ),
     apiGatewayUrl: trimTrailingSlash(process.env.CS_API_GATEWAY_URL) ?? "http://localhost:8080",
     internalServiceApiKey: process.env.CS_INTERNAL_SERVICE_API_KEY ?? "",
-    userAuthContextPath:
-        process.env.CS_USER_AUTH_CONTEXT_PATH ?? "/users/internal/authz/context",
-    userAuthBatchPath:
-        process.env.CS_USER_AUTH_BATCH_PATH ?? "/users/internal/validation/batch",
-    questionSelectionPath:
-        process.env.CS_QUESTION_SELECTION_PATH ?? "/internal/select",
-    questionDetailsPath:
-        process.env.CS_QUESTION_DETAILS_PATH ?? "/internal/get",
+    userAuthContextPath: process.env.CS_USER_AUTH_CONTEXT_PATH ?? "/users/internal/authz/context",
+    userAuthBatchPath: process.env.CS_USER_AUTH_BATCH_PATH ?? "/users/internal/validation/batch",
+    questionSelectionPath: process.env.CS_QUESTION_SELECTION_PATH ?? "/internal/select",
+    questionDetailsPath: process.env.CS_QUESTION_DETAILS_PATH ?? "/internal/get",
     useQuestionStub: readBoolean(process.env.CS_USE_QUESTION_STUB, false),
-    stubQuestionPrefix:
-        process.env.CS_STUB_QUESTION_PREFIX ?? DEFAULTS.STUB_QUESTION_PREFIX,
+    stubQuestionPrefix: process.env.CS_STUB_QUESTION_PREFIX ?? DEFAULTS.STUB_QUESTION_PREFIX,
     redisHost: process.env.CS_REDIS_HOST ?? "127.0.0.1",
     redisPort: readNumber(process.env.CS_REDIS_PORT, DEFAULTS.REDIS_PORT),
     redisDb: readNumber(process.env.CS_REDIS_DB, DEFAULTS.REDIS_DB),
@@ -65,6 +60,8 @@ export const env = {
         DEFAULTS.INACTIVITY_CHECK_INTERVAL_MS,
     ),
     databaseUri: process.env.CS_DATABASE_URI ?? "postgresql://localhost:5432/collaboration_service",
-    userServiceUrl: trimTrailingSlash(process.env.CS_USER_SERVICE_URL) ?? "http://user-service:3001",
-    questionsServiceUrl: trimTrailingSlash(process.env.CS_QUESTIONS_SERVICE_URL) ?? "http://questions-service:3005",
+    userServiceUrl:
+        trimTrailingSlash(process.env.CS_USER_SERVICE_URL) ?? "http://user-service:3001",
+    questionsServiceUrl:
+        trimTrailingSlash(process.env.CS_QUESTIONS_SERVICE_URL) ?? "http://questions-service:3005",
 };

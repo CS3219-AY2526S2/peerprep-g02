@@ -10,7 +10,10 @@ type InternalAuthzContextResponse = {
 };
 
 export class InternalAuthController {
-    private static buildContextResponse(clerkUserId: string, user?: UserRecord): InternalAuthzContextResponse {
+    private static buildContextResponse(
+        clerkUserId: string,
+        user?: UserRecord,
+    ): InternalAuthzContextResponse {
         return {
             data: {
                 clerkUserId,
@@ -40,5 +43,4 @@ export class InternalAuthController {
 
         return res.status(200).json(InternalAuthController.buildContextResponse(clerkUserId, user));
     }
-
 }

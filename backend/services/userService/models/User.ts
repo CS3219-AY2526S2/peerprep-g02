@@ -2,11 +2,7 @@ import { query } from "../utils/postgres.js";
 
 export type UserStatus = "active" | "suspended" | "deleted";
 export type UserRole = "user" | "admin" | "super_user";
-export type AdminAuditAction =
-    | "PROMOTE_USER"
-    | "DEMOTE_USER"
-    | "SUSPEND_USER"
-    | "UNSUSPEND_USER";
+export type AdminAuditAction = "PROMOTE_USER" | "DEMOTE_USER" | "SUSPEND_USER" | "UNSUSPEND_USER";
 
 type UserRow = {
     clerk_user_id: string;
@@ -171,10 +167,7 @@ class UserRepository {
         return result.rows.map(mapUserRow);
     }
 
-    async updateRoleByClerkUserId(
-        clerkUserId: string,
-        role: UserRole,
-    ): Promise<UserRecord | null> {
+    async updateRoleByClerkUserId(clerkUserId: string, role: UserRole): Promise<UserRecord | null> {
         const result = await query<UserRow>(
             `
                 UPDATE users

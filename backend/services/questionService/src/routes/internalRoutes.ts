@@ -70,8 +70,7 @@ router.post("/select", async (req, res) => {
     }
 
     const questionRecord = question as Record<string, unknown>;
-    const questionId =
-        typeof questionRecord.quid === "string" ? questionRecord.quid : undefined;
+    const questionId = typeof questionRecord.quid === "string" ? questionRecord.quid : undefined;
 
     if (!questionId) {
         return res.status(404).json({
@@ -83,10 +82,7 @@ router.post("/select", async (req, res) => {
         data: {
             question: {
                 questionId,
-                title:
-                    typeof questionRecord.title === "string"
-                        ? questionRecord.title
-                        : undefined,
+                title: typeof questionRecord.title === "string" ? questionRecord.title : undefined,
                 topic:
                     typeof questionRecord.topics === "string"
                         ? questionRecord.topics

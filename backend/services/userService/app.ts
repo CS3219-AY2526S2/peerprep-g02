@@ -18,11 +18,7 @@ if (AppConstants.MODE === "dev") {
 }
 
 app.use(clerkMiddleware());
-app.use(
-    "/users/webhooks/clerk",
-    express.raw({ type: "application/json" }),
-    clerkWebhookRoutes,
-);
+app.use("/users/webhooks/clerk", express.raw({ type: "application/json" }), clerkWebhookRoutes);
 app.use(express.json());
 app.use(
     cors({

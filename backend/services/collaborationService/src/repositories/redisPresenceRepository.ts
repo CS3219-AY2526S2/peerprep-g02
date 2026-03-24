@@ -33,7 +33,11 @@ export class RedisPresenceRepository {
         collaborationId: string,
         userId: string,
         socketId: string,
-    ): Promise<{ isFirstConnection: boolean; wasDisconnected: boolean; disconnectDurationMs: number }> {
+    ): Promise<{
+        isFirstConnection: boolean;
+        wasDisconnected: boolean;
+        disconnectDurationMs: number;
+    }> {
         const now = Date.now();
         const presenceKey = KEYS.presence(collaborationId, userId);
 
@@ -313,7 +317,11 @@ export class RedisPresenceRepository {
         await this.redis.hset(presenceKey, "lastActivityTime", Date.now().toString());
     }
 
-    async hasUserTimedOut(collaborationId: string, userId: string, timeoutMs: number): Promise<boolean> {
+    async hasUserTimedOut(
+        collaborationId: string,
+        userId: string,
+        timeoutMs: number,
+    ): Promise<boolean> {
         const presenceKey = KEYS.presence(collaborationId, userId);
         const state = await this.redis.hgetall(presenceKey);
 
@@ -340,10 +348,18 @@ export class RedisPresenceRepository {
     }
 
     async updateSessionActivity(collaborationId: string): Promise<void> {
-        await this.redis.set(KEYS.activity(collaborationId), Date.now().toString(), "PX", this.ttlMs);
+        await this.redis.set(
+            KEYS.activity(collaborationId),
+            Date.now().toString(),
+            "PX",
+            this.ttlMs,
+        );
     }
 
-    async isSessionInactive(collaborationId: string, inactivityTimeoutMs: number): Promise<boolean> {
+    async isSessionInactive(
+        collaborationId: string,
+        inactivityTimeoutMs: number,
+    ): Promise<boolean> {
         const lastActivity = await this.getSessionLastActivity(collaborationId);
         if (!lastActivity) {
             return false;

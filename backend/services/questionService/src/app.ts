@@ -1,7 +1,8 @@
-import express from "express";
-import questionRoute from "./routes/routes";
-import internalRoute from "./routes/internalRoutes";
 import cors from "cors";
+import express from "express";
+
+import internalRoute from "./routes/internalRoutes";
+import questionRoute from "./routes/routes";
 
 const app = express();
 const port = 3005;

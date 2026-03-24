@@ -1,10 +1,10 @@
 import cors from "cors";
 import express from "express";
 
+import { env } from "@/config/env.js";
 import { errorHandler } from "@/middleware/errorHandler.js";
 import { requireInternalServiceAuth } from "@/middleware/internalServiceAuth.js";
 import sessionRoutes from "@/routes/sessionRoutes.js";
-import { env } from "@/config/env.js";
 
 const app = express();
 

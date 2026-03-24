@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { HTTP_STATUS } from "@/config/constants.js";
-import { logger } from "@/utils/logger.js";
 import { toAppError } from "@/utils/errors.js";
+import { logger } from "@/utils/logger.js";
 
 export function errorHandler(
     error: unknown,
