@@ -14,15 +14,12 @@ export const socketAuthMiddleware = async (socket: Socket, next: (err?: Error) =
     }
 
     try {
-        const response = await fetch(
-            `http://user-service:3001/users/internal/authz/context`,
-            {
-                headers: {
-                    authorization: authHeader,
-                    "x-internal-service-key": serviceKey,
-                },
+        const response = await fetch(`http://user-service:3001/users/internal/authz/context`, {
+            headers: {
+                authorization: authHeader,
+                "x-internal-service-key": serviceKey,
             },
-        );
+        });
 
         if (!response.ok) {
             socketLogger.warn(

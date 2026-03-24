@@ -1,0 +1,35 @@
+name: backend
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: lints and tests matchingService
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+          cache-dependency-path: backend/services/matchingService/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend/services/matchingService
+        run: npm ci
+
+      - name: Run linting
+        working-directory: backend/services/matchingService
+        run: npm run lint
+
+      - name: Run testing
+        working-directory: backend/services/matchingService
+        run: npm run test

@@ -6,9 +6,8 @@ import { Server } from "socket.io";
 import app from "@/app.js";
 import RedisManager from "@/managers/redisManager.js";
 import { registerSocketHandlers } from "@/managers/socketManager.js";
-import { mainLogger } from "@/utils/logger.js";
-
 import { socketAuthMiddleware } from "@/middlewares/socketAuth.js";
+import { mainLogger } from "@/utils/logger.js";
 
 const server = createServer(app);
 const io = new Server(server, {
