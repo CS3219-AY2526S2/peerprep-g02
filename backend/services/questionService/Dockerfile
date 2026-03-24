@@ -1,7 +1,14 @@
-FROM node:18
+FROM node:25-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
-EXPOSE 3005
-CMD ["npm", "start"]
+RUN npm run build
+
+FROM node:25-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/QUDB.sql ./QUDB.sql
+CMD ["npm", "run", "start"]

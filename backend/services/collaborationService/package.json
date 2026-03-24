@@ -4,7 +4,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "tsc",
+        "build": "tsc && tsc-alias",
         "start": "node dist/index.js",
         "dev": "tsx --watch src/index.ts",
         "test": "vitest",
@@ -31,6 +31,7 @@
         "@types/express": "^4.17.21",
         "@types/node": "^20.11.5",
         "@types/pg": "^8.11.10",
+        "tsc-alias": "^1.8.16",
         "eslint": "^10.1.0",
         "eslint-config-prettier": "^10.1.8",
         "prettier": "^3.8.1",

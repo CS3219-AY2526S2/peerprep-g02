@@ -28,7 +28,7 @@ services:
       - user-service
       - matching-service
       - questions-service
-      # - collaboration-service
+      - collaboration-service
       # - attempts-service
     networks:
       - gateway-network
@@ -138,9 +138,6 @@ services:
     networks:
       - gateway-network
       - questions-db-network
-    volumes:
-      - ./backend/services/questionService:/app
-      - /app/node_modules
     restart: unless-stopped
 
   questions-db:
@@ -200,10 +197,6 @@ services:
       - collaboration-db-network
     ports:
       - "3003:3003"
-    volumes:
-      - ./backend/services/collaborationService:/app
-      - /app/node_modules
-      - ./secrets:/secrets:ro
     restart: unless-stopped
 
   collaboration-db:
