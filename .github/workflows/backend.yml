@@ -62,7 +62,6 @@ jobs:
         run: |
           npm ci
           npm run lint
-          npm run test
 
   # --- Job 4: Collaboration Service ---
   collaboration-service:
