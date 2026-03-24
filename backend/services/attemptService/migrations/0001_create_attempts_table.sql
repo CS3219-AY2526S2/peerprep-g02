@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS attempts (
     duration DOUBLE PRECISION NOT NULL,
     attempted_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT attempts_difficulty_check CHECK (difficulty IN ('easy', 'medium', 'hard')),
+    CONSTRAINT attempts_difficulty_check CHECK (difficulty IN ('Easy', 'Medium', 'Hard')),
     CONSTRAINT attempts_duration_nonnegative_check CHECK (duration >= 0)
 );
 

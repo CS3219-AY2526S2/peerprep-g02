@@ -26,14 +26,14 @@ type ScoreUpdate = {
     delta: number;
 };
 
-function normalizeDifficulty(difficulty: string): AttemptDifficulty {
-    const normalized = difficulty.trim().toLowerCase();
+function parseDifficulty(difficulty: string): AttemptDifficulty {
+    const normalized = difficulty.trim();
 
-    if (normalized === "easy" || normalized === "medium" || normalized === "hard") {
+    if (normalized === "Easy" || normalized === "Medium" || normalized === "Hard") {
         return normalized;
     }
 
-    throw new ServiceError(400, "difficulty must be one of: easy, medium, hard.");
+    throw new ServiceError(400, "difficulty must be one of: Easy, Medium, Hard.");
 }
 
 function parseAttemptedAt(attemptedAt?: string): Date {
@@ -57,11 +57,11 @@ export function calculateScoreDelta(
         return -10;
     }
 
-    if (difficulty === "easy") {
+    if (difficulty === "Easy") {
         return 10;
     }
 
-    if (difficulty === "medium") {
+    if (difficulty === "Medium") {
         return 30;
     }
 
@@ -103,7 +103,7 @@ export class AttemptService {
             throw new ServiceError(400, "duration must be a non-negative number.");
         }
 
-        const difficulty = normalizeDifficulty(input.difficulty);
+        const difficulty = parseDifficulty(input.difficulty);
         const attemptedAt = parseAttemptedAt(input.attemptedAt);
         const scoreDelta = calculateScoreDelta(difficulty, input.success);
         const userIds = [userAId, userBId];

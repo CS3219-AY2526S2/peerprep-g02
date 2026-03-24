@@ -1,6 +1,6 @@
 import { query } from "@/utils/postgres.js";
 
-export type AttemptDifficulty = "easy" | "medium" | "hard";
+export type AttemptDifficulty = "Easy" | "Medium" | "Hard";
 
 type AttemptRow = {
     id: string;

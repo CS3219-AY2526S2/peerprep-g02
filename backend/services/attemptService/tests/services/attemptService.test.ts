@@ -10,9 +10,9 @@ describe("AttemptService", () => {
     });
 
     it("calculates score deltas for success cases", () => {
-        expect(calculateScoreDelta("easy", true)).toBe(10);
-        expect(calculateScoreDelta("medium", true)).toBe(30);
-        expect(calculateScoreDelta("hard", true)).toBe(50);
+        expect(calculateScoreDelta("Easy", true)).toBe(10);
+        expect(calculateScoreDelta("Medium", true)).toBe(30);
+        expect(calculateScoreDelta("Hard", true)).toBe(50);
     });
 
     it("applies a fail penalty without letting score go below zero", async () => {
@@ -21,7 +21,7 @@ describe("AttemptService", () => {
             clerkUserId: "user_1",
             questionId: "question-1",
             language: "typescript",
-            difficulty: "easy",
+            difficulty: "Easy",
             success: false,
             duration: 1200,
             attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
@@ -69,7 +69,7 @@ describe("AttemptService", () => {
             clerkUserId: "user_1",
             questionId: "question-1",
             language: "typescript",
-            difficulty: "hard",
+            difficulty: "Hard",
             success: true,
             duration: 1200,
             attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
