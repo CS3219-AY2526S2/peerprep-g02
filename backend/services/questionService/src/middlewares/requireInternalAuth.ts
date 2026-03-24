@@ -5,11 +5,7 @@ import type { NextFunction, Request, Response } from "express";
 const INTERNAL_SERVICE_API_KEY =
     process.env.INTERNAL_SERVICE_API_KEY ?? process.env.US_INTERNAL_SERVICE_API_KEY;
 
-export function requireInternalAuth(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-): void {
+export function requireInternalAuth(req: Request, res: Response, next: NextFunction): void {
     const internalServiceKey = req.header("x-internal-service-key");
 
     if (!INTERNAL_SERVICE_API_KEY) {
