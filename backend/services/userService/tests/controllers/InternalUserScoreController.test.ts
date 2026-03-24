@@ -95,4 +95,55 @@ describe("InternalUserScoreController", () => {
             },
         });
     });
+
+    it("applies score deltas in one request", async () => {
+        vi.spyOn(userRepository, "applyScoreDeltas").mockResolvedValue([
+            {
+                clerkUserId: "user_123",
+                previousScore: 20,
+                newScore: 50,
+                delta: 30,
+            },
+            {
+                clerkUserId: "user_456",
+                previousScore: 5,
+                newScore: 0,
+                delta: -5,
+            },
+        ]);
+
+        const controller = new InternalUserScoreController();
+        const req = createMockRequest({
+            body: {
+                updates: [
+                    { clerkUserId: "user_123", delta: 30 },
+                    { clerkUserId: "user_456", delta: -10 },
+                ],
+            },
+        });
+        const res = createMockResponse();
+
+        await controller.applyScoreDeltas(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({
+            message: "User scores updated successfully.",
+            data: {
+                updates: [
+                    {
+                        clerkUserId: "user_123",
+                        previousScore: 20,
+                        newScore: 50,
+                        delta: 30,
+                    },
+                    {
+                        clerkUserId: "user_456",
+                        previousScore: 5,
+                        newScore: 0,
+                        delta: -5,
+                    },
+                ],
+            },
+        });
+    });
 });

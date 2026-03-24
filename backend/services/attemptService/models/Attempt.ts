@@ -95,6 +95,20 @@ class AttemptRepository {
         return mapAttemptRow(result.rows[0]);
     }
 
+    async deleteByIds(ids: string[]): Promise<void> {
+        if (ids.length === 0) {
+            return;
+        }
+
+        await query(
+            `
+                DELETE FROM attempts
+                WHERE id = ANY($1::uuid[])
+            `,
+            [ids],
+        );
+    }
+
     async listUniqueQuestionIdsByClerkUserId(clerkUserId: string): Promise<string[]> {
         const result = await query<{ question_id: string }>(
             `

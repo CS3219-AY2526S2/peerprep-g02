@@ -13,6 +13,9 @@ internalUserRoutes.use(requireInternalAuth);
 internalUserRoutes.post("/validation/batch", (req, res) =>
     internalUserValidationController.validateUsers(req, res),
 );
+internalUserRoutes.post("/deltas", (req, res) =>
+    internalUserScoreController.applyScoreDeltas(req, res),
+);
 internalUserRoutes.get("/:clerkUserId/score", (req, res) =>
     internalUserScoreController.getScore(req, res),
 );

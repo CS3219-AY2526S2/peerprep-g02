@@ -4,6 +4,7 @@ import {
     attemptRepository,
     type AttemptDifficulty,
     type AttemptRecord,
+    type CreateAttemptInput,
 } from "@/models/Attempt.js";
 import { ServiceError } from "@/utils/ResponseHelpers.js";
 import { UserScoreService } from "@/services/userScoreService.js";
@@ -107,44 +108,40 @@ export class AttemptService {
         const attemptedAt = parseAttemptedAt(input.attemptedAt);
         const scoreDelta = calculateScoreDelta(difficulty, input.success);
         const userIds = [userAId, userBId];
+        const attemptInputs: CreateAttemptInput[] = userIds.map((clerkUserId) => ({
+            id: randomUUID(),
+            clerkUserId,
+            questionId,
+            language,
+            difficulty,
+            success: input.success,
+            duration: input.duration,
+            attemptedAt,
+        }));
 
         const attempts = await Promise.all(
-            userIds.map((clerkUserId) =>
-                attemptRepository.insert({
-                    id: randomUUID(),
-                    clerkUserId,
-                    questionId,
-                    language,
-                    difficulty,
-                    success: input.success,
-                    duration: input.duration,
-                    attemptedAt,
-                }),
-            ),
+            attemptInputs.map((attemptInput) => attemptRepository.insert(attemptInput)),
         );
 
-        const scoreUpdates = await Promise.all(
-            userIds.map(async (clerkUserId) => {
-                const previousScore = await this.userScoreService.getScore(clerkUserId);
-                const nextScore = Math.max(0, previousScore + scoreDelta);
-                const newScore = await this.userScoreService.updateScore(clerkUserId, nextScore);
-
-                return {
+        try {
+            const scoreUpdates = await this.userScoreService.applyScoreDeltas(
+                userIds.map((clerkUserId) => ({
                     clerkUserId,
-                    previousScore,
-                    newScore,
-                    delta: newScore - previousScore,
-                };
-            }),
-        );
+                    delta: scoreDelta,
+                })),
+            );
 
-        return {
-            message: "Attempt recorded successfully.",
-            data: {
-                attempts,
-                scoreUpdates,
-            },
-        };
+            return {
+                message: "Attempt recorded successfully.",
+                data: {
+                    attempts,
+                    scoreUpdates,
+                },
+            };
+        } catch (error) {
+            await attemptRepository.deleteByIds(attempts.map((attempt) => attempt.id));
+            throw error;
+        }
     }
 
     async listUniqueAttemptedQuestions(clerkUserId: string): Promise<{

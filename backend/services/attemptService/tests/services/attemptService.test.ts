@@ -27,11 +27,22 @@ describe("AttemptService", () => {
             attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
             createdAt: new Date("2026-03-24T00:00:00.000Z"),
         });
-        vi.spyOn(UserScoreService.prototype, "getScore").mockResolvedValueOnce(5).mockResolvedValueOnce(8);
-        const updateScoreSpy = vi
-            .spyOn(UserScoreService.prototype, "updateScore")
-            .mockResolvedValueOnce(0)
-            .mockResolvedValueOnce(0);
+        const applyScoreDeltasSpy = vi
+            .spyOn(UserScoreService.prototype, "applyScoreDeltas")
+            .mockResolvedValue([
+                {
+                    clerkUserId: "user_1",
+                    previousScore: 5,
+                    newScore: 0,
+                    delta: -5,
+                },
+                {
+                    clerkUserId: "user_2",
+                    previousScore: 8,
+                    newScore: 0,
+                    delta: -8,
+                },
+            ]);
 
         const service = new AttemptService();
         const result = await service.recordAttempt({
@@ -45,8 +56,16 @@ describe("AttemptService", () => {
             attemptedAt: "2026-03-24T00:00:00.000Z",
         });
 
-        expect(updateScoreSpy).toHaveBeenNthCalledWith(1, "user_1", 0);
-        expect(updateScoreSpy).toHaveBeenNthCalledWith(2, "user_2", 0);
+        expect(applyScoreDeltasSpy).toHaveBeenCalledWith([
+            {
+                clerkUserId: "user_1",
+                delta: -10,
+            },
+            {
+                clerkUserId: "user_2",
+                delta: -10,
+            },
+        ]);
         expect(result.data.scoreUpdates).toEqual([
             {
                 clerkUserId: "user_1",
@@ -75,11 +94,22 @@ describe("AttemptService", () => {
             attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
             createdAt: new Date("2026-03-24T00:00:00.000Z"),
         });
-        vi.spyOn(UserScoreService.prototype, "getScore").mockResolvedValueOnce(20).mockResolvedValueOnce(30);
-        const updateScoreSpy = vi
-            .spyOn(UserScoreService.prototype, "updateScore")
-            .mockResolvedValueOnce(70)
-            .mockResolvedValueOnce(80);
+        const applyScoreDeltasSpy = vi
+            .spyOn(UserScoreService.prototype, "applyScoreDeltas")
+            .mockResolvedValue([
+                {
+                    clerkUserId: "user_1",
+                    previousScore: 20,
+                    newScore: 70,
+                    delta: 50,
+                },
+                {
+                    clerkUserId: "user_2",
+                    previousScore: 30,
+                    newScore: 80,
+                    delta: 50,
+                },
+            ]);
 
         const service = new AttemptService();
         await service.recordAttempt({
@@ -92,7 +122,63 @@ describe("AttemptService", () => {
             duration: 1200,
         });
 
-        expect(updateScoreSpy).toHaveBeenNthCalledWith(1, "user_1", 70);
-        expect(updateScoreSpy).toHaveBeenNthCalledWith(2, "user_2", 80);
+        expect(applyScoreDeltasSpy).toHaveBeenCalledWith([
+            {
+                clerkUserId: "user_1",
+                delta: 50,
+            },
+            {
+                clerkUserId: "user_2",
+                delta: 50,
+            },
+        ]);
+    });
+
+    it("deletes inserted attempts when score updates fail", async () => {
+        vi.spyOn(attemptRepository, "insert")
+            .mockResolvedValueOnce({
+                id: "attempt-1",
+                clerkUserId: "user_1",
+                questionId: "question-1",
+                language: "typescript",
+                difficulty: "Medium",
+                success: true,
+                duration: 1200,
+                attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+                createdAt: new Date("2026-03-24T00:00:00.000Z"),
+            })
+            .mockResolvedValueOnce({
+                id: "attempt-2",
+                clerkUserId: "user_2",
+                questionId: "question-1",
+                language: "typescript",
+                difficulty: "Medium",
+                success: true,
+                duration: 1200,
+                attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+                createdAt: new Date("2026-03-24T00:00:00.000Z"),
+            });
+        const deleteByIdsSpy = vi
+            .spyOn(attemptRepository, "deleteByIds")
+            .mockResolvedValue();
+        vi.spyOn(UserScoreService.prototype, "applyScoreDeltas").mockRejectedValue(
+            new Error("score update failed"),
+        );
+
+        const service = new AttemptService();
+
+        await expect(
+            service.recordAttempt({
+                userAId: "user_1",
+                userBId: "user_2",
+                questionId: "question-1",
+                language: "typescript",
+                difficulty: "Medium",
+                success: true,
+                duration: 1200,
+            }),
+        ).rejects.toThrow("score update failed");
+
+        expect(deleteByIdsSpy).toHaveBeenCalledWith(["attempt-1", "attempt-2"]);
     });
 });
