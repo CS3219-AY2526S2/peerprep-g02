@@ -1,7 +1,7 @@
 import express from "express";
 
-import { requireInternalAuth } from "./middlewares/requireInternalAuth.js";
-import attemptRoutes from "./routes/attemptRoutes.js";
+import { requireInternalAuth } from "@/middlewares/requireInternalAuth.js";
+import attemptRoutes from "@/routes/attemptRoutes.js";
 
 const app = express();
 

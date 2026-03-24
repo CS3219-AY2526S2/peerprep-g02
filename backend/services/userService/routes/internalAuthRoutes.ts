@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { InternalAuthController } from "../controllers/InternalAuthController.js";
-import { requireAuth } from "../middlewares/requireAuth.js";
-import { requireInternalAuth } from "../middlewares/requireInternalAuth.js";
+import { InternalAuthController } from "@/controllers/InternalAuthController.js";
+import { requireAuth } from "@/middlewares/requireAuth.js";
+import { requireInternalAuth } from "@/middlewares/requireInternalAuth.js";
 
 const internalAuthController = new InternalAuthController();
 const internalAuthRoutes = Router();

@@ -1,4 +1,4 @@
-import { query } from "../utils/postgres.js";
+import { query } from "@/utils/postgres.js";
 
 export type AttemptDifficulty = "easy" | "medium" | "hard";
 

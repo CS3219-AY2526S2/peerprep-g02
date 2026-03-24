@@ -1,5 +1,5 @@
-import { AppConstants } from "../constants.js";
-import { ServiceError } from "../utils/ResponseHelpers.js";
+import { AppConstants } from "@/constants.js";
+import { ServiceError } from "@/utils/ResponseHelpers.js";
 
 type UserScorePayload = {
     data?: {

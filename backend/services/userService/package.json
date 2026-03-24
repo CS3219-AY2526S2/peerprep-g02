@@ -8,7 +8,7 @@
         "predev": "npm run db:migrate",
         "dev": "tsx --watch server.ts",
         "db:migrate": "tsx migrations/migrate.ts",
-        "build": "tsc -p tsconfig.json",
+        "build": "tsc && tsc-alias",
         "start:container": "npm run db:migrate && npm start",
         "start": "node dist/server.js",
         "test": "vitest run --config vitest.config.ts",
@@ -46,6 +46,7 @@
         "pino-pretty": "^13.0.0",
         "prettier": "^3.8.1",
         "tsx": "^4.7.0",
+        "tsc-alias": "^1.8.16",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.57.2",
         "vitest": "^4.0.18"

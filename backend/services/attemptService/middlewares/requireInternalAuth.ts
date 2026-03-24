@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { AppConstants } from "../constants.js";
+import { AppConstants } from "@/constants.js";
 
 export function requireInternalAuth(req: Request, res: Response, next: NextFunction): void {
     const internalServiceKey = req.header("x-internal-service-key");

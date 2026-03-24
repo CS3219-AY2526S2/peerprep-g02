@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { AuthResponse } from "../types/auth.js";
-import { UserRole, userRepository } from "../models/User.js";
-import { ClerkService } from "./clerkService.js";
-import { ServiceError, toServiceError } from "../utils/ResponseHelpers.js";
-import { logger } from "../utils/logger.js";
+import { AuthResponse } from "@/types/auth.js";
+import { UserRole, userRepository } from "@/models/User.js";
+import { ClerkService } from "@/services/clerkService.js";
+import { ServiceError, toServiceError } from "@/utils/ResponseHelpers.js";
+import { logger } from "@/utils/logger.js";
 
 export class AuthService {
     private readonly clerkService = new ClerkService();

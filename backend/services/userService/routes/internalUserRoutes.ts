@@ -1,8 +1,8 @@
 import { Router } from "express";
 
-import { InternalUserScoreController } from "../controllers/InternalUserScoreController.js";
-import { InternalUserValidationController } from "../controllers/InternalUserValidationController.js";
-import { requireInternalAuth } from "../middlewares/requireInternalAuth.js";
+import { InternalUserScoreController } from "@/controllers/InternalUserScoreController.js";
+import { InternalUserValidationController } from "@/controllers/InternalUserValidationController.js";
+import { requireInternalAuth } from "@/middlewares/requireInternalAuth.js";
 
 const internalUserValidationController = new InternalUserValidationController();
 const internalUserScoreController = new InternalUserScoreController();

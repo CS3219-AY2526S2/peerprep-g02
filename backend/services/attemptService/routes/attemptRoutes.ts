@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { AttemptController } from "../controllers/AttemptController.js";
+import { AttemptController } from "@/controllers/AttemptController.js";
 
 const attemptController = new AttemptController();
 const attemptRoutes = Router();

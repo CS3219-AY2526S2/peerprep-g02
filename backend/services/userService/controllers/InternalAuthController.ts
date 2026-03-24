@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { UserRecord } from "../models/User.js";
+import { UserRecord } from "@/models/User.js";
 
 type InternalAuthzContextResponse = {
     data: {

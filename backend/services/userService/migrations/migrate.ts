@@ -2,8 +2,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client, Pool } from "pg";
-import { AppConstants } from "../constants.js";
-import { logger } from "../utils/logger.js";
+import { AppConstants } from "@/constants.js";
+import { logger } from "@/utils/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

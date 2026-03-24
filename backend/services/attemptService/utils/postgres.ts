@@ -1,7 +1,7 @@
 import { Pool, QueryResult, QueryResultRow } from "pg";
 
-import { AppConstants } from "../constants.js";
-import { logger } from "./logger.js";
+import { AppConstants } from "@/constants.js";
+import { logger } from "@/utils/logger.js";
 
 const pool = new Pool({
     connectionString: AppConstants.DATABASE_URI,

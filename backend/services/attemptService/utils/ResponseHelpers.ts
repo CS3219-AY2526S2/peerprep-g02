@@ -1,6 +1,6 @@
 import type { Response } from "express";
 
-import { logger } from "./logger.js";
+import { logger } from "@/utils/logger.js";
 
 type ErrorWithStatus = Error & {
     statusCode?: number;

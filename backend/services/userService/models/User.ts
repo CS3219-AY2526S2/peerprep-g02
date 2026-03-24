@@ -1,4 +1,4 @@
-import { query } from "../utils/postgres.js";
+import { query } from "@/utils/postgres.js";
 
 export type UserStatus = "active" | "suspended" | "deleted";
 export type UserRole = "user" | "admin" | "super_user";

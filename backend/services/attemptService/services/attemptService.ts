@@ -4,9 +4,9 @@ import {
     attemptRepository,
     type AttemptDifficulty,
     type AttemptRecord,
-} from "../models/Attempt.js";
-import { ServiceError } from "../utils/ResponseHelpers.js";
-import { UserScoreService } from "./userScoreService.js";
+} from "@/models/Attempt.js";
+import { ServiceError } from "@/utils/ResponseHelpers.js";
+import { UserScoreService } from "@/services/userScoreService.js";
 
 export type RecordAttemptInput = {
     userAId: string;

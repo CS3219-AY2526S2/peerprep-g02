@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
-import { userRepository } from "../models/User.js";
-import { handleError } from "../utils/ResponseHelpers.js";
+import { userRepository } from "@/models/User.js";
+import { handleError } from "@/utils/ResponseHelpers.js";
 
 type ScoreUpdateRequest = {
     score?: number;

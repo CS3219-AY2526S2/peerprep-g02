@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
-import { AttemptService } from "../services/attemptService.js";
-import { badRequest, handleError } from "../utils/ResponseHelpers.js";
+import { AttemptService } from "@/services/attemptService.js";
+import { badRequest, handleError } from "@/utils/ResponseHelpers.js";
 
 type RecordAttemptRequest = {
     userAId?: string;

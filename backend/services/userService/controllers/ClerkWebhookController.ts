@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
 import { verifyWebhook } from "@clerk/express/webhooks";
-import { AppConstants } from "../constants.js";
-import { ClerkWebhookService } from "../services/clerkWebhookService.js";
-import { handleError } from "../utils/ResponseHelpers.js";
-import { logger } from "../utils/logger.js";
+import { AppConstants } from "@/constants.js";
+import { ClerkWebhookService } from "@/services/clerkWebhookService.js";
+import { handleError } from "@/utils/ResponseHelpers.js";
+import { logger } from "@/utils/logger.js";
 
 export class ClerkWebhookController {
     private readonly clerkWebhookService = new ClerkWebhookService();

@@ -1,6 +1,6 @@
 import pino from "pino";
 
-import { AppConstants } from "../constants.js";
+import { AppConstants } from "@/constants.js";
 
 const prettyTransport =
     AppConstants.MODE === "dev"
