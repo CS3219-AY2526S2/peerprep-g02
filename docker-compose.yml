@@ -138,9 +138,6 @@ services:
     networks:
       - gateway-network
       - questions-db-network
-    volumes:
-      - ./backend/services/questionService:/app
-      - /app/node_modules
     restart: unless-stopped
 
   questions-db:
