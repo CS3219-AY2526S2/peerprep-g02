@@ -15,12 +15,11 @@ import { RedisOutputRepository } from "@/repositories/redisOutputRepository.js";
 import { RedisPresenceRepository } from "@/repositories/redisPresenceRepository.js";
 import { RedisSessionRepository } from "@/repositories/redisSessionRepository.js";
 import { SessionCacheRepository } from "@/repositories/sessionCacheRepository.js";
-import { AppError } from "@/utils/errors.js";
-import { logger } from "@/utils/logger.js";
-
 import { OTDocumentManager } from "@/services/otService.js";
 import { QuestionSelectionService } from "@/services/questionSelectionService.js";
 import { UserValidationService } from "@/services/userValidationService.js";
+import { AppError } from "@/utils/errors.js";
+import { logger } from "@/utils/logger.js";
 
 export type CreateSessionResponse = {
     session: CollaborationSession;
@@ -272,7 +271,10 @@ export class CollaborationSessionService {
             input.collaborationId,
         );
         if (!session) {
-            logger.warn({ collaborationId: input.collaborationId }, "Session not found for code change");
+            logger.warn(
+                { collaborationId: input.collaborationId },
+                "Session not found for code change",
+            );
             return {
                 ok: false,
                 error: ERROR_CODES.SESSION_NOT_FOUND,
@@ -421,7 +423,8 @@ export class CollaborationSessionService {
         collaborationId: string,
         reason: EndSessionResult["reason"],
     ): Promise<EndSessionResult | null> {
-        const session = await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
+        const session =
+            await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
         if (!session || session.status !== "active") {
             return null;
         }
@@ -498,7 +501,8 @@ export class CollaborationSessionService {
     }
 
     async getRoomState(collaborationId: string): Promise<RoomState | null> {
-        const session = await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
+        const session =
+            await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
         if (!session) {
             return null;
         }

@@ -28,26 +28,26 @@ services:
       - user-service
       - matching-service
       - questions-service
-      # - collaboration-service
       - attempts-service
+      - collaboration-service
     networks:
       - gateway-network
     restart: unless-stopped
 
-#   # Message Broker (RabbitMQ)
-#   rabbitmq:
-#     image: rabbitmq:latest
-#     container_name: rabbitmq
-#     hostname: rabbitmq
-#     networks:
-#       - gateway-network
-#     healthcheck:
-#       test: rabbitmq-diagnostics check_port_connectivity
-#       interval: 30s
-#       timeout: 30s
-#       retries: 10
-#       start_period: 30s
-#     restart: unless-stopped
+  #   # Message Broker (RabbitMQ)
+  #   rabbitmq:
+  #     image: rabbitmq:latest
+  #     container_name: rabbitmq
+  #     hostname: rabbitmq
+  #     networks:
+  #       - gateway-network
+  #     healthcheck:
+  #       test: rabbitmq-diagnostics check_port_connectivity
+  #       interval: 30s
+  #       timeout: 30s
+  #       retries: 10
+  #       start_period: 30s
+  #     restart: unless-stopped
 
   # User Service
   user-service:
@@ -131,16 +131,13 @@ services:
     environment:
       - DB_HOST=questions-db
     ports:
-    - "3005:3005"
+      - "3005:3005"
     depends_on:
       questions-db:
         condition: service_started
     networks:
       - gateway-network
       - questions-db-network
-    volumes:
-      - ./backend/services/questionService:/app
-      - /app/node_modules
     restart: unless-stopped
 
   questions-db:
@@ -200,10 +197,6 @@ services:
       - collaboration-db-network
     ports:
       - "3003:3003"
-    volumes:
-      - ./backend/services/collaborationService:/app
-      - /app/node_modules
-      - ./secrets:/secrets:ro
     restart: unless-stopped
 
   collaboration-db:

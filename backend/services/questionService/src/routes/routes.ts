@@ -1,17 +1,18 @@
 import { Router } from "express";
+import { UUID } from "node:crypto";
+
+import { requireAdminAuth } from "../middlewares/requireAdminAuth";
+import { getLeetCode } from "../services/leetcodeQueries";
 import {
-    GetQuestion,
-    EditQuestion,
     CreateQuestion,
     DeleteQuestion,
-    GetQuestions,
+    EditQuestion,
     GetPopularQuestions,
+    GetQuestion,
+    GetQuestions,
     SearchQuestion,
 } from "../services/questionDatabase";
-import { requireAdminAuth } from "../middlewares/requireAdminAuth";
-import { UUID } from "node:crypto";
 import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicsDatabase";
-import { getLeetCode } from "../services/leetcodeQueries";
 
 const router = Router();
 
@@ -50,7 +51,7 @@ router.get("/popular", async (req, res) => {
 
 //Get specified question
 router.post("/get", async (req, res) => {
-    var result = await GetQuestion(req.body.quid);
+    const result = await GetQuestion(req.body.quid);
 
     if (!result) {
         return res.status(400).json({
@@ -101,45 +102,45 @@ router.delete("/:id", async (req, res) => {
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to delete question from database."
-        })
+            message: "Unable to delete question from database.",
+        });
     }
 
     return res.status(200).json({
-        message: "Question successfully deleted from the database."
-    })
-})
+        message: "Question successfully deleted from the database.",
+    });
+});
 
 //Search for matching question
 router.post("/search", async (req, res) => {
     const { topic, difficulty, userA, userB } = req.body;
-    var result = await SearchQuestion(topic, difficulty, userA, userB);
+    const result = await SearchQuestion(topic, difficulty, userA, userB);
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to find matching question in the database."
-        })
+            message: "Unable to find matching question in the database.",
+        });
     }
 
     return res.status(200).json({
         message: "Get matching question success.",
-        body: result
-    })
-})
+        body: result,
+    });
+});
 
 //Get leetcode question
-router.post('/leetcode', async (req, res) => {
+router.post("/leetcode", async (req, res) => {
     const result = await getLeetCode(req.body.topic);
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to retrieve leetcode questions."
-        })
+            message: "Unable to retrieve leetcode questions.",
+        });
     }
     return res.status(200).json({
         message: "Get leetcode questions success.",
-        body: result
-    })
+        body: result,
+    });
 });
 
 //Get topics
@@ -148,14 +149,14 @@ router.get("/topics", async (req, res) => {
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to find topics in the database."
-        })
+            message: "Unable to find topics in the database.",
+        });
     }
     return res.status(200).json({
         message: "Get topics success",
-        body: result
-    })
-})
+        body: result,
+    });
+});
 
 //Save topic
 router.post("/topics", async (req, res) => {
@@ -194,13 +195,13 @@ router.delete("/topics/:id", async (req, res) => {
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to delete topic from database."
-        })
+            message: "Unable to delete topic from database.",
+        });
     }
 
     return res.status(200).json({
-        message: "Topic successfully deleted from the database."
-    })
-})
+        message: "Topic successfully deleted from the database.",
+    });
+});
 
 export default router;

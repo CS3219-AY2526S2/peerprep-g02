@@ -1,13 +1,11 @@
+import dotenv from "dotenv";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-
-import dotenv from "dotenv";
 import { Client } from "pg";
 
 dotenv.config();
 
 const sqlFilePath = path.resolve(__dirname, "../QUDB.sql");
-
 
 const DB_HOST = process.env.DB_HOST || "questions-db";
 const DB_PORT = Number(process.env.DB_PORT) || 5435;
@@ -20,7 +18,6 @@ function quoteIdentifier(identifier: string): string {
 }
 
 async function ensureDatabaseExists(): Promise<void> {
-
     const maintenanceClient = new Client({
         host: DB_HOST,
         port: DB_PORT,
@@ -57,19 +54,21 @@ async function initializeSchema(): Promise<void> {
     });
     await client.connect();
     try {
-        const tableResult = await client.query("SELECT to_regclass('public.questions') AS table_name");
+        const tableResult = await client.query(
+            "SELECT to_regclass('public.questions') AS table_name",
+        );
         if ((tableResult.rows[0] as { table_name?: string | null } | undefined)?.table_name) {
             console.log("Question schema already exists. Skipping QUDB.sql import.");
             return;
         }
 
-        const sqlCommands: string = await readFile(sqlFilePath, 'utf8');
+        const sqlCommands: string = await readFile(sqlFilePath, "utf8");
 
         // Split the SQL file content into individual commands
-        const commands: string[] = sqlCommands.split(';');
+        const commands: string[] = sqlCommands.split(";");
 
         // Execute each SQL command
-        for (let command of commands) {
+        for (const command of commands) {
             if (command.trim()) {
                 // Execute the command (trimming any extra spaces)
                 await client.query(command.trim());

@@ -28,11 +28,7 @@ type SocketAck = (response: {
     message?: string;
 }) => void;
 
-type CodeAck = (response: {
-    ok: boolean;
-    revision?: number;
-    error?: string;
-}) => void;
+type CodeAck = (response: { ok: boolean; revision?: number; error?: string }) => void;
 
 function collaborationRoom(collaborationId: string): string {
     return `collaboration:${collaborationId}`;
@@ -83,15 +79,14 @@ export function registerSocketHandlers(io: Server): void {
                     ack?.({ ok: true, state });
 
                     // F4.3.2 - Notify other users in the room that this user joined
-                    socket.to(collaborationRoom(payload.collaborationId)).emit(
-                        SOCKET_EVENTS.USER_JOINED,
-                        {
+                    socket
+                        .to(collaborationRoom(payload.collaborationId))
+                        .emit(SOCKET_EVENTS.USER_JOINED, {
                             collaborationId: payload.collaborationId,
                             userId,
                             isFirstConnection: state.isFirstConnection,
                             wasDisconnected: state.wasDisconnected,
-                        },
-                    );
+                        });
 
                     // Broadcast updated presence to all in room
                     io.to(collaborationRoom(payload.collaborationId)).emit(
@@ -139,75 +134,71 @@ export function registerSocketHandlers(io: Server): void {
          * F4.5.5 - Ensure both users see same version (OT)
          * F4.5.6 - Resolve concurrent changes with OT conflict resolution
          */
-        socket.on(
-            SOCKET_EVENTS.CODE_CHANGE,
-            async (payload: CodeChangePayload, ack?: CodeAck) => {
-                if (!payload?.collaborationId || !Array.isArray(payload.operations)) {
-                    ack?.({
-                        ok: false,
-                        error: "Invalid code change payload",
-                    });
-                    return;
-                }
-
-                const result = await collaborationSessionService.applyCodeChange({
-                    collaborationId: payload.collaborationId as UUID,
-                    userId: userId as UUID,
-                    revision: payload.revision,
-                    operations: payload.operations,
-                });
-
-                // F4.5.2 - Reject if not authorized or session inactive
-                if (!result.ok) {
-                    // Send sync if needed
-                    if (result.needsSync) {
-                        const roomState = await collaborationSessionService.getRoomState(payload.collaborationId);
-                        if (roomState) {
-                            socket.emit(SOCKET_EVENTS.CODE_SYNC, {
-                                collaborationId: payload.collaborationId,
-                                code: roomState.code,
-                                revision: roomState.codeRevision,
-                            });
-                        }
-                    }
-
-                    ack?.({
-                        ok: false,
-                        error: result.error,
-                    });
-
-                    logger.warn(
-                        {
-                            collaborationId: payload.collaborationId,
-                            userId,
-                            error: result.error,
-                        },
-                        "Code change rejected",
-                    );
-                    return;
-                }
-
-                // Update session activity on code change
-                await collaborationSessionService.updateSessionActivity(payload.collaborationId);
-
-                // F4.5.3 - Acknowledge with new revision (confirms order)
+        socket.on(SOCKET_EVENTS.CODE_CHANGE, async (payload: CodeChangePayload, ack?: CodeAck) => {
+            if (!payload?.collaborationId || !Array.isArray(payload.operations)) {
                 ack?.({
-                    ok: true,
-                    revision: result.newRevision,
+                    ok: false,
+                    error: "Invalid code change payload",
+                });
+                return;
+            }
+
+            const result = await collaborationSessionService.applyCodeChange({
+                collaborationId: payload.collaborationId as UUID,
+                userId: userId as UUID,
+                revision: payload.revision,
+                operations: payload.operations,
+            });
+
+            // F4.5.2 - Reject if not authorized or session inactive
+            if (!result.ok) {
+                // Send sync if needed
+                if (result.needsSync) {
+                    const roomState = await collaborationSessionService.getRoomState(
+                        payload.collaborationId,
+                    );
+                    if (roomState) {
+                        socket.emit(SOCKET_EVENTS.CODE_SYNC, {
+                            collaborationId: payload.collaborationId,
+                            code: roomState.code,
+                            revision: roomState.codeRevision,
+                        });
+                    }
+                }
+
+                ack?.({
+                    ok: false,
+                    error: result.error,
                 });
 
-                // F4.5.4 - Propagate transformed operations to all other connected users
-                socket.to(collaborationRoom(payload.collaborationId)).emit(
-                    SOCKET_EVENTS.CODE_CHANGE,
+                logger.warn(
                     {
                         collaborationId: payload.collaborationId,
                         userId,
-                        revision: result.newRevision,
-                        operations: result.transformedOps,
+                        error: result.error,
                     },
+                    "Code change rejected",
                 );
-            },
-        );
+                return;
+            }
+
+            // Update session activity on code change
+            await collaborationSessionService.updateSessionActivity(payload.collaborationId);
+
+            // F4.5.3 - Acknowledge with new revision (confirms order)
+            ack?.({
+                ok: true,
+                revision: result.newRevision,
+            });
+
+            // F4.5.4 - Propagate transformed operations to all other connected users
+            socket.to(collaborationRoom(payload.collaborationId)).emit(SOCKET_EVENTS.CODE_CHANGE, {
+                collaborationId: payload.collaborationId,
+                userId,
+                revision: result.newRevision,
+                operations: result.transformedOps,
+            });
+        });
 
         /**
          * F4.8.1 - Inform remaining user when other leaves
@@ -232,13 +223,10 @@ export function registerSocketHandlers(io: Server): void {
                 socket.leave(collaborationRoom(payload.collaborationId));
 
                 // F4.8.1 - Notify other users that this user left intentionally
-                io.to(collaborationRoom(result.collaborationId)).emit(
-                    SOCKET_EVENTS.USER_LEFT,
-                    {
-                        collaborationId: result.collaborationId,
-                        userId: result.userId,
-                    },
-                );
+                io.to(collaborationRoom(result.collaborationId)).emit(SOCKET_EVENTS.USER_LEFT, {
+                    collaborationId: result.collaborationId,
+                    userId: result.userId,
+                });
 
                 // Broadcast updated presence
                 io.to(collaborationRoom(result.collaborationId)).emit(
@@ -317,13 +305,10 @@ export function registerSocketHandlers(io: Server): void {
             }
 
             // Always broadcast updated presence
-            io.to(collaborationRoom(result.collaborationId)).emit(
-                SOCKET_EVENTS.PRESENCE_UPDATED,
-                {
-                    collaborationId: result.collaborationId,
-                    participants: result.participants,
-                },
-            );
+            io.to(collaborationRoom(result.collaborationId)).emit(SOCKET_EVENTS.PRESENCE_UPDATED, {
+                collaborationId: result.collaborationId,
+                participants: result.participants,
+            });
         });
 
         logger.info({ socketId: socket.id, userId }, "Collaboration socket connected");

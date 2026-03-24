@@ -48,7 +48,8 @@ export class SessionCacheRepository {
                 this.connected = true;
             }
 
-            await this.redis.multi()
+            await this.redis
+                .multi()
                 .hset(key, {
                     collaborationId: session.collaborationId,
                     matchId: session.matchId ?? "",
