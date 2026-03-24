@@ -7,29 +7,78 @@ on:
     branches: [ main ]
 
 jobs:
-  lint:
-    name: lints and tests matchingService
+  # --- Job 1: Matching Service ---
+  matching-service:
+    name: matchingService
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
+      - uses: actions/checkout@v4
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '25'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: backend/services/matchingService/package-lock.json
-
-      - name: Install dependencies
+      - name: Install & Test
         working-directory: backend/services/matchingService
-        run: npm ci
+        run: |
+          npm ci
+          npm run lint
+          npm run test
 
-      - name: Run linting
-        working-directory: backend/services/matchingService
-        run: npm run lint
+  # --- Job 2: User Service ---
+  user-service:
+    name: userService
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/services/userService/package-lock.json
+      - name: Install & Test
+        working-directory: backend/services/userService
+        run: |
+          npm ci
+          npm run lint
+          npm run test
 
-      - name: Run testing
-        working-directory: backend/services/matchingService
-        run: npm run test
+  # --- Job 3: Question Service ---
+  # question-service:
+  #   name: questionService
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Setup Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '24'
+  #         cache: 'npm'
+  #         cache-dependency-path: backend/services/questionService/package-lock.json
+  #     - name: Install & Test
+  #       working-directory: backend/services/questionService
+  #       run: |
+  #         npm ci
+  #         npm run lint
+  #         npm run test
+
+  # --- Job 4: Collaboration Service ---
+  collaboration-service:
+    name: collaborationService
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/services/collaborationService/package-lock.json
+      - name: Install & Test
+        working-directory: backend/services/collaborationService
+        run: |
+          npm ci
+          npm run lint
+          npm run test
