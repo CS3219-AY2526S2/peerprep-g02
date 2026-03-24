@@ -212,10 +212,7 @@ class UserRepository {
         return mapUserRow(result.rows[0]);
     }
 
-    async updateScoreByClerkUserId(
-        clerkUserId: string,
-        score: number,
-    ): Promise<UserRecord | null> {
+    async updateScoreByClerkUserId(clerkUserId: string, score: number): Promise<UserRecord | null> {
         const result = await query<UserRow>(
             `
                 UPDATE users
