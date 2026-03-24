@@ -28,7 +28,7 @@ services:
       - user-service
       - matching-service
       - questions-service
-      # - collaboration-service
+      - collaboration-service
       # - attempts-service
     networks:
       - gateway-network
