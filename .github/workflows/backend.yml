@@ -46,23 +46,23 @@ jobs:
           npm run test
 
   # --- Job 3: Question Service ---
-  # question-service:
-  #   name: questionService
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Setup Node
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '24'
-  #         cache: 'npm'
-  #         cache-dependency-path: backend/services/questionService/package-lock.json
-  #     - name: Install & Test
-  #       working-directory: backend/services/questionService
-  #       run: |
-  #         npm ci
-  #         npm run lint
-  #         npm run test
+  question-service:
+    name: questionService
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/services/questionService/package-lock.json
+      - name: Install & Test
+        working-directory: backend/services/questionService
+        run: |
+          npm ci
+          npm run lint
+          npm run test
 
   # --- Job 4: Collaboration Service ---
   collaboration-service:
