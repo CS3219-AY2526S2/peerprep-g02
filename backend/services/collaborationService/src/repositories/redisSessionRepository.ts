@@ -1,7 +1,11 @@
-import { randomUUID, type UUID } from "node:crypto";
+import { type UUID, randomUUID } from "node:crypto";
 
 import { env } from "@/config/env.js";
-import type { CollaborationSession, CreateSessionRequest, SessionStatus } from "@/models/session.js";
+import type {
+    CollaborationSession,
+    CreateSessionRequest,
+    SessionStatus,
+} from "@/models/session.js";
 import { getRedisClient } from "@/utils/redis.js";
 
 function buildPairKey(userAId: string, userBId: string): string {
@@ -77,7 +81,9 @@ export class RedisSessionRepository {
         const idempotencyKey = buildIdempotencyKey(input);
 
         // Check idempotency key first
-        const existingIdempotencyId = await this.redis.get(KEYS.sessionByIdempotency(idempotencyKey));
+        const existingIdempotencyId = await this.redis.get(
+            KEYS.sessionByIdempotency(idempotencyKey),
+        );
         if (existingIdempotencyId) {
             const existingSession = await this.getSessionByCollaborationId(existingIdempotencyId);
             if (existingSession && existingSession.status === "active") {
@@ -91,7 +97,9 @@ export class RedisSessionRepository {
         }
 
         // Check if there's an active session for this pair
-        const existingPairId = await this.redis.get(KEYS.sessionByPair(input.userAId, input.userBId));
+        const existingPairId = await this.redis.get(
+            KEYS.sessionByPair(input.userAId, input.userBId),
+        );
         if (existingPairId) {
             const existingSession = await this.getSessionByCollaborationId(existingPairId);
             if (existingSession && existingSession.status === "active") {
@@ -155,7 +163,9 @@ export class RedisSessionRepository {
         };
     }
 
-    async getSessionByCollaborationId(collaborationId: string): Promise<CollaborationSession | null> {
+    async getSessionByCollaborationId(
+        collaborationId: string,
+    ): Promise<CollaborationSession | null> {
         const data = await this.redis.hgetall(KEYS.session(collaborationId));
         return parseSession(data);
     }

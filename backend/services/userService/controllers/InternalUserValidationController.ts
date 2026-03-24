@@ -10,7 +10,9 @@ export class InternalUserValidationController {
     async validateUsers(req: Request, res: Response): Promise<Response> {
         const body = req.body as BatchValidationRequest | undefined;
         const userIds = Array.isArray(body?.userIds)
-            ? body.userIds.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+            ? body.userIds.filter(
+                  (value): value is string => typeof value === "string" && value.trim().length > 0,
+              )
             : [];
 
         if (userIds.length === 0) {

@@ -1,9 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { vi } from "vitest";
 
-export function createMockRequest(
-    overrides: Partial<Request> = {},
-): Request {
+export function createMockRequest(overrides: Partial<Request> = {}): Request {
     return overrides as Request;
 }
 

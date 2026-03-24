@@ -2,7 +2,9 @@
 
 ## Overview
 
-The Collaboration Service enables real-time collaborative coding sessions between two matched users. It handles session creation, real-time code synchronization using Operational Transformation (OT), presence management, and session lifecycle.
+The Collaboration Service enables real-time collaborative coding sessions between two matched users.
+It handles session creation, real-time code synchronization using Operational Transformation (OT),
+presence management, and session lifecycle.
 
 ---
 
@@ -274,54 +276,56 @@ POST /sessions
 ```
 
 **Headers:**
+
 ```http
 Content-Type: application/json
 x-internal-service-key: <internal-service-key>
 ```
 
 **Request Body:**
+
 ```json
 {
-  "matchId": "match-123",
-  "userAId": "user-a",
-  "userBId": "user-b",
-  "difficulty": "Medium",
-  "language": "typescript",
-  "topic": "arrays"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `matchId` | string | No | Match identifier from Matching Service |
-| `userAId` | string | Yes | First user's ID |
-| `userBId` | string | Yes | Second user's ID |
-| `difficulty` | enum | Yes | `Easy`, `Medium`, or `Hard` |
-| `language` | string | Yes | Programming language |
-| `topic` | string | Yes | Question topic |
-
-**Success Response (201 Created):**
-```json
-{
-  "session": {
-    "collaborationId": "4f0d95c6-b6e7-4c0e-b38f-2dd5332ed7d7",
     "matchId": "match-123",
     "userAId": "user-a",
     "userBId": "user-b",
     "difficulty": "Medium",
     "language": "typescript",
-    "topic": "arrays",
-    "questionId": "q-123",
-    "status": "active",
-    "createdAt": "2026-03-21T15:00:00.000Z"
-  },
-  "idempotentHit": false,
-  "cacheWriteSucceeded": true
+    "topic": "arrays"
 }
 ```
 
-**Idempotent Response (200 OK):**
-Returns existing session if same request is made again.
+| Field        | Type   | Required | Description                            |
+| ------------ | ------ | -------- | -------------------------------------- |
+| `matchId`    | string | No       | Match identifier from Matching Service |
+| `userAId`    | string | Yes      | First user's ID                        |
+| `userBId`    | string | Yes      | Second user's ID                       |
+| `difficulty` | enum   | Yes      | `Easy`, `Medium`, or `Hard`            |
+| `language`   | string | Yes      | Programming language                   |
+| `topic`      | string | Yes      | Question topic                         |
+
+**Success Response (201 Created):**
+
+```json
+{
+    "session": {
+        "collaborationId": "4f0d95c6-b6e7-4c0e-b38f-2dd5332ed7d7",
+        "matchId": "match-123",
+        "userAId": "user-a",
+        "userBId": "user-b",
+        "difficulty": "Medium",
+        "language": "typescript",
+        "topic": "arrays",
+        "questionId": "q-123",
+        "status": "active",
+        "createdAt": "2026-03-21T15:00:00.000Z"
+    },
+    "idempotentHit": false,
+    "cacheWriteSucceeded": true
+}
+```
+
+**Idempotent Response (200 OK):** Returns existing session if same request is made again.
 
 ```json
 {
@@ -333,15 +337,15 @@ Returns existing session if same request is made again.
 
 **Error Responses:**
 
-| Status | Error Code | Description |
-|--------|------------|-------------|
-| 400 | `INVALID_SESSION_REQUEST` | Missing/invalid fields |
-| 401 | `UNAUTHORIZED_INTERNAL_REQUEST` | Invalid internal service key |
-| 409 | `ACTIVE_SESSION_CONFLICT` | Active session exists for user pair |
-| 424 | `USER_VALIDATION_FAILED` | Users not active |
-| 424 | `QUESTION_NOT_FOUND` | No question available |
-| 503 | `USER_SERVICE_UNAVAILABLE` | User Service down |
-| 503 | `QUESTION_SERVICE_UNAVAILABLE` | Question Service down |
+| Status | Error Code                      | Description                         |
+| ------ | ------------------------------- | ----------------------------------- |
+| 400    | `INVALID_SESSION_REQUEST`       | Missing/invalid fields              |
+| 401    | `UNAUTHORIZED_INTERNAL_REQUEST` | Invalid internal service key        |
+| 409    | `ACTIVE_SESSION_CONFLICT`       | Active session exists for user pair |
+| 424    | `USER_VALIDATION_FAILED`        | Users not active                    |
+| 424    | `QUESTION_NOT_FOUND`            | No question available               |
+| 503    | `USER_SERVICE_UNAVAILABLE`      | User Service down                   |
+| 503    | `QUESTION_SERVICE_UNAVAILABLE`  | Question Service down               |
 
 ---
 
@@ -382,46 +386,49 @@ Emitted when socket is authenticated and ready.
 **Direction:** Client → Server
 
 **Request:**
+
 ```json
 { "collaborationId": "collab-123" }
 ```
 
 **Success Response:**
+
 ```json
 {
-  "ok": true,
-  "state": {
-    "session": {
-      "collaborationId": "collab-123",
-      "userAId": "user-a",
-      "userBId": "user-b",
-      "difficulty": "Medium",
-      "language": "typescript",
-      "topic": "arrays",
-      "questionId": "q-123",
-      "status": "active",
-      "createdAt": "2026-03-21T12:00:00.000Z"
-    },
-    "questionId": "q-123",
-    "codeSnapshot": "// code here",
-    "codeRevision": 5,
-    "participants": [
-      { "userId": "user-a", "status": "connected", "connectionCount": 1 },
-      { "userId": "user-b", "status": "disconnected", "connectionCount": 0 }
-    ],
-    "isFirstConnection": false,
-    "wasDisconnected": true,
-    "disconnectDurationMs": 5000
-  }
+    "ok": true,
+    "state": {
+        "session": {
+            "collaborationId": "collab-123",
+            "userAId": "user-a",
+            "userBId": "user-b",
+            "difficulty": "Medium",
+            "language": "typescript",
+            "topic": "arrays",
+            "questionId": "q-123",
+            "status": "active",
+            "createdAt": "2026-03-21T12:00:00.000Z"
+        },
+        "questionId": "q-123",
+        "codeSnapshot": "// code here",
+        "codeRevision": 5,
+        "participants": [
+            { "userId": "user-a", "status": "connected", "connectionCount": 1 },
+            { "userId": "user-b", "status": "disconnected", "connectionCount": 0 }
+        ],
+        "isFirstConnection": false,
+        "wasDisconnected": true,
+        "disconnectDurationMs": 5000
+    }
 }
 ```
 
 **Error Response:**
+
 ```json
 {
-  "ok": false,
-  "error": "SESSION_ACCESS_DENIED",
-  "message": "Authenticated user is not assigned to this collaboration session."
+    "ok": false,
+    "error": "SESSION_ACCESS_DENIED",
+    "message": "Authenticated user is not assigned to this collaboration session."
 }
 ```
 
@@ -430,11 +437,13 @@ Emitted when socket is authenticated and ready.
 **Direction:** Client → Server
 
 **Request:**
+
 ```json
 { "collaborationId": "collab-123" }
 ```
 
 **Response:**
+
 ```json
 { "ok": true }
 ```
@@ -444,6 +453,7 @@ Emitted when socket is authenticated and ready.
 **Direction:** Server → Client
 
 **Payload:**
+
 ```json
 {
   "collaborationId": "collab-123",
@@ -459,10 +469,10 @@ Emitted when socket is authenticated and ready.
 
 ```json
 {
-  "collaborationId": "collab-123",
-  "userId": "user-a",
-  "isFirstConnection": true,
-  "wasDisconnected": false
+    "collaborationId": "collab-123",
+    "userId": "user-a",
+    "isFirstConnection": true,
+    "wasDisconnected": false
 }
 ```
 
@@ -484,8 +494,8 @@ Emitted when socket is authenticated and ready.
 
 ```json
 {
-  "collaborationId": "collab-123",
-  "userId": "user-a"
+    "collaborationId": "collab-123",
+    "userId": "user-a"
 }
 ```
 
@@ -495,11 +505,11 @@ Emitted when socket is authenticated and ready.
 
 ```json
 {
-  "collaborationId": "collab-123",
-  "participants": [
-    { "userId": "user-a", "status": "connected", "connectionCount": 2 },
-    { "userId": "user-b", "status": "disconnected", "connectionCount": 0 }
-  ]
+    "collaborationId": "collab-123",
+    "participants": [
+        { "userId": "user-a", "status": "connected", "connectionCount": 2 },
+        { "userId": "user-b", "status": "disconnected", "connectionCount": 0 }
+    ]
 }
 ```
 
@@ -511,13 +521,13 @@ Emitted when socket is authenticated and ready.
 
 ```json
 {
-  "collaborationId": "collab-123",
-  "revision": 5,
-  "operations": [
-    { "type": "retain", "position": 0, "count": 10 },
-    { "type": "insert", "position": 10, "text": "hello" },
-    { "type": "delete", "position": 15, "count": 3 }
-  ]
+    "collaborationId": "collab-123",
+    "revision": 5,
+    "operations": [
+        { "type": "retain", "position": 0, "count": 10 },
+        { "type": "insert", "position": 10, "text": "hello" },
+        { "type": "delete", "position": 15, "count": 3 }
+    ]
 }
 ```
 
@@ -525,12 +535,10 @@ Emitted when socket is authenticated and ready.
 
 ```json
 {
-  "collaborationId": "collab-123",
-  "userId": "user-a",
-  "revision": 6,
-  "operations": [
-    { "type": "insert", "position": 10, "text": "hello" }
-  ]
+    "collaborationId": "collab-123",
+    "userId": "user-a",
+    "revision": 6,
+    "operations": [{ "type": "insert", "position": 10, "text": "hello" }]
 }
 ```
 
@@ -540,17 +548,18 @@ Emitted when socket is authenticated and ready.
 
 ```json
 {
-  "ok": true,
-  "revision": 6
+    "ok": true,
+    "revision": 6
 }
 ```
 
 Or on error:
+
 ```json
 {
-  "ok": false,
-  "error": "SESSION_INACTIVE",
-  "message": "Cannot modify code - session is no longer active."
+    "ok": false,
+    "error": "SESSION_INACTIVE",
+    "message": "Cannot modify code - session is no longer active."
 }
 ```
 
@@ -562,9 +571,9 @@ Full sync when client is too far behind.
 
 ```json
 {
-  "collaborationId": "collab-123",
-  "code": "// full code content",
-  "revision": 10
+    "collaborationId": "collab-123",
+    "code": "// full code content",
+    "revision": 10
 }
 ```
 
@@ -576,8 +585,8 @@ Full sync when client is too far behind.
 
 ```json
 {
-  "collaborationId": "collab-123",
-  "output": "Test passed!\n"
+    "collaborationId": "collab-123",
+    "output": "Test passed!\n"
 }
 ```
 
@@ -587,17 +596,17 @@ Full sync when client is too far behind.
 
 ### Storage Strategy
 
-| Data | Storage | Reason |
-|------|---------|--------|
-| Session metadata | Redis | Fast lookup, ephemeral during session |
-| OT documents (code, revision) | Redis | Real-time, needs fast access |
-| OT operation history | Redis | Last ~50 ops for transforms |
-| Presence state | Redis | Real-time, multi-instance coordination |
-| Socket bindings | Redis | Multi-instance routing |
-| Left users tracking | Redis | Session lifecycle |
-| Activity timestamps | Redis | Inactivity timeout checks |
-| Execution output | Redis | Shared state |
-| **Completed sessions** | **PostgreSQL** | Permanent history/audit trail |
+| Data                          | Storage        | Reason                                 |
+| ----------------------------- | -------------- | -------------------------------------- |
+| Session metadata              | Redis          | Fast lookup, ephemeral during session  |
+| OT documents (code, revision) | Redis          | Real-time, needs fast access           |
+| OT operation history          | Redis          | Last ~50 ops for transforms            |
+| Presence state                | Redis          | Real-time, multi-instance coordination |
+| Socket bindings               | Redis          | Multi-instance routing                 |
+| Left users tracking           | Redis          | Session lifecycle                      |
+| Activity timestamps           | Redis          | Inactivity timeout checks              |
+| Execution output              | Redis          | Shared state                           |
+| **Completed sessions**        | **PostgreSQL** | Permanent history/audit trail          |
 
 ### Redis Key Design
 
@@ -663,11 +672,11 @@ CREATE INDEX idx_sessions_status ON collaboration_sessions(status);
 
 ### Operation Types
 
-| Type | Fields | Description |
-|------|--------|-------------|
-| `insert` | `position`, `text` | Insert text at position |
+| Type     | Fields              | Description                         |
+| -------- | ------------------- | ----------------------------------- |
+| `insert` | `position`, `text`  | Insert text at position             |
 | `delete` | `position`, `count` | Delete count characters at position |
-| `retain` | `position`, `count` | Skip count characters (no-op) |
+| `retain` | `position`, `count` | Skip count characters (no-op)       |
 
 ### Client State Machine
 
@@ -702,12 +711,12 @@ CREATE INDEX idx_sessions_status ON collaboration_sessions(status);
 
 When operations conflict, transform to maintain consistency:
 
-| Op A | Op B | Transformation |
-|------|------|----------------|
+| Op A        | Op B                | Transformation                         |
+| ----------- | ------------------- | -------------------------------------- |
 | Insert at X | Insert at Y (Y > X) | B's position shifts by A's text length |
-| Insert at X | Insert at X | Priority determines order |
-| Insert at X | Delete at Y | Adjust positions based on overlap |
-| Delete at X | Delete at Y | Handle overlapping deletions |
+| Insert at X | Insert at X         | Priority determines order              |
+| Insert at X | Delete at Y         | Adjust positions based on overlap      |
+| Delete at X | Delete at Y         | Handle overlapping deletions           |
 
 ### Convergence Example
 
@@ -729,33 +738,36 @@ Both clients receive transformed operations and converge to "XhelloY"
 
 ```typescript
 class OTDocumentManager {
-  private readonly otRepo: RedisOTRepository;
-  private readonly maxHistoryLength = 50;
+    private readonly otRepo: RedisOTRepository;
+    private readonly maxHistoryLength = 50;
 
-  async applyClientOperations(collaborationId, userId, clientRevision, operations) {
-    // Get current document state from Redis
-    const doc = await this.otRepo.getDocument(collaborationId);
+    async applyClientOperations(collaborationId, userId, clientRevision, operations) {
+        // Get current document state from Redis
+        const doc = await this.otRepo.getDocument(collaborationId);
 
-    // Get recent operations for transformation
-    const recentOps = await this.otRepo.getRecentOperations(collaborationId, this.maxHistoryLength);
+        // Get recent operations for transformation
+        const recentOps = await this.otRepo.getRecentOperations(
+            collaborationId,
+            this.maxHistoryLength,
+        );
 
-    // Transform against all ops since client's revision
-    let transformed = operations;
-    for (const historyEntry of recentOps) {
-      if (historyEntry.revision > clientRevision) {
-        transformed = transform(transformed, historyEntry.operations);
-      }
+        // Transform against all ops since client's revision
+        let transformed = operations;
+        for (const historyEntry of recentOps) {
+            if (historyEntry.revision > clientRevision) {
+                transformed = transform(transformed, historyEntry.operations);
+            }
+        }
+
+        // Apply to document and save to Redis
+        const newContent = applyOperations(doc.content, transformed);
+        const newRevision = doc.revision + 1;
+
+        await this.otRepo.setDocument(collaborationId, newContent, newRevision);
+        await this.otRepo.pushOperation(collaborationId, newRevision, userId, transformed);
+
+        return { transformed, newRevision, newContent };
     }
-
-    // Apply to document and save to Redis
-    const newContent = applyOperations(doc.content, transformed);
-    const newRevision = doc.revision + 1;
-
-    await this.otRepo.setDocument(collaborationId, newContent, newRevision);
-    await this.otRepo.pushOperation(collaborationId, newRevision, userId, transformed);
-
-    return { transformed, newRevision, newContent };
-  }
 }
 ```
 
@@ -771,29 +783,29 @@ class OTDocumentManager {
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CS_SERVER_PORT` | 3003 | Server port |
-| `CS_FRONTEND_URL` | http://localhost:5173 | CORS origin |
-| `CS_LOG_LEVEL` | info | Logging level |
-| `CS_SESSION_TTL_MS` | 3600000 (1h) | Session TTL in Redis |
-| `CS_DEPENDENCY_TIMEOUT_MS` | 5000 | External service timeout |
-| `CS_DISCONNECT_GRACE_MS` | 30000 (30s) | Reconnection grace period |
-| `CS_HEARTBEAT_INTERVAL_MS` | 25000 (25s) | Socket.IO ping interval |
-| `CS_HEARTBEAT_TIMEOUT_MS` | 20000 (20s) | Socket.IO ping timeout |
-| `CS_SESSION_INACTIVITY_TIMEOUT_MS` | 1800000 (30m) | Session inactivity timeout |
-| `CS_INACTIVITY_CHECK_INTERVAL_MS` | 60000 (1m) | Inactivity check interval |
-| `CS_API_GATEWAY_URL` | http://localhost:8080 | API Gateway URL |
-| `CS_INTERNAL_SERVICE_API_KEY` | | Internal service auth key |
-| `CS_USER_AUTH_CONTEXT_PATH` | /users/internal/authz/context | User auth context endpoint |
-| `CS_USER_AUTH_BATCH_PATH` | /users/internal/validation/batch | User batch validation endpoint |
-| `CS_QUESTION_SELECTION_PATH` | /internal/select | Question selection endpoint |
-| `CS_USE_QUESTION_STUB` | false | Use stub questions |
-| `CS_REDIS_HOST` | 127.0.0.1 | Redis host |
-| `CS_REDIS_PORT` | 6379 | Redis port |
-| `CS_REDIS_DB` | 0 | Redis database |
-| `CS_REDIS_KEY_PREFIX` | collaboration-service: | Redis key prefix |
-| `CS_DATABASE_URI` | postgresql://localhost:5432/collaboration_service | PostgreSQL connection URI |
+| Variable                           | Default                                           | Description                    |
+| ---------------------------------- | ------------------------------------------------- | ------------------------------ |
+| `CS_SERVER_PORT`                   | 3003                                              | Server port                    |
+| `CS_FRONTEND_URL`                  | http://localhost:5173                             | CORS origin                    |
+| `CS_LOG_LEVEL`                     | info                                              | Logging level                  |
+| `CS_SESSION_TTL_MS`                | 3600000 (1h)                                      | Session TTL in Redis           |
+| `CS_DEPENDENCY_TIMEOUT_MS`         | 5000                                              | External service timeout       |
+| `CS_DISCONNECT_GRACE_MS`           | 30000 (30s)                                       | Reconnection grace period      |
+| `CS_HEARTBEAT_INTERVAL_MS`         | 25000 (25s)                                       | Socket.IO ping interval        |
+| `CS_HEARTBEAT_TIMEOUT_MS`          | 20000 (20s)                                       | Socket.IO ping timeout         |
+| `CS_SESSION_INACTIVITY_TIMEOUT_MS` | 1800000 (30m)                                     | Session inactivity timeout     |
+| `CS_INACTIVITY_CHECK_INTERVAL_MS`  | 60000 (1m)                                        | Inactivity check interval      |
+| `CS_API_GATEWAY_URL`               | http://localhost:8080                             | API Gateway URL                |
+| `CS_INTERNAL_SERVICE_API_KEY`      |                                                   | Internal service auth key      |
+| `CS_USER_AUTH_CONTEXT_PATH`        | /users/internal/authz/context                     | User auth context endpoint     |
+| `CS_USER_AUTH_BATCH_PATH`          | /users/internal/validation/batch                  | User batch validation endpoint |
+| `CS_QUESTION_SELECTION_PATH`       | /internal/select                                  | Question selection endpoint    |
+| `CS_USE_QUESTION_STUB`             | false                                             | Use stub questions             |
+| `CS_REDIS_HOST`                    | 127.0.0.1                                         | Redis host                     |
+| `CS_REDIS_PORT`                    | 6379                                              | Redis port                     |
+| `CS_REDIS_DB`                      | 0                                                 | Redis database                 |
+| `CS_REDIS_KEY_PREFIX`              | collaboration-service:                            | Redis key prefix               |
+| `CS_DATABASE_URI`                  | postgresql://localhost:5432/collaboration_service | PostgreSQL connection URI      |
 
 ---
 
@@ -803,16 +815,16 @@ class OTDocumentManager {
 
 ```typescript
 type CollaborationSession = {
-  collaborationId: string;
-  matchId?: string;
-  userAId: string;
-  userBId: string;
-  difficulty: "Easy" | "Medium" | "Hard";
-  language: string;
-  topic: string;
-  questionId: string;
-  status: "active" | "inactive";
-  createdAt: string;
+    collaborationId: string;
+    matchId?: string;
+    userAId: string;
+    userBId: string;
+    difficulty: "Easy" | "Medium" | "Hard";
+    language: string;
+    topic: string;
+    questionId: string;
+    status: "active" | "inactive";
+    createdAt: string;
 };
 ```
 
@@ -826,9 +838,9 @@ type PresenceStatus = "connected" | "disconnected" | "left";
 
 ```typescript
 type SessionParticipantPresence = {
-  userId: string;
-  status: PresenceStatus;
-  connectionCount: number;
+    userId: string;
+    status: PresenceStatus;
+    connectionCount: number;
 };
 ```
 
@@ -836,10 +848,10 @@ type SessionParticipantPresence = {
 
 ```typescript
 type OTOperation = {
-  type: "insert" | "delete" | "retain";
-  position: number;
-  text?: string;   // For insert
-  count?: number;  // For delete/retain
+    type: "insert" | "delete" | "retain";
+    position: number;
+    text?: string; // For insert
+    count?: number; // For delete/retain
 };
 ```
 
@@ -847,13 +859,13 @@ type OTOperation = {
 
 ```typescript
 type RoomState = {
-  collaborationId: string;
-  questionId: string;
-  code: string;
-  codeRevision: number;
-  language: string;
-  output: string;
-  participants: SessionParticipantPresence[];
+    collaborationId: string;
+    questionId: string;
+    code: string;
+    codeRevision: number;
+    language: string;
+    output: string;
+    participants: SessionParticipantPresence[];
 };
 ```
 
@@ -861,14 +873,14 @@ type RoomState = {
 
 ```typescript
 type CollaborationJoinState = {
-  session: CollaborationSession;
-  questionId: string;
-  codeSnapshot: string;
-  codeRevision: number;
-  participants: SessionParticipantPresence[];
-  isFirstConnection: boolean;
-  wasDisconnected: boolean;
-  disconnectDurationMs: number;
+    session: CollaborationSession;
+    questionId: string;
+    codeSnapshot: string;
+    codeRevision: number;
+    participants: SessionParticipantPresence[];
+    isFirstConnection: boolean;
+    wasDisconnected: boolean;
+    disconnectDurationMs: number;
 };
 ```
 
@@ -876,22 +888,22 @@ type CollaborationJoinState = {
 
 ## Error Codes
 
-| Code | HTTP | Description |
-|------|------|-------------|
-| `INVALID_SESSION_REQUEST` | 400 | Invalid request payload |
-| `UNAUTHORIZED_INTERNAL_REQUEST` | 401 | Invalid internal service key |
-| `SOCKET_AUTHENTICATION_FAILED` | 401 | JWT validation failed |
-| `SESSION_ACCESS_DENIED` | 403 | User not assigned to session |
-| `REJOIN_GRACE_PERIOD_EXPIRED` | 403 | Reconnection timeout exceeded |
-| `SESSION_NOT_FOUND` | 404 | Session doesn't exist |
-| `SESSION_INACTIVE` | 409 | Session is no longer active |
-| `ACTIVE_SESSION_CONFLICT` | 409 | Active session exists for pair |
-| `SESSION_CAPACITY_REACHED` | 409 | Session already has 2 users |
-| `INVALID_JOIN_REQUEST` | 400 | Missing collaborationId |
-| `USER_VALIDATION_FAILED` | 424 | User validation failed |
-| `QUESTION_NOT_FOUND` | 424 | No matching question |
-| `USER_SERVICE_UNAVAILABLE` | 503 | User Service unreachable |
-| `QUESTION_SERVICE_UNAVAILABLE` | 503 | Question Service unreachable |
+| Code                            | HTTP | Description                    |
+| ------------------------------- | ---- | ------------------------------ |
+| `INVALID_SESSION_REQUEST`       | 400  | Invalid request payload        |
+| `UNAUTHORIZED_INTERNAL_REQUEST` | 401  | Invalid internal service key   |
+| `SOCKET_AUTHENTICATION_FAILED`  | 401  | JWT validation failed          |
+| `SESSION_ACCESS_DENIED`         | 403  | User not assigned to session   |
+| `REJOIN_GRACE_PERIOD_EXPIRED`   | 403  | Reconnection timeout exceeded  |
+| `SESSION_NOT_FOUND`             | 404  | Session doesn't exist          |
+| `SESSION_INACTIVE`              | 409  | Session is no longer active    |
+| `ACTIVE_SESSION_CONFLICT`       | 409  | Active session exists for pair |
+| `SESSION_CAPACITY_REACHED`      | 409  | Session already has 2 users    |
+| `INVALID_JOIN_REQUEST`          | 400  | Missing collaborationId        |
+| `USER_VALIDATION_FAILED`        | 424  | User validation failed         |
+| `QUESTION_NOT_FOUND`            | 424  | No matching question           |
+| `USER_SERVICE_UNAVAILABLE`      | 503  | User Service unreachable       |
+| `QUESTION_SERVICE_UNAVAILABLE`  | 503  | Question Service unreachable   |
 
 ---
 
@@ -957,15 +969,15 @@ src/
 
 ## Data Retention
 
-| Data Type | Storage | On Session End |
-|-----------|---------|----------------|
-| Session metadata | Redis | **Deleted** |
-| OT document (code) | Redis | **Deleted** (final snapshot → PostgreSQL) |
-| OT operation history | Redis | **Deleted** |
-| Output cache | Redis | **Deleted** |
-| Presence data | Redis | **Deleted** |
-| Socket bindings | Redis | **Deleted** |
-| Session history | PostgreSQL | **Kept** (permanent record with final code) |
+| Data Type            | Storage    | On Session End                              |
+| -------------------- | ---------- | ------------------------------------------- |
+| Session metadata     | Redis      | **Deleted**                                 |
+| OT document (code)   | Redis      | **Deleted** (final snapshot → PostgreSQL)   |
+| OT operation history | Redis      | **Deleted**                                 |
+| Output cache         | Redis      | **Deleted**                                 |
+| Presence data        | Redis      | **Deleted**                                 |
+| Socket bindings      | Redis      | **Deleted**                                 |
+| Session history      | PostgreSQL | **Kept** (permanent record with final code) |
 
 ### Persistence Benefits
 
@@ -983,21 +995,23 @@ src/
 **Endpoint:** `{CS_API_GATEWAY_URL}{CS_USER_AUTH_BATCH_PATH}`
 
 **Request:**
+
 ```json
 {
-  "userIds": ["user-a", "user-b"]
+    "userIds": ["user-a", "user-b"]
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "data": {
-    "users": [
-      { "userId": "user-a", "status": "active" },
-      { "userId": "user-b", "status": "active" }
-    ]
-  }
+    "data": {
+        "users": [
+            { "userId": "user-a", "status": "active" },
+            { "userId": "user-b", "status": "active" }
+        ]
+    }
 }
 ```
 
@@ -1012,25 +1026,27 @@ Validates JWT and returns user context.
 **Endpoint:** `{CS_API_GATEWAY_URL}{CS_QUESTION_SELECTION_PATH}`
 
 **Request:**
+
 ```json
 {
-  "topic": "arrays",
-  "difficulty": "Medium",
-  "userAId": "user-a",
-  "userBId": "user-b"
+    "topic": "arrays",
+    "difficulty": "Medium",
+    "userAId": "user-a",
+    "userBId": "user-b"
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "data": {
-    "question": {
-      "questionId": "q-123",
-      "title": "Two Sum",
-      "topic": "arrays",
-      "difficulty": "Medium"
+    "data": {
+        "question": {
+            "questionId": "q-123",
+            "title": "Two Sum",
+            "topic": "arrays",
+            "difficulty": "Medium"
+        }
     }
-  }
 }
 ```

@@ -8,22 +8,34 @@ import {
 } from "@/luaScripts/matchmaking.js";
 import RedisManager from "@/managers/redisManager.js";
 import { createCollaborationSession } from "@/services/collaborationService.js";
-import { type Difficulty, type MatchRequest, type MatchResult, type RejoinResult } from "@/types/match.js";
+import {
+    type Difficulty,
+    type MatchRequest,
+    type MatchResult,
+    type RejoinResult,
+} from "@/types/match.js";
 import { buildQueueKey, buildUserStatusKey } from "@/utils/match.js";
 
 export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     const redis = RedisManager.getInstance();
 
     const queueKeys = req.difficulties.flatMap((diff) =>
-        req.languages.map((lang) => buildQueueKey(req.topic, diff, lang))
+        req.languages.map((lang) => buildQueueKey(req.topic, diff, lang)),
     );
     const seekerKey = buildUserStatusKey(req.userId);
 
     // run atomic matchmaking logic using a Lua script
-    const [status, partnerId, matchedDifficulty, matchedLanguage, startTimeStr] = (await redis.eval(FIND_MATCH_LUA_SCRIPT, {
-        keys: [...queueKeys, seekerKey],
-        arguments: [Date.now().toString(), queueKeys.length.toString(), JSON.stringify(queueKeys)],
-    })) as [string, string, string, string, string];
+    const [status, partnerId, matchedDifficulty, matchedLanguage, startTimeStr] = (await redis.eval(
+        FIND_MATCH_LUA_SCRIPT,
+        {
+            keys: [...queueKeys, seekerKey],
+            arguments: [
+                Date.now().toString(),
+                queueKeys.length.toString(),
+                JSON.stringify(queueKeys),
+            ],
+        },
+    )) as [string, string, string, string, string];
 
     if (status === "matched") {
         const matchId = uuidv4();
@@ -70,7 +82,7 @@ export async function attemptRejoin(userId: string): Promise<RejoinResult> {
 
     return {
         success: status === "success",
-        startTime: startTime ? parseInt(startTime, 10) : undefined
+        startTime: startTime ? parseInt(startTime, 10) : undefined,
     };
 }
 

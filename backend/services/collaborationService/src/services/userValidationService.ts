@@ -51,7 +51,9 @@ export class UserValidationService {
                 signal: controller.signal,
             });
 
-            const payload = (await response.json().catch(() => null)) as BatchValidationResponse | null;
+            const payload = (await response
+                .json()
+                .catch(() => null)) as BatchValidationResponse | null;
 
             if (!response.ok) {
                 throw new AppError(
