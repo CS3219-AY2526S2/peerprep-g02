@@ -197,10 +197,6 @@ services:
       - collaboration-db-network
     ports:
       - "3003:3003"
-    volumes:
-      - ./backend/services/collaborationService:/app
-      - /app/node_modules
-      - ./secrets:/secrets:ro
     restart: unless-stopped
 
   collaboration-db:
