@@ -16,8 +16,7 @@ export async function socketAuthMiddleware(
     socket: Socket,
     next: (err?: Error) => void,
 ): Promise<void> {
-    const authorization =
-        socket.handshake.headers["authorization"] ?? socket.handshake.auth?.token;
+    const authorization = socket.handshake.headers["authorization"] ?? socket.handshake.auth?.token;
 
     logger.info(
         {

@@ -6,9 +6,7 @@ function isNonEmptyString(value: unknown): value is string {
     return typeof value === "string" && value.trim().length > 0;
 }
 
-function isDifficulty(
-    value: unknown,
-): value is CreateSessionRequest["difficulty"] {
+function isDifficulty(value: unknown): value is CreateSessionRequest["difficulty"] {
     return value === "Easy" || value === "Medium" || value === "Hard";
 }
 

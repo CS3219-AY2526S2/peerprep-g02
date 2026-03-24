@@ -18,11 +18,7 @@ export function toAppError(error: unknown): AppError {
     }
 
     if (error instanceof Error) {
-        return new AppError(
-            "UNEXPECTED_ERROR",
-            HTTP_STATUS.INTERNAL_SERVER_ERROR,
-            error.message,
-        );
+        return new AppError("UNEXPECTED_ERROR", HTTP_STATUS.INTERNAL_SERVER_ERROR, error.message);
     }
 
     return new AppError(

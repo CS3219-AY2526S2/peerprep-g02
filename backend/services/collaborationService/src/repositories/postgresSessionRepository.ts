@@ -1,6 +1,6 @@
 import type { CollaborationSession } from "@/models/session.js";
-import { query } from "@/utils/postgres.js";
 import { logger } from "@/utils/logger.js";
+import { query } from "@/utils/postgres.js";
 
 type EndedReason = "both_users_left" | "inactivity_timeout" | "manual";
 
@@ -120,15 +120,9 @@ export class PostgresSessionRepository {
             );
 
             if (result.rowCount === 0) {
-                logger.warn(
-                    { collaborationId },
-                    "No session found to update in PostgreSQL",
-                );
+                logger.warn({ collaborationId }, "No session found to update in PostgreSQL");
             } else {
-                logger.debug(
-                    { collaborationId, endedReason },
-                    "Session ended in PostgreSQL",
-                );
+                logger.debug({ collaborationId, endedReason }, "Session ended in PostgreSQL");
             }
         } catch (error) {
             logger.error(
@@ -176,7 +170,9 @@ export class PostgresSessionRepository {
         return result.rows.map(rowToSessionHistory);
     }
 
-    async getRecentSessions(options: { limit?: number; offset?: number } = {}): Promise<SessionHistory[]> {
+    async getRecentSessions(
+        options: { limit?: number; offset?: number } = {},
+    ): Promise<SessionHistory[]> {
         const { limit = 50, offset = 0 } = options;
 
         const result = await query<SessionHistoryRow>(

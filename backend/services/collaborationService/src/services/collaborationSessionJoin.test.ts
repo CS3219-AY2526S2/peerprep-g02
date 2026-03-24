@@ -1,8 +1,8 @@
 import type { UUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
-import { AppError } from "../utils/errors.js";
 import type { CollaborationSession } from "../models/session.js";
+import { AppError } from "../utils/errors.js";
 import { CollaborationSessionService } from "./collaborationSessionService.js";
 
 function buildSession(): CollaborationSession {
@@ -32,12 +32,10 @@ describe("CollaborationSessionService join flow", () => {
                 wasDisconnected: false,
                 disconnectDurationMs: 0,
             }),
-            getParticipants: vi
-                .fn()
-                .mockResolvedValue([
-                    { userId: "user-1", status: "online", connectionCount: 2 },
-                    { userId: "user-2", status: "offline", connectionCount: 0 },
-                ]),
+            getParticipants: vi.fn().mockResolvedValue([
+                { userId: "user-1", status: "online", connectionCount: 2 },
+                { userId: "user-2", status: "offline", connectionCount: 0 },
+            ]),
             removeSocketConnection: vi.fn(),
             hasUserLeft: vi.fn().mockResolvedValue(false),
             canRejoinWithinGracePeriod: vi.fn().mockResolvedValue({
@@ -106,7 +104,9 @@ describe("CollaborationSessionService join flow", () => {
                 deleteSessionData: vi.fn(),
             } as never,
             {
-                getDistinctUserIds: vi.fn().mockResolvedValue(new Set<string>(["user-1", "user-2"])),
+                getDistinctUserIds: vi
+                    .fn()
+                    .mockResolvedValue(new Set<string>(["user-1", "user-2"])),
                 addSocketConnection: vi.fn(),
                 getParticipants: vi.fn(),
                 removeSocketConnection: vi.fn(),

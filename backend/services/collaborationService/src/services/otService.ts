@@ -175,7 +175,9 @@ export class OTDocumentManager {
         return this.otRepository.getRevision(collaborationId);
     }
 
-    async getDocument(collaborationId: string): Promise<{ content: string; revision: number } | null> {
+    async getDocument(
+        collaborationId: string,
+    ): Promise<{ content: string; revision: number } | null> {
         return this.otRepository.getDocument(collaborationId);
     }
 

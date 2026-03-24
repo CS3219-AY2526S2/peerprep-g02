@@ -1,7 +1,7 @@
 import { env } from "@/config/env.js";
 import type { OTOperation } from "@/models/session.js";
-import { getRedisClient } from "@/utils/redis.js";
 import { logger } from "@/utils/logger.js";
+import { getRedisClient } from "@/utils/redis.js";
 
 // Redis key patterns
 const KEYS = {

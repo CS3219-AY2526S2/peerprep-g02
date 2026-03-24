@@ -57,7 +57,9 @@ export class QuestionSelectionService {
                 signal: controller.signal,
             });
 
-            const payload = (await response.json().catch(() => null)) as QuestionSelectionResponse | null;
+            const payload = (await response
+                .json()
+                .catch(() => null)) as QuestionSelectionResponse | null;
             if (!response.ok) {
                 throw new AppError(
                     ERROR_CODES.QUESTION_SERVICE_UNAVAILABLE,
@@ -121,7 +123,9 @@ export class QuestionSelectionService {
                 signal: controller.signal,
             });
 
-            const payload = (await response.json().catch(() => null)) as QuestionDetailsResponse | null;
+            const payload = (await response
+                .json()
+                .catch(() => null)) as QuestionDetailsResponse | null;
 
             if (!response.ok) {
                 logger.warn(
