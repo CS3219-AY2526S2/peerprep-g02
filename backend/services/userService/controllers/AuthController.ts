@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { getAuth } from "@clerk/express";
 
-import { AuthService } from "../services/authService.js";
-import { badRequest, handleError } from "../utils/ResponseHelpers.js";
+import { AuthService } from "@/services/authService.js";
+import { badRequest, handleError } from "@/utils/ResponseHelpers.js";
 
 export class AuthController {
     private readonly authService = new AuthService();

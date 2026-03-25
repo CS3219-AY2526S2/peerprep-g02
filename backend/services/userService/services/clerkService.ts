@@ -1,6 +1,6 @@
 import { clerkClient } from "@clerk/express";
 
-import { ClerkUserSummary } from "../types/auth.js";
+import { ClerkUserSummary } from "@/types/auth.js";
 
 type RawClerkEmailAddress = {
     id?: string;

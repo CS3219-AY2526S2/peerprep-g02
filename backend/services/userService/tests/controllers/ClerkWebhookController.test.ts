@@ -17,7 +17,7 @@ describe("ClerkWebhookController", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        AppConstants.CLERK_WEBHOOK_SIGNING_SECRET = originalSigningSecret;
+        AppConstants.CLERK_WEBHOOK_SIGNING_SECRET = originalSigningSecret ?? "test-signing-secret";
     });
 
     // missing secret

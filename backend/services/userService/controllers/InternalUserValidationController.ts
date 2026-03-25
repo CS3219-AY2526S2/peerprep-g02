@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import { userRepository } from "../models/User.js";
+import { userRepository } from "@/models/User.js";
 
 type BatchValidationRequest = {
     userIds?: string[];

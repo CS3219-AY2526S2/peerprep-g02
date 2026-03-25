@@ -1,4 +1,5 @@
-import { query } from "../utils/postgres.js";
+import { query, type QueryExecutor, withTransaction } from "@/utils/postgres.js";
+import { ServiceError } from "@/utils/ResponseHelpers.js";
 
 export type UserStatus = "active" | "suspended" | "deleted";
 export type UserRole = "user" | "admin" | "super_user";
@@ -10,6 +11,7 @@ type UserRow = {
     avatar_url: string | null;
     status: UserStatus;
     role: UserRole;
+    score: number;
     preferred_language: string | null;
     last_login_at: Date | null;
     created_at: Date;
@@ -22,10 +24,18 @@ export type UserRecord = {
     avatarUrl: string | null;
     status: UserStatus;
     role: UserRole;
+    score: number;
     preferredLanguage: string | null;
     lastLoginAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
+};
+
+export type ScoreDeltaUpdate = {
+    clerkUserId: string;
+    previousScore: number;
+    newScore: number;
+    delta: number;
 };
 
 function mapUserRow(row: UserRow): UserRecord {
@@ -35,6 +45,7 @@ function mapUserRow(row: UserRow): UserRecord {
         avatarUrl: row.avatar_url,
         status: row.status,
         role: row.role,
+        score: row.score,
         preferredLanguage: row.preferred_language,
         lastLoginAt: row.last_login_at,
         createdAt: row.created_at,
@@ -49,6 +60,7 @@ class UserRepository {
         avatar_url,
         status,
         role,
+        score,
         preferred_language,
         last_login_at,
         created_at,
@@ -206,6 +218,83 @@ class UserRepository {
         }
 
         return mapUserRow(result.rows[0]);
+    }
+
+    async updateScoreByClerkUserId(clerkUserId: string, score: number): Promise<UserRecord | null> {
+        const result = await query<UserRow>(
+            `
+                UPDATE users
+                SET score = $2,
+                    updated_at = NOW()
+                WHERE clerk_user_id = $1
+                RETURNING ${this.selectColumns}
+            `,
+            [clerkUserId, score],
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        return mapUserRow(result.rows[0]);
+    }
+
+    async applyScoreDeltas(
+        updates: Array<{ clerkUserId: string; delta: number }>,
+    ): Promise<ScoreDeltaUpdate[]> {
+        return withTransaction(async (client) => {
+            const results: ScoreDeltaUpdate[] = [];
+
+            for (const update of updates) {
+                const appliedUpdate = await this.applyScoreDeltaWithExecutor(update, client);
+                results.push(appliedUpdate);
+            }
+
+            return results;
+        });
+    }
+
+    private async applyScoreDeltaWithExecutor(
+        update: { clerkUserId: string; delta: number },
+        executor: QueryExecutor,
+    ): Promise<ScoreDeltaUpdate> {
+        const existingResult = await query<{ score: number }>(
+            `
+                SELECT score
+                FROM users
+                WHERE clerk_user_id = $1
+                FOR UPDATE
+            `,
+            [update.clerkUserId],
+            executor,
+        );
+
+        if (existingResult.rows.length === 0) {
+            throw new ServiceError(404, "User not found.");
+        }
+
+        const previousScore = existingResult.rows[0].score;
+
+        const result = await query<UserRow>(
+            `
+                UPDATE users
+                SET score = GREATEST(0, users.score + $2),
+                    updated_at = NOW()
+                WHERE clerk_user_id = $1
+                RETURNING ${this.selectColumns}
+            `,
+            [update.clerkUserId, update.delta],
+            executor,
+        );
+
+        const user = mapUserRow(result.rows[0]);
+
+        return {
+            clerkUserId: user.clerkUserId,
+            previousScore,
+            newScore: user.score,
+            delta: user.score - previousScore,
+        };
     }
 }
 

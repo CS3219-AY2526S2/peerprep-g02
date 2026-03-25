@@ -1,7 +1,7 @@
 import { getAuth } from "@clerk/express";
 import { NextFunction, Request, Response } from "express";
-import { UserRole, userRepository } from "../models/User.js";
-import { logger } from "../utils/logger.js";
+import { UserRole, userRepository } from "@/models/User.js";
+import { logger } from "@/utils/logger.js";
 
 type RequireAuthOptions = {
     allowMissingLocalUser?: boolean;

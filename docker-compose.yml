@@ -28,26 +28,26 @@ services:
       - user-service
       - matching-service
       - questions-service
+      - attempts-service
       - collaboration-service
-      # - attempts-service
     networks:
       - gateway-network
     restart: unless-stopped
 
-#   # Message Broker (RabbitMQ)
-#   rabbitmq:
-#     image: rabbitmq:latest
-#     container_name: rabbitmq
-#     hostname: rabbitmq
-#     networks:
-#       - gateway-network
-#     healthcheck:
-#       test: rabbitmq-diagnostics check_port_connectivity
-#       interval: 30s
-#       timeout: 30s
-#       retries: 10
-#       start_period: 30s
-#     restart: unless-stopped
+  #   # Message Broker (RabbitMQ)
+  #   rabbitmq:
+  #     image: rabbitmq:latest
+  #     container_name: rabbitmq
+  #     hostname: rabbitmq
+  #     networks:
+  #       - gateway-network
+  #     healthcheck:
+  #       test: rabbitmq-diagnostics check_port_connectivity
+  #       interval: 30s
+  #       timeout: 30s
+  #       retries: 10
+  #       start_period: 30s
+  #     restart: unless-stopped
 
   # User Service
   user-service:
@@ -131,7 +131,7 @@ services:
     environment:
       - DB_HOST=questions-db
     ports:
-    - "3005:3005"
+      - "3005:3005"
     depends_on:
       questions-db:
         condition: service_started
@@ -226,40 +226,56 @@ services:
     networks:
       - collaboration-redis-network
 
-#   # Attempts Service
-#   attempts-service:
-#     build: ./backend/services/attemptService
-#     container_name: attempts-service
-#     env_file:
-#       - ./backend/services/attemptService/.env
-#     depends_on:
-#       rabbitmq:
-#         condition: service_healthy
-#       attempts-db:
-#         condition: service_started
-#     networks:
-#       - gateway-network
-#       - attempts-db-network
-#     volumes:
-#       - ./backend/services/attemptService:/app
-#       - /app/node_modules
-#     restart: unless-stopped
+  # Attempts Service
+  attempts-service:
+    build:
+      context: ./backend/services/attemptService
+      dockerfile: Dockerfile
+    container_name: attempts-service
+    env_file:
+      - ./backend/services/attemptService/.env
+    environment:
+      DATABASE_URI: postgresql://postgres:postgres@attempts-db:5432/peerprep_attempt
+      PORT: 3004
+      USER_SERVICE_URL: http://user-service:3001
+    depends_on:
+      attempts-db:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - gateway-network
+      - attempts-db-network
+    ports:
+      - "3004:3004"
+    restart: unless-stopped
 
-#   attempts-db:
-#     image: mongo:latest
-#     container_name: attempts-db
-#     volumes:
-#       - attempts_data:/data/db
-#     networks:
-#       - attempts-db-network
-#     restart: unless-stopped
+  attempts-db:
+    image: postgres:16-alpine
+    container_name: attempts-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: peerprep_attempt
+    ports:
+      - "5436:5432"
+    volumes:
+      - attempts_data:/var/lib/postgresql/data
+    networks:
+      - attempts-db-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d peerprep_attempt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
 
 volumes:
   user_data:
   matching_data:
   questions_data:
   collaboration_data:
-#   attempts_data:
+  attempts_data:
 #   redis_data:
 
 networks:
@@ -275,5 +291,5 @@ networks:
     driver: bridge
   collaboration-db-network:
     driver: bridge
-#   attempts-db-network:
-#     driver: bridge
+  attempts-db-network:
+    driver: bridge

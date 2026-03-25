@@ -1,7 +1,7 @@
-import app from "./app.js";
-import { AppConstants } from "./constants.js";
-import { logger } from "./utils/logger.js";
-import { closePostgres, initializePostgres } from "./utils/postgres.js";
+import app from "@/app.js";
+import { AppConstants } from "@/constants.js";
+import { logger } from "@/utils/logger.js";
+import { closePostgres, initializePostgres } from "@/utils/postgres.js";
 
 async function startServer(): Promise<void> {
     try {

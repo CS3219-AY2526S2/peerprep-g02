@@ -1,5 +1,5 @@
 import type { WebhookEvent } from "@clerk/express/webhooks";
-import { userRepository } from "../models/User.js";
+import { userRepository } from "@/models/User.js";
 
 type WebhookUserEmail = {
     id?: string;

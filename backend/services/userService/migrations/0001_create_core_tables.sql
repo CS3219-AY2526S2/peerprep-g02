@@ -4,12 +4,14 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url TEXT NULL,
     status TEXT NOT NULL DEFAULT 'active',
     role TEXT NOT NULL DEFAULT 'user',
+    score INTEGER NOT NULL DEFAULT 0,
     preferred_language TEXT NULL,
     last_login_at TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT users_status_check CHECK (status IN ('active', 'suspended', 'deleted')),
-    CONSTRAINT users_role_check CHECK (role IN ('user', 'admin', 'super_user'))
+    CONSTRAINT users_role_check CHECK (role IN ('user', 'admin', 'super_user')),
+    CONSTRAINT users_score_nonnegative_check CHECK (score >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
