@@ -4,6 +4,12 @@ import { AppConstants } from "../../constants.js";
 import { requireInternalAuth } from "../../middlewares/requireInternalAuth.js";
 import { createMockNext, createMockRequest, createMockResponse } from "../helpers/httpMocks.js";
 
+vi.mock("@/constants.js", () => ({
+    AppConstants: {
+        INTERNAL_SERVICE_API_KEY: "test-secret-key-123",
+    },
+}));
+
 describe("requireInternalAuth", () => {
     beforeEach(() => {
         vi.clearAllMocks();
