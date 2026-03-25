@@ -12,7 +12,9 @@
         "start:container": "npm run db:migrate && npm start",
         "start": "node dist/server.js",
         "test": "vitest run --config vitest.config.ts",
-        "test:watch": "vitest --config vitest.config.ts"
+        "test:watch": "vitest --config vitest.config.ts",
+        "lint": "eslint .",
+        "lint:fix": "prettier --write . && eslint . --fix"
     },
     "dependencies": {
         "dotenv": "^16.6.1",
@@ -21,14 +23,20 @@
         "pino": "^9.6.0"
     },
     "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@trivago/prettier-plugin-sort-imports": "^6.0.2",
         "@types/express": "^4.17.21",
         "@types/node": "^20.11.5",
         "@types/pg": "^8.15.5",
         "@vitest/coverage-v8": "^4.0.18",
+        "eslint": "^10.1.0",
+        "eslint-config-prettier": "^10.1.8",
         "pino-pretty": "^13.0.0",
+        "prettier": "^3.8.1",
         "tsc-alias": "^1.8.16",
         "tsx": "^4.7.0",
         "typescript": "^5.3.3",
+        "typescript-eslint": "^8.57.2",
         "vitest": "^4.0.18"
     }
 }

@@ -81,3 +81,22 @@ jobs:
           npm ci
           npm run lint
           npm run test
+
+  # --- Job 5: Attempt Service ---
+  attempt-service:
+    name: attemptService
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/services/attemptService/package-lock.json
+      - name: Install & Test
+        working-directory: backend/services/attemptService
+        run: |
+          npm ci
+          npm run lint
+          npm run test

@@ -27,11 +27,13 @@ describe("requireInternalAuth", () => {
 
     it("calls next when the internal service key matches", () => {
         const req = createMockRequest({
-            header: vi.fn().mockImplementation((name: string) =>
-                name === "x-internal-service-key"
-                    ? AppConstants.INTERNAL_SERVICE_API_KEY
-                    : undefined,
-            ),
+            header: vi
+                .fn()
+                .mockImplementation((name: string) =>
+                    name === "x-internal-service-key"
+                        ? AppConstants.INTERNAL_SERVICE_API_KEY
+                        : undefined,
+                ),
         });
         const res = createMockResponse();
         const next = createMockNext();
