@@ -6,9 +6,25 @@ type ApiRequestInit = RequestInit & {
 };
 
 let getTokenRef: TokenGetter | undefined;
+const AUTH_INTERCEPTOR_WAIT_MS = 1500;
+const AUTH_INTERCEPTOR_POLL_MS = 25;
 
 export function injectAuthInterceptor(getToken?: TokenGetter): void {
     getTokenRef = getToken;
+}
+
+async function waitForAuthInterceptor(): Promise<TokenGetter | undefined> {
+    if (getTokenRef) {
+        return getTokenRef;
+    }
+
+    const start = Date.now();
+
+    while (!getTokenRef && Date.now() - start < AUTH_INTERCEPTOR_WAIT_MS) {
+        await new Promise((resolve) => setTimeout(resolve, AUTH_INTERCEPTOR_POLL_MS));
+    }
+
+    return getTokenRef;
 }
 
 // automatically injects auth token from Clerk
@@ -32,8 +48,9 @@ export async function apiFetch(url: string, init: ApiRequestInit = {}): Promise<
     }
 
     // Inject Authorization header if not skipped
-    if (!skipAuth && getTokenRef && !headers.has("Authorization")) {
-        const token = await getTokenRef({ template: tokenTemplate });
+    if (!skipAuth && !headers.has("Authorization")) {
+        const tokenGetter = await waitForAuthInterceptor();
+        const token = tokenGetter ? await tokenGetter({ template: tokenTemplate }) : null;
         if (token) {
             headers.set("Authorization", `Bearer ${token}`);
         }

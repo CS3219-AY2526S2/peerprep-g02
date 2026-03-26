@@ -17,6 +17,7 @@
         "lint:fix": "prettier --write . && eslint . --fix"
     },
     "dependencies": {
+        "cors": "^2.8.6",
         "dotenv": "^16.6.1",
         "express": "^4.22.1",
         "pg": "^8.16.3",

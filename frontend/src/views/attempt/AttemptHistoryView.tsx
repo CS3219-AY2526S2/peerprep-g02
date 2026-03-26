@@ -418,7 +418,7 @@ export default function AttemptHistoryView() {
                         <CardHeader className="gap-5 border-b border-slate-200 px-6 py-6 sm:px-8">
                             <div className="space-y-1">
                                 <CardTitle className="text-3xl font-extrabold tracking-tight text-slate-950">
-                                    Attempt log
+                                    Attempt History
                                 </CardTitle>
                                 <CardDescription className="text-base text-slate-600">
                                     {isInitialLoad
