@@ -181,4 +181,66 @@ describe("AttemptService", () => {
 
         expect(deleteByIdsSpy).toHaveBeenCalledWith(["attempt-1", "attempt-2"]);
     });
+
+    it("returns attempt history from stored attempt records", async () => {
+        vi.spyOn(attemptRepository, "listByClerkUserId").mockResolvedValue([
+            {
+                id: "attempt-1",
+                clerkUserId: "user_1",
+                questionId: "question-1",
+                language: "typescript",
+                difficulty: "Easy",
+                success: true,
+                duration: 900,
+                attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+                createdAt: new Date("2026-03-24T00:00:00.000Z"),
+            },
+            {
+                id: "attempt-2",
+                clerkUserId: "user_1",
+                questionId: "question-2",
+                language: "python",
+                difficulty: "Medium",
+                success: false,
+                duration: 1800,
+                attemptedAt: new Date("2026-03-25T00:00:00.000Z"),
+                createdAt: new Date("2026-03-25T00:00:00.000Z"),
+            },
+        ]);
+
+        const service = new AttemptService();
+        const result = await service.listAttemptHistory("user_1");
+
+        expect(attemptRepository.listByClerkUserId).toHaveBeenCalledWith("user_1");
+        expect(result).toEqual({
+            message: "Attempt history fetched successfully.",
+            data: {
+                clerkUserId: "user_1",
+                attempts: [
+                    {
+                        id: "attempt-1",
+                        clerkUserId: "user_1",
+                        questionId: "question-1",
+                        language: "typescript",
+                        difficulty: "Easy",
+                        success: true,
+                        duration: 900,
+                        attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+                        createdAt: new Date("2026-03-24T00:00:00.000Z"),
+                    },
+                    {
+                        id: "attempt-2",
+                        clerkUserId: "user_1",
+                        questionId: "question-2",
+                        language: "python",
+                        difficulty: "Medium",
+                        success: false,
+                        duration: 1800,
+                        attemptedAt: new Date("2026-03-25T00:00:00.000Z"),
+                        createdAt: new Date("2026-03-25T00:00:00.000Z"),
+                    },
+                ],
+            },
+        });
+    });
 });

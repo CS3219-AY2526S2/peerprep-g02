@@ -10,6 +10,7 @@ const US_PREFIX = `${gatewayBase}/us`;
 const MS_PREFIX = `${gatewayBase}/ms`;
 const QS_PREFIX = `${gatewayBase}/qs`;
 const CS_PREFIX = `${gatewayBase}/cs`;
+const AS_PREFIX = `${gatewayBase}/as`;
 
 export const API_ENDPOINTS = {
     USERS: {
@@ -32,5 +33,9 @@ export const API_ENDPOINTS = {
 
     COLLABORATION: {
         SOCKET_PATH: `${CS_PREFIX}/sessions`,
+    },
+
+    ATTEMPTS: {
+        HISTORY: `${AS_PREFIX}/attempts/me`,
     },
 } as const;

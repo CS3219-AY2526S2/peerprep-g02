@@ -1,13 +1,22 @@
 import { Router } from "express";
 
 import { AttemptController } from "@/controllers/AttemptController.js";
+import { requireInternalAuth } from "@/middlewares/requireInternalAuth.js";
+import { requireAuth } from "@/middlewares/requireAuth.js";
 
 const attemptController = new AttemptController();
 const attemptRoutes = Router();
 
-attemptRoutes.post("/", (req, res) => attemptController.create(req, res));
-attemptRoutes.get("/users/:clerkUserId/questions", (req, res) =>
-    attemptController.listUniqueQuestions(req, res),
+attemptRoutes.get("/me", requireAuth, (req, res) =>
+  attemptController.listAttemptsForCurrentUser(req, res),
+);
+attemptRoutes.post("/", requireInternalAuth, (req, res) =>
+  attemptController.create(req, res),
+);
+attemptRoutes.get(
+  "/users/:clerkUserId/questions",
+  requireInternalAuth,
+  (req, res) => attemptController.listUniqueQuestions(req, res),
 );
 
 export default attemptRoutes;
