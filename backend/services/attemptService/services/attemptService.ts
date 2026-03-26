@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 
 import {
-    attemptRepository,
     type AttemptDifficulty,
     type AttemptRecord,
     type CreateAttemptInput,
+    attemptRepository,
 } from "@/models/Attempt.js";
-import { ServiceError } from "@/utils/ResponseHelpers.js";
 import { UserScoreService } from "@/services/userScoreService.js";
+import { ServiceError } from "@/utils/ResponseHelpers.js";
 
 export type RecordAttemptInput = {
     userAId: string;
@@ -50,10 +50,7 @@ function parseAttemptedAt(attemptedAt?: string): Date {
     return parsed;
 }
 
-export function calculateScoreDelta(
-    difficulty: AttemptDifficulty,
-    success: boolean,
-): number {
+export function calculateScoreDelta(difficulty: AttemptDifficulty, success: boolean): number {
     if (!success) {
         return -10;
     }

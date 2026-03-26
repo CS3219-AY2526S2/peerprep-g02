@@ -4,6 +4,12 @@ import { AppConstants } from "../../constants.js";
 import { requireInternalAuth } from "../../middlewares/requireInternalAuth.js";
 import { createMockNext, createMockRequest, createMockResponse } from "../helpers/httpMocks.js";
 
+vi.mock("@/constants.js", () => ({
+    AppConstants: {
+        INTERNAL_SERVICE_API_KEY: "test-secret-key-123",
+    },
+}));
+
 describe("requireInternalAuth", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -27,11 +33,13 @@ describe("requireInternalAuth", () => {
 
     it("calls next when the internal service key matches", () => {
         const req = createMockRequest({
-            header: vi.fn().mockImplementation((name: string) =>
-                name === "x-internal-service-key"
-                    ? AppConstants.INTERNAL_SERVICE_API_KEY
-                    : undefined,
-            ),
+            header: vi
+                .fn()
+                .mockImplementation((name: string) =>
+                    name === "x-internal-service-key"
+                        ? AppConstants.INTERNAL_SERVICE_API_KEY
+                        : undefined,
+                ),
         });
         const res = createMockResponse();
         const next = createMockNext();

@@ -158,9 +158,7 @@ describe("AttemptService", () => {
                 attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
                 createdAt: new Date("2026-03-24T00:00:00.000Z"),
             });
-        const deleteByIdsSpy = vi
-            .spyOn(attemptRepository, "deleteByIds")
-            .mockResolvedValue();
+        const deleteByIdsSpy = vi.spyOn(attemptRepository, "deleteByIds").mockResolvedValue();
         vi.spyOn(UserScoreService.prototype, "applyScoreDeltas").mockRejectedValue(
             new Error("score update failed"),
         );

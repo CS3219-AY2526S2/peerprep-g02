@@ -55,9 +55,7 @@ export class AttemptController {
                 success: body.success,
                 duration: body.duration,
                 attemptedAt:
-                    typeof body.attemptedAt === "string"
-                        ? body.attemptedAt
-                        : body.timestamp,
+                    typeof body.attemptedAt === "string" ? body.attemptedAt : body.timestamp,
             });
 
             return res.status(201).json(response);
@@ -74,8 +72,7 @@ export class AttemptController {
         }
 
         try {
-            const response =
-                await this.attemptService.listUniqueAttemptedQuestions(clerkUserId);
+            const response = await this.attemptService.listUniqueAttemptedQuestions(clerkUserId);
             return res.status(200).json(response);
         } catch (error) {
             handleError(res, error, "fetch attempted questions");
