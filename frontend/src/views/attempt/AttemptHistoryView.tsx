@@ -234,9 +234,6 @@ function AttemptHistoryTable({ attempts }: { attempts: AttemptHistoryItem[] }) {
                                     <p className="truncate text-[0.95rem] font-semibold text-slate-950">
                                         {attempt.questionId}
                                     </p>
-                                    <p className="mt-1 truncate text-[0.85rem] text-slate-500">
-                                        Attempt record
-                                    </p>
                                 </div>
                             </TableCell>
                             <TableCell className="px-4 py-4 text-center">
@@ -296,8 +293,7 @@ export default function AttemptHistoryView() {
                 loadError instanceof Error ? loadError.message : "Failed to load attempt history.",
             );
         } finally {
-            const remainingFeedbackMs =
-                MIN_LOADING_FEEDBACK_MS - (Date.now() - loadStartedAt);
+            const remainingFeedbackMs = MIN_LOADING_FEEDBACK_MS - (Date.now() - loadStartedAt);
 
             if (remainingFeedbackMs > 0) {
                 await new Promise((resolve) => setTimeout(resolve, remainingFeedbackMs));
@@ -347,7 +343,8 @@ export default function AttemptHistoryView() {
         };
     }, [attempts]);
 
-    const isInitialLoad = (!isAuthLoaded && attempts.length === 0) || (loading && attempts.length === 0);
+    const isInitialLoad =
+        (!isAuthLoaded && attempts.length === 0) || (loading && attempts.length === 0);
     const isEmpty = !loading && !error && filteredAttempts.length === 0;
 
     return (
