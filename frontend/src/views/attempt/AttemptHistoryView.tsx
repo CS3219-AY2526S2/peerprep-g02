@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 
+import { useAuth } from "@clerk/clerk-react";
 import { ArrowLeft, CheckCircle2, Clock3, History, RefreshCw, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,8 @@ type StatePanelProps = {
     description: string;
     action?: ReactNode;
 };
+
+const MIN_LOADING_FEEDBACK_MS = 250;
 
 function formatDuration(totalSeconds: number): string {
     if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
@@ -270,12 +273,18 @@ function AttemptHistoryTable({ attempts }: { attempts: AttemptHistoryItem[] }) {
 }
 
 export default function AttemptHistoryView() {
+    const { isLoaded: isAuthLoaded } = useAuth();
     const [attempts, setAttempts] = useState<AttemptHistoryItem[]>([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
     const loadAttemptHistory = useCallback(async () => {
+        if (!isAuthLoaded) {
+            return;
+        }
+
+        const loadStartedAt = Date.now();
         setLoading(true);
         setError("");
 
@@ -287,9 +296,16 @@ export default function AttemptHistoryView() {
                 loadError instanceof Error ? loadError.message : "Failed to load attempt history.",
             );
         } finally {
+            const remainingFeedbackMs =
+                MIN_LOADING_FEEDBACK_MS - (Date.now() - loadStartedAt);
+
+            if (remainingFeedbackMs > 0) {
+                await new Promise((resolve) => setTimeout(resolve, remainingFeedbackMs));
+            }
+
             setLoading(false);
         }
-    }, []);
+    }, [isAuthLoaded]);
 
     useEffect(() => {
         void loadAttemptHistory();
@@ -331,7 +347,7 @@ export default function AttemptHistoryView() {
         };
     }, [attempts]);
 
-    const isInitialLoad = loading && attempts.length === 0;
+    const isInitialLoad = (!isAuthLoaded && attempts.length === 0) || (loading && attempts.length === 0);
     const isEmpty = !loading && !error && filteredAttempts.length === 0;
 
     return (
