@@ -1,9 +1,6 @@
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import {
-    AttemptHistoryItem,
-    AttemptHistoryResponse,
-} from "@/models/attempt/attemptHistoryType";
 import { apiFetch } from "@/utils/apiClient";
+import { AttemptHistoryItem, AttemptHistoryResponse } from "@/models/attempt/attemptHistoryType";
 
 export const getAttemptHistory = async (): Promise<AttemptHistoryItem[]> => {
     const response = await apiFetch(API_ENDPOINTS.ATTEMPTS.HISTORY, {
