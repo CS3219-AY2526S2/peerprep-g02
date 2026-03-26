@@ -122,6 +122,20 @@ class AttemptRepository {
 
         return result.rows.map((row) => row.question_id);
     }
+
+    async listByClerkUserId(clerkUserId: string): Promise<AttemptRecord[]> {
+        const result = await query<AttemptRow>(
+            `
+                SELECT ${this.selectColumns}
+                FROM attempts
+                WHERE clerk_user_id = $1
+                ORDER BY attempted_at DESC, created_at DESC
+            `,
+            [clerkUserId],
+        );
+
+        return result.rows.map(mapAttemptRow);
+    }
 }
 
 export const attemptRepository = new AttemptRepository();

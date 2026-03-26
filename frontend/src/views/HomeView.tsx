@@ -119,6 +119,13 @@ export default function HomeView() {
                                         variant="outline"
                                         className="rounded-full border-slate-300 bg-white px-4"
                                     >
+                                        <Link to={ROUTES.ATTEMPT_HISTORY}>Attempt History</Link>
+                                    </Button>
+                                    <Button
+                                        asChild
+                                        variant="outline"
+                                        className="rounded-full border-slate-300 bg-white px-4"
+                                    >
                                         <Link to={ROUTES.USER_ADMIN}>User Admin</Link>
                                     </Button>
                                     <Button
@@ -129,7 +136,17 @@ export default function HomeView() {
                                         <Link to={ROUTES.QUESTION_ADMIN}>Question Admin</Link>
                                     </Button>
                                 </div>
-                            ) : null}
+                            ) : (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                                        asChild
+                                        variant="outline"
+                                        className="rounded-full border-slate-300 bg-white px-4"
+                                    >
+                                        <Link to={ROUTES.ATTEMPT_HISTORY}>Attempt History</Link>
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
