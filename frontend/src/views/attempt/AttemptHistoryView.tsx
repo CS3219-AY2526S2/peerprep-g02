@@ -359,7 +359,7 @@ export default function AttemptHistoryView() {
                             <p className="text-3xl font-extrabold tracking-tight text-slate-950">
                                 PeerPrep
                             </p>
-                            <p className="text-sm text-slate-500">Personal attempt history</p>
+                            <p className="text-sm text-slate-500">Attempt history</p>
                         </div>
                     </div>
 
