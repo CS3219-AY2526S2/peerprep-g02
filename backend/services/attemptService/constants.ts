@@ -21,6 +21,7 @@ export const AppConstants = {
         "postgresql://postgres:postgres@localhost:5432/peerprep_attempt",
     PORT: readNumber(process.env.PORT, 3004),
     API_BASE_URI: process.env.API_BASE_URI || "http://localhost",
+    FRONTEND_ORIGIN: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
     MODE: process.env.MODE || "dev",
     LOG_LEVEL: process.env.LOG_LEVEL || "info",
     INTERNAL_SERVICE_API_KEY: process.env.INTERNAL_SERVICE_API_KEY ?? "",

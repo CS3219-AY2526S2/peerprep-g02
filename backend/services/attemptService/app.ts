@@ -1,11 +1,17 @@
 import cors from "cors";
 import express from "express";
 
+import { AppConstants } from "@/constants.js";
 import attemptRoutes from "@/routes/attemptRoutes.js";
 
 const app = express();
 
-app.use(cors());
+app.use(
+    cors({
+        origin: AppConstants.FRONTEND_ORIGIN,
+        credentials: true,
+    }),
+);
 app.use(express.json());
 
 app.use("/attempts", attemptRoutes);
