@@ -18,6 +18,7 @@ export interface MatchSearchingViewProps {
     difficulties: Difficulty[];
     relaxationTier: number;
     onCancel: () => void;
+    isConnected: boolean;
 }
 
 export const TIER_METADATA: Record<number, { title: string; description: string }> = {

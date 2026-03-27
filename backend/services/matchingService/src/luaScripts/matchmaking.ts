@@ -34,7 +34,17 @@ end
 local existingStartTime = now
 if redis.call('EXISTS', seekerKey) == 1 then
     local st = redis.call('HGET', seekerKey, 'start_time')
-    if st then existingStartTime = tonumber(st) end
+    local status = redis.call('HGET', seekerKey, 'status')
+    local lastSeen = tonumber(redis.call('HGET', seekerKey, 'last_seen') or 0)
+    
+    if st then 
+        if status == 'DISCONNECTED' and (now - lastSeen) > gracePeriodMs then
+            existingStartTime = now
+        else
+            existingStartTime = tonumber(st) 
+        end
+    end
+    
     remove_from_all_queues(seekerKey)
 end
 

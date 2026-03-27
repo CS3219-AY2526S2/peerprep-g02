@@ -2,6 +2,7 @@ import { Difficulty } from "../question/questionType";
 
 export const SocketEvents = {
     CONNECT: "connect",
+    DISCONNECT: "disconnect",
     MATCH_WAITING: "match_waiting",
     MATCH_CANCELLED: "match_cancelled",
     MATCH_ERROR: "match_error",
@@ -22,6 +23,7 @@ export interface MatchResultSuccess {
 export interface MatchResultWaiting {
     matchFound: false;
     startTime: string;
+    message: string;
 }
 
 export type MatchResult = MatchResultSuccess | MatchResultWaiting;

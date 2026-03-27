@@ -24,6 +24,7 @@ export function useMatchingQueue(
     difficulty: Difficulty,
     onMatchFound?: (payload: MatchSuccessPayload) => void,
 ) {
+    const [isConnected, setIsConnected] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
     const [activeTier, setActiveTier] = useState(0);
 
@@ -74,10 +75,12 @@ export function useMatchingQueue(
 
         const setupListeners = async () => {
             socketInstance = await matchingService.connect();
+            setIsConnected(socketInstance.connected);
 
             socketInstance.on(SocketEvents.CONNECT, () => {
+                setIsConnected(true);
                 if (isSearchingRef.current) {
-                    console.log("Reconnected! Rejoining queue...");
+                    console.log("Reconnected!");
                     matchingService.joinQueue({
                         topic,
                         difficulties: [difficulty],
@@ -88,7 +91,13 @@ export function useMatchingQueue(
                 }
             });
 
+            socketInstance.on(SocketEvents.DISCONNECT, () => {
+                console.log("Socket disconnected.");
+                setIsConnected(false);
+            });
+
             socketInstance.on(SocketEvents.MATCH_WAITING, (data: MatchWaitingPayload) => {
+                console.log(data.message);
                 setIsSearching(true);
                 if (data.startTime) searchStartTime.current = parseInt(data.startTime, 10);
             });
@@ -137,15 +146,16 @@ export function useMatchingQueue(
                 socketInstance.off(SocketEvents.MATCH_CANCELLED);
                 socketInstance.off(SocketEvents.MATCH_ERROR);
                 socketInstance.off(SocketEvents.MATCH_SUCCESS);
+                socketInstance.off(SocketEvents.DISCONNECT);
             }
         };
-    }, [topic, language, difficulty]);
+    }, [topic, language, difficulty, userScore]);
 
     // 2. Relaxation Timer Logic
     useEffect(() => {
         let relaxationTimer: NodeJS.Timeout;
 
-        if (isSearching) {
+        if (isSearching && isConnected) {
             relaxationTimer = setInterval(() => {
                 if (!searchStartTime.current) return;
 
@@ -173,10 +183,11 @@ export function useMatchingQueue(
                 } else if (secondsPassed >= 48 && relaxationTier.current === 3) {
                     upgradeTier(4);
                 } else if (secondsPassed >= 60) {
-                    cancelSearch(); 
+                    cancelSearch();
                     pushToast({
                         tone: "info",
-                        message: "No match found within 60 seconds. Try broadening your topic or language.",
+                        message:
+                            "No match found within 60 seconds. Try broadening your topic or language.",
                     });
                 }
             }, 1000);
@@ -185,7 +196,7 @@ export function useMatchingQueue(
         return () => {
             if (relaxationTimer) clearInterval(relaxationTimer);
         };
-    }, [isSearching, topic, difficulty, language, userScore]);
+    }, [isSearching, isConnected, topic, difficulty, language, userScore]);
 
     const startSearch = async () => {
         setIsSearching(true);
@@ -207,5 +218,5 @@ export function useMatchingQueue(
         matchingService.cancelQueue();
     };
 
-    return { isSearching, activeTier, startSearch, cancelSearch, userScore };
+    return { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected };
 }
