@@ -172,6 +172,12 @@ export function useMatchingQueue(
                     upgradeTier(3);
                 } else if (secondsPassed >= 48 && relaxationTier.current === 3) {
                     upgradeTier(4);
+                } else if (secondsPassed >= 60) {
+                    cancelSearch(); 
+                    pushToast({
+                        tone: "info",
+                        message: "No match found within 60 seconds. Try broadening your topic or language.",
+                    });
                 }
             }, 1000);
         }
