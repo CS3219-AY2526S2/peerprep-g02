@@ -42,9 +42,7 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
     return executor.query<T>(text, params);
 }
 
-export async function withTransaction<T>(
-    callback: (client: PoolClient) => Promise<T>,
-): Promise<T> {
+export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
     const client = await pool.connect();
 
     try {
