@@ -3,7 +3,7 @@ import { BookOpen, Brain, Code, Loader2, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
 
-import { MatchSearchingViewProps } from "@/models/matching/matchingViewType";
+import { MatchSearchingViewProps, TIER_METADATA } from "@/models/matching/matchingViewType";
 
 export default function MatchSearchingView({
     topic,
@@ -13,6 +13,7 @@ export default function MatchSearchingView({
     onCancel,
 }: MatchSearchingViewProps) {
     const isRelaxed = relaxationTier > 0;
+    const { title, description } = TIER_METADATA[relaxationTier] || TIER_METADATA[0];
 
     return (
         <CardContent className="p-8 sm:p-12 bg-gradient-to-br from-indigo-900 via-purple-900 to-violet-900 text-white flex flex-col items-center justify-center min-h-[500px]">
@@ -37,13 +38,9 @@ export default function MatchSearchingView({
                     className={`text-2xl font-bold tracking-tight mb-2 flex items-center justify-center gap-2 transition-all duration-500 ${isRelaxed ? "text-yellow-300 scale-105" : "text-white"}`}
                 >
                     {isRelaxed && <Sparkles className="size-5 animate-pulse" />}
-                    {isRelaxed ? "Relaxing Search Criteria..." : "Finding a Peer..."}
+                    {title}
                 </h3>
-                <p className="text-indigo-200 max-w-[280px] mx-auto">
-                    {isRelaxed
-                        ? "Broadening search to find you a match faster."
-                        : "Matching you with someone who has similar settings."}
-                </p>
+                <p className="text-indigo-200 max-w-[280px] mx-auto">{description}</p>
             </div>
 
             {/* Selected Settings Summary Box */}

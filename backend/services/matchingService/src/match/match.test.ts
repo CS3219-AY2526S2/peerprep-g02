@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { findMatch, attemptRejoin, handleDisconnect, cancelMatch } from "@/match/match.js"
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import RedisManager from "@/managers/redisManager.js";
+import { attemptRejoin, cancelMatch, findMatch, handleDisconnect } from "@/match/match.js";
 import { createCollaborationSession } from "@/services/collaborationService.js";
-import { type MatchRequest, type Difficulty } from "@/types/match.js";
+import { type Difficulty, type MatchRequest } from "@/types/match.js";
 
 // Mock dependencies
 vi.mock("@/managers/redisManager.js");
@@ -14,7 +15,7 @@ describe("Matchmaking Service", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         // Setup Redis mock
         mockRedis = {
             eval: vi.fn(),
@@ -28,7 +29,9 @@ describe("Matchmaking Service", () => {
             topic: "strings",
             difficulties: ["Easy"],
             languages: ["python"],
-            isUpdate: false
+            userScore: 100,
+            scoreRange: 100,
+            isUpdate: false,
         };
 
         it("should return MatchResultSuccess when a partner is found", async () => {
@@ -37,8 +40,14 @@ describe("Matchmaking Service", () => {
             const partnerId = "user-2";
 
             // Mock Lua returns: [status, partnerId, difficulty, language, startTime]
-            mockRedis.eval.mockResolvedValue(["matched", partnerId, matchedDifficulty, matchedLanguage, "12345678"]);
-            
+            mockRedis.eval.mockResolvedValue([
+                "matched",
+                partnerId,
+                matchedDifficulty,
+                matchedLanguage,
+                "12345678",
+            ]);
+
             (createCollaborationSession as any).mockResolvedValue("collab-id-999");
 
             const result = await findMatch(mockRequest);
@@ -52,13 +61,15 @@ describe("Matchmaking Service", () => {
                 expect(result.matchedDifficulty).toBe(matchedDifficulty);
                 expect(result.matchedLanguage).toBe(matchedLanguage);
             }
-            
-            expect(createCollaborationSession).toHaveBeenCalledWith(expect.objectContaining({
-                userAId: "user-1",
-                userBId: partnerId,
-                difficulty: matchedDifficulty,
-                language: matchedLanguage
-            }));
+
+            expect(createCollaborationSession).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    userAId: "user-1",
+                    userBId: partnerId,
+                    difficulty: matchedDifficulty,
+                    language: matchedLanguage,
+                }),
+            );
         });
 
         it("should return MatchResultWaiting if no partner is found", async () => {

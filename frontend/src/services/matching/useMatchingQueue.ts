@@ -2,27 +2,21 @@ import { useEffect, useRef, useState } from "react";
 
 import { Socket } from "socket.io-client";
 
-import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { apiFetch } from "@/utils/apiClient";
+import { getRelaxedDifficulties, getRelaxedRange } from "@/utils/matching/matchingUtils";
 import { pushToast } from "@/utils/toast";
+import { SCORE_RANGE } from "@/models/matching/matchingDetailsType";
 import {
     MatchCancelledPayload,
     MatchErrorPayload,
+    MatchSuccessPayload,
     MatchWaitingPayload,
     SocketEvents,
 } from "@/models/matching/matchingSocketType";
 import { Difficulty } from "@/models/question/questionType";
 
 import { matchingService } from "@/services/matching/matchingService";
-
-type MatchSuccessPayload = {
-    collaborationId?: string;
-    matchId?: string;
-    matchedTopic?: string;
-    matchedDifficulty?: string;
-    matchedLanguage?: string;
-    userId?: string;
-    partnerId?: string;
-};
 
 export function useMatchingQueue(
     topic: string,
@@ -33,9 +27,37 @@ export function useMatchingQueue(
     const [isSearching, setIsSearching] = useState(false);
     const [activeTier, setActiveTier] = useState(0);
 
+    const [userScore, setUserScore] = useState(0);
+
     const searchStartTime = useRef<number | null>(null);
     const relaxationTier = useRef(0);
     const isSearchingRef = useRef(false);
+
+    useEffect(() => {
+        const fetchScore = async () => {
+            try {
+                const response = await apiFetch(API_ENDPOINTS.USERS.ME);
+
+                if (!response.ok) {
+                    console.error(`Error ${response.status}: Failed to fetch profile`);
+                    return;
+                }
+
+                const payload = await response.json();
+                const score = payload?.data?.user?.score;
+
+                if (score !== undefined) {
+                    setUserScore(score);
+                }
+            } catch (error) {
+                pushToast({
+                    tone: "error",
+                    message: "Unable to fetch user score.",
+                });
+            }
+        };
+        fetchScore();
+    }, []);
 
     // Store callback in ref to avoid effect re-runs when callback identity changes
     const onMatchFoundRef = useRef(onMatchFound);
@@ -60,6 +82,8 @@ export function useMatchingQueue(
                         topic,
                         difficulties: [difficulty],
                         languages: [language],
+                        userScore: userScore,
+                        scoreRange: SCORE_RANGE.DEFAULT,
                     });
                 }
             });
@@ -134,22 +158,28 @@ export function useMatchingQueue(
                         topic,
                         difficulties: getRelaxedDifficulties(difficulty, newTier),
                         languages: [language],
+                        userScore: userScore,
+                        scoreRange: getRelaxedRange(newTier),
                         isUpdate: true,
                     });
                 };
 
-                if (secondsPassed >= 15 && relaxationTier.current === 0) {
-                    console.log("15s passed: Relaxing search criteria!");
+                if (secondsPassed >= 12 && relaxationTier.current === 0) {
                     upgradeTier(1);
-                } else if (secondsPassed >= 30 && relaxationTier.current === 1) {
-                    console.log("30s passed: Max relaxation!");
+                } else if (secondsPassed >= 24 && relaxationTier.current === 1) {
                     upgradeTier(2);
+                } else if (secondsPassed >= 36 && relaxationTier.current === 2) {
+                    upgradeTier(3);
+                } else if (secondsPassed >= 48 && relaxationTier.current === 3) {
+                    upgradeTier(4);
                 }
             }, 1000);
         }
 
-        return () => clearInterval(relaxationTimer);
-    }, [isSearching, topic, difficulty, language]);
+        return () => {
+            if (relaxationTimer) clearInterval(relaxationTimer);
+        };
+    }, [isSearching, topic, difficulty, language, userScore]);
 
     const startSearch = async () => {
         setIsSearching(true);
@@ -162,6 +192,8 @@ export function useMatchingQueue(
             topic,
             difficulties: [difficulty],
             languages: [language],
+            userScore: userScore,
+            scoreRange: SCORE_RANGE.DEFAULT,
         });
     };
 
@@ -169,5 +201,5 @@ export function useMatchingQueue(
         matchingService.cancelQueue();
     };
 
-    return { isSearching, activeTier, startSearch, cancelSearch };
+    return { isSearching, activeTier, startSearch, cancelSearch, userScore };
 }

@@ -19,7 +19,7 @@ export function MatchingView() {
     const [language, setLanguage] = useState(languageOptions[0]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
-    const { isSearching, activeTier, startSearch, cancelSearch } = useMatchingQueue(
+    const { isSearching, activeTier, startSearch, cancelSearch, userScore } = useMatchingQueue(
         topic,
         language,
         difficulty,
@@ -46,6 +46,7 @@ export function MatchingView() {
                 />
             ) : (
                 <MatchFormView
+                    userScore={userScore}
                     topic={topic}
                     setTopic={setTopic}
                     language={language}

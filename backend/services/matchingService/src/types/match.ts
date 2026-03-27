@@ -7,6 +7,8 @@ export const MatchDetailsSchema = z.object({
     topic: z.string().min(1, "Topic is required"),
     difficulties: z.array(zDifficultySchema).min(1, "Select at least one difficulty"),
     languages: z.array(z.string()).min(1, "Select at least one language"),
+    userScore: z.number().int().nonnegative("Score must be a non-negative integer"),
+    scoreRange: z.number().int().nonnegative("Score range must be a non-negative integer"),
     isUpdate: z.boolean().optional(),
 });
 
