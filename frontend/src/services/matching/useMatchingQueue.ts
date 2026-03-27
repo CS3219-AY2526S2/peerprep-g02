@@ -34,6 +34,12 @@ export function useMatchingQueue(
     const relaxationTier = useRef(0);
     const isSearchingRef = useRef(false);
 
+    const cancelSearch = () => {
+        matchingService.cancelQueue();
+    };
+
+    const onMatchFoundRef = useRef(onMatchFound);
+
     useEffect(() => {
         const fetchScore = async () => {
             try {
@@ -60,8 +66,6 @@ export function useMatchingQueue(
         fetchScore();
     }, []);
 
-    // Store callback in ref to avoid effect re-runs when callback identity changes
-    const onMatchFoundRef = useRef(onMatchFound);
     useEffect(() => {
         onMatchFoundRef.current = onMatchFound;
     }, [onMatchFound]);
@@ -212,10 +216,6 @@ export function useMatchingQueue(
             userScore: userScore,
             scoreRange: SCORE_RANGE.DEFAULT,
         });
-    };
-
-    const cancelSearch = () => {
-        matchingService.cancelQueue();
     };
 
     return { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected };
