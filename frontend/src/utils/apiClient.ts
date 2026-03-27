@@ -6,11 +6,20 @@ type ApiRequestInit = RequestInit & {
 };
 
 let getTokenRef: TokenGetter | undefined;
-const AUTH_INTERCEPTOR_WAIT_MS = 1500;
-const AUTH_INTERCEPTOR_POLL_MS = 25;
+let resolveAuthInterceptorReady: ((value: TokenGetter | undefined) => void) | undefined;
+let authInterceptorReady = false;
+const authInterceptorReadyPromise = new Promise<TokenGetter | undefined>((resolve) => {
+    resolveAuthInterceptorReady = resolve;
+});
 
 export function injectAuthInterceptor(getToken?: TokenGetter): void {
     getTokenRef = getToken;
+
+    if (!authInterceptorReady) {
+        authInterceptorReady = true;
+        resolveAuthInterceptorReady?.(getToken);
+        resolveAuthInterceptorReady = undefined;
+    }
 }
 
 async function waitForAuthInterceptor(): Promise<TokenGetter | undefined> {
@@ -18,13 +27,11 @@ async function waitForAuthInterceptor(): Promise<TokenGetter | undefined> {
         return getTokenRef;
     }
 
-    const start = Date.now();
-
-    while (!getTokenRef && Date.now() - start < AUTH_INTERCEPTOR_WAIT_MS) {
-        await new Promise((resolve) => setTimeout(resolve, AUTH_INTERCEPTOR_POLL_MS));
+    if (authInterceptorReady) {
+        return undefined;
     }
 
-    return getTokenRef;
+    return authInterceptorReadyPromise;
 }
 
 // automatically injects auth token from Clerk
@@ -66,9 +73,6 @@ export async function apiFetch(url: string, init: ApiRequestInit = {}): Promise<
 }
 
 export async function getAuthToken(): Promise<string | null> {
-    if (!getTokenRef) {
-        console.warn("Auth interceptor not yet initialized. Retrying...");
-        return null;
-    }
-    return await getTokenRef({ template: "jwt" });
+    const tokenGetter = await waitForAuthInterceptor();
+    return tokenGetter ? await tokenGetter({ template: "jwt" }) : null;
 }

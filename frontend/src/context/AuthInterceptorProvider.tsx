@@ -23,10 +23,6 @@ export function AuthInterceptorProvider({ children }: Props) {
         } else {
             injectAuthInterceptor(undefined);
         }
-
-        return () => {
-            injectAuthInterceptor(undefined);
-        };
     }, [getToken, isLoaded, isSignedIn]);
 
     if (!isLoaded) {

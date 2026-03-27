@@ -112,41 +112,34 @@ export default function HomeView() {
                         <div className="flex flex-wrap items-center gap-3 lg:gap-4">
                             <p className="text-3xl font-extrabold tracking-tight">PeerPrep</p>
 
-                            {isAdmin ? (
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Button
-                                        asChild
-                                        variant="outline"
-                                        className="rounded-full border-slate-300 bg-white px-4"
-                                    >
-                                        <Link to={ROUTES.ATTEMPT_HISTORY}>Attempt History</Link>
-                                    </Button>
-                                    <Button
-                                        asChild
-                                        variant="outline"
-                                        className="rounded-full border-slate-300 bg-white px-4"
-                                    >
-                                        <Link to={ROUTES.USER_ADMIN}>User Admin</Link>
-                                    </Button>
-                                    <Button
-                                        asChild
-                                        variant="outline"
-                                        className="rounded-full border-slate-300 bg-white px-4"
-                                    >
-                                        <Link to={ROUTES.QUESTION_ADMIN}>Question Admin</Link>
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Button
-                                        asChild
-                                        variant="outline"
-                                        className="rounded-full border-slate-300 bg-white px-4"
-                                    >
-                                        <Link to={ROUTES.ATTEMPT_HISTORY}>Attempt History</Link>
-                                    </Button>
-                                </div>
-                            )}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                    asChild
+                                    variant="outline"
+                                    className="rounded-full border-slate-300 bg-white px-4"
+                                >
+                                    <Link to={ROUTES.ATTEMPT_HISTORY}>Attempt History</Link>
+                                </Button>
+
+                                {isAdmin ? (
+                                    <>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            className="rounded-full border-slate-300 bg-white px-4"
+                                        >
+                                            <Link to={ROUTES.USER_ADMIN}>User Admin</Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            className="rounded-full border-slate-300 bg-white px-4"
+                                        >
+                                            <Link to={ROUTES.QUESTION_ADMIN}>Question Admin</Link>
+                                        </Button>
+                                    </>
+                                ) : null}
+                            </div>
                         </div>
                     </div>
 
