@@ -180,11 +180,11 @@ export function useMatchingQueue(
 
                 if (secondsPassed >= 12 && relaxationTier.current === 0) {
                     upgradeTier(1);
-                } else if (secondsPassed >= 24 && relaxationTier.current === 1) {
+                } else if (secondsPassed >= 24 && relaxationTier.current <= 1) {
                     upgradeTier(2);
-                } else if (secondsPassed >= 36 && relaxationTier.current === 2) {
+                } else if (secondsPassed >= 36 && relaxationTier.current <= 2) {
                     upgradeTier(3);
-                } else if (secondsPassed >= 48 && relaxationTier.current === 3) {
+                } else if (secondsPassed >= 48 && relaxationTier.current <= 3) {
                     upgradeTier(4);
                 } else if (secondsPassed >= 60) {
                     cancelSearch();
