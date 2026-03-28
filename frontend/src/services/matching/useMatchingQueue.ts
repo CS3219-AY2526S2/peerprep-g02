@@ -28,7 +28,7 @@ export function useMatchingQueue(
     const [isSearching, setIsSearching] = useState(false);
     const [activeTier, setActiveTier] = useState(0);
 
-    const [userScore, setUserScore] = useState(0);
+    const [userScore, setUserScore] = useState<number | null>(null);
 
     const searchStartTime = useRef<number | null>(null);
     const relaxationTier = useRef(0);
@@ -82,6 +82,13 @@ export function useMatchingQueue(
             setIsConnected(socketInstance.connected);
 
             socketInstance.on(SocketEvents.CONNECT, () => {
+                if (userScore === null) {
+                    pushToast({
+                        tone: "error",
+                        message: "Still loading your profile. Please try again in a moment.",
+                    });
+                    return;
+                }
                 setIsConnected(true);
                 if (isSearchingRef.current) {
                     console.log("Reconnected!");
@@ -166,6 +173,13 @@ export function useMatchingQueue(
                 const secondsPassed = (Date.now() - searchStartTime.current) / 1000;
 
                 const upgradeTier = (newTier: number) => {
+                    if (userScore === null) {
+                        pushToast({
+                            tone: "error",
+                            message: "Still loading your profile. Please try again in a moment.",
+                        });
+                        return;
+                    }
                     relaxationTier.current = newTier;
                     setActiveTier(newTier);
                     matchingService.joinQueue({
@@ -204,6 +218,13 @@ export function useMatchingQueue(
     }, [isSearching, isConnected, topic, difficulty, language, userScore]);
 
     const startSearch = async () => {
+        if (userScore === null) {
+            pushToast({
+                tone: "error",
+                message: "Still loading your profile. Please try again in a moment.",
+            });
+            return;
+        }
         setIsSearching(true);
         relaxationTier.current = 0;
         setActiveTier(0);
