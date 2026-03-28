@@ -5,7 +5,7 @@ import { UUID } from "crypto";
 
 export const getTopics = async (): Promise<TopicMap | null> => {
     try {
-        const res = await apiFetch(API_ENDPOINTS.TOPICS.BASE, {
+        const res = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -27,7 +27,7 @@ export const getTopics = async (): Promise<TopicMap | null> => {
 };
 
 export const createTopic = async (data: TopicInfo[]): Promise<number> => {
-    const res = await apiFetch(API_ENDPOINTS.TOPICS.BASE, {
+    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -36,7 +36,7 @@ export const createTopic = async (data: TopicInfo[]): Promise<number> => {
 };
 
 export const editTopic = async (data: TopicInfo[]): Promise<number> => {
-    const res = await apiFetch(API_ENDPOINTS.TOPICS.BASE, {
+    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -45,7 +45,7 @@ export const editTopic = async (data: TopicInfo[]): Promise<number> => {
 };
 
 export const deleteTopic = async (id: UUID): Promise<number> => {
-    const res = await apiFetch(API_ENDPOINTS.TOPICS.BASE + "/" + id, {
+    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS + "/" + id, {
         method: "DELETE",
         headers: {
             "Content-Type": "application/json",

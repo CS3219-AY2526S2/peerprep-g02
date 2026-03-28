@@ -1,18 +1,16 @@
 import { Router } from "express";
-import { UUID } from "node:crypto";
-
-import { requireAdminAuth } from "../middlewares/requireAdminAuth";
 import {
+    GetQuestion,
+    EditQuestion,
     CreateQuestion,
     DeleteQuestion,
-    EditQuestion,
-    GetPopularQuestions,
-    GetQuestion,
     GetQuestions,
+    GetPopularQuestions,
     SearchQuestion,
     SearchQuestionDatabase,
 } from "../services/questionDatabase";
-
+import { requireAdminAuth } from "../middlewares/requireAdminAuth";
+import { UUID } from "node:crypto";
 import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDatabase";
 import { getLeetCode, getLeetCodeAuto } from "../services/leetcodeQueries";
 
@@ -53,7 +51,7 @@ router.get("/popular", async (req, res) => {
 
 //Get specified question
 router.post("/get", async (req, res) => {
-    const result = await GetQuestion(req.body.quid);
+    var result = await GetQuestion(req.body.quid);
 
     if (!result) {
         return res.status(400).json({
@@ -104,34 +102,34 @@ router.delete("/:id", async (req, res) => {
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to delete question from database.",
-        });
+            message: "Unable to delete question from database."
+        })
     }
 
     return res.status(200).json({
-        message: "Question successfully deleted from the database.",
-    });
-});
+        message: "Question successfully deleted from the database."
+    })
+})
 
 //Search for matching question
 router.post("/search", async (req, res) => {
     const { topic, difficulty, userA, userB } = req.body;
-    const result = await SearchQuestion(topic, difficulty, userA, userB);
+    var result = await SearchQuestion(topic, difficulty, userA, userB);
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to find matching question in the database.",
-        });
+            message: "Unable to find matching question in the database."
+        })
     }
 
     return res.status(200).json({
         message: "Get matching question success.",
-        body: result,
-    });
-});
+        body: result
+    })
+})
 
 //Search for matching question in question database
-router.post("/questions/search-database", async (req, res) => {
+router.post("/search-database", async (req, res) => {
     var result = await SearchQuestionDatabase(req.body.title);
 
     if (!result) {
@@ -147,21 +145,21 @@ router.post("/questions/search-database", async (req, res) => {
 })
 
 //Get leetcode question
-router.post("/leetcode", async (req, res) => {
+router.post('/leetcode', async (req, res) => {
     const result = await getLeetCode(req.body.topic);
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to retrieve leetcode questions.",
-        });
+            message: "Unable to retrieve leetcode questions."
+        })
     }
     return res.status(200).json({
         message: "Get leetcode questions success.",
-        body: result,
-    });
+        body: result
+    })
 });
 
-router.get('/questions/leetcode', async (req, res) => {
+router.get('/leetcode', async (req, res) => {
     const result = await getLeetCodeAuto();
 
     if (!result) {
@@ -181,14 +179,14 @@ router.get("/topics", async (req, res) => {
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to find topics in the database.",
-        });
+            message: "Unable to find topics in the database."
+        })
     }
     return res.status(200).json({
         message: "Get topics success",
-        body: result,
-    });
-});
+        body: result
+    })
+})
 
 //Save topic
 router.post("/topics", async (req, res) => {
@@ -230,13 +228,13 @@ router.delete("/topics/:id", async (req, res) => {
 
     if (!result) {
         return res.status(400).json({
-            message: "Unable to delete topic from database.",
-        });
+            message: "Unable to delete topic from database."
+        })
     }
 
     return res.status(200).json({
-        message: "Topic successfully deleted from the database.",
-    });
-});
+        message: "Topic successfully deleted from the database."
+    })
+})
 
 export default router;
