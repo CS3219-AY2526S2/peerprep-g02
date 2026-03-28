@@ -29,8 +29,8 @@ describe("Matchmaking Service", () => {
             topic: "strings",
             difficulties: ["Easy"],
             languages: ["python"],
-            userScore: 100,
-            scoreRange: 100,
+            userScore: 1250,
+            scoreRange: 150,
             isUpdate: false,
         };
 
@@ -39,7 +39,6 @@ describe("Matchmaking Service", () => {
             const matchedLanguage = "python";
             const partnerId = "user-2";
 
-            // Mock Lua returns: [status, partnerId, difficulty, language, startTime]
             mockRedis.eval.mockResolvedValue([
                 "matched",
                 partnerId,
@@ -51,6 +50,17 @@ describe("Matchmaking Service", () => {
             (createCollaborationSession as any).mockResolvedValue("collab-id-999");
 
             const result = await findMatch(mockRequest);
+
+            expect(mockRedis.eval).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    arguments: expect.arrayContaining([
+                        mockRequest.userScore.toString(),
+                        mockRequest.scoreRange.toString(),
+                    ]),
+                    keys: expect.arrayContaining([`mm:us:${mockRequest.userId}`]),
+                }),
+            );
 
             // Asserting against MatchResultSuccess interface
             expect(result.matchFound).toBe(true);
