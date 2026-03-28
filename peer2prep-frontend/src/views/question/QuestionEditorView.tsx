@@ -1,74 +1,115 @@
-import { getPopularQuestions, getQuestions } from "@/services/question/questionService";
-import { UUID } from "crypto";
+import {
+    getLeetcodeQuestions,
+    getPopularQuestions,
+    getQuestions,
+} from "@/services/question/questionService";
 import { useState, useEffect } from "react";
-import { QuestionInfo } from "../../models/question/questionType";
+import { useTopics, useUseCase } from "@/services/question/TopicProvider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { UUID } from "crypto";
+import { Difficulty, LeetcodeInfo, QuestionInfo } from "@/models/question/questionType";
+import { BorderedDiv } from "@/components/question/QuestionComponents";
+import TopicEdit from "@/components/question/TopicForm";
+import QuestionSearch from "@/components/question/QuestionSearchComponent";
 
 interface QuestionProp {
     toggler: React.Dispatch<React.SetStateAction<boolean>>;
-    useCase: React.Dispatch<React.SetStateAction<UUID | null>>;
     questionDetails: QuestionInfo;
 }
 
 function Question(props: QuestionProp) {
+    const { setUseCase } = useUseCase();
+    const { topics } = useTopics();
+    if (topics == null) return <div></div>;
     return (
         <div
             key={props.questionDetails.title}
-            style={{
-                backgroundColor: "#F9FAFB",
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "10px",
-                borderRadius: "15px",
-                margin: "0.5rem 0rem",
-            }}
+            className="flex justify-between bg-[#F9FAFB] p-2.5 rounded-[15px] my-2"
         >
-            <div style={{ display: "flex", flexGrow: "3", alignContent: "center" }}>
-                <p style={{ fontWeight: "bold", alignSelf: "center" }}>
-                    {props.questionDetails.title}
-                </p>
-                {props.questionDetails.topics.map((category) => (
-                    <span
-                        key={props.questionDetails.title + category}
-                        style={{
-                            backgroundColor: "#BCBCF7",
-                            color: "#5046E6",
-                            padding: "0.2rem 0.8rem",
-                            borderRadius: "25px",
-                            fontWeight: "600",
-                            marginLeft: "5px",
-                        }}
+            <div className="flex grow-[3] content-center">
+                <p className="font-bold self-center">{props.questionDetails.title}</p>
+                {props.questionDetails.topics.map((topic) => (
+                    <Badge
+                        key={props.questionDetails.title + topic}
+                        className="bg-secondary-200 text-secondary px-3 py-1 rounded-full font-semibold ml-1"
                     >
-                        {category}
-                    </span>
+                        {topics[topic]}
+                    </Badge>
                 ))}
             </div>
-            <div
-                style={{
-                    display: "flex",
-                    flexGrow: "1",
-                    alignContent: "center",
-                    justifyContent: "end",
-                }}
-            >
-                <p style={{ textAlign: "right", alignSelf: "center" }}>
-                    {props.questionDetails.difficulty}
-                </p>
-                <button
-                    onClick={() => {
-                        props.useCase(props.questionDetails.quid);
-                        props.toggler(false);
-                    }}
+            <div className="flex grow justify-end content-center">
+                <p
                     style={{
-                        backgroundColor: "#BCBCF7",
-                        color: "#5046E6",
-                        padding: "0.2rem 0.8rem",
-                        borderRadius: "25px",
-                        fontWeight: "600",
-                        marginLeft: "5px",
+                        textAlign: "right",
+                        alignSelf: "center",
+                        color:
+                            props.questionDetails.difficulty == Difficulty.EASY
+                                ? "green"
+                                : props.questionDetails.difficulty == Difficulty.MEDIUM
+                                  ? "#F9A93F"
+                                  : "red",
                     }}
                 >
+                    {props.questionDetails.difficulty}
+                </p>
+                <Button
+                    onClick={() => {
+                        setUseCase(props.questionDetails.quid);
+                        props.toggler(false);
+                    }}
+                    className="bg-secondary-200 text-secondary hover:bg-primary-200 px-3 py-1 rounded-full font-semibold ml-1"
+                >
                     Edit
-                </button>
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+interface LeetcodeProp {
+    questionDetails: LeetcodeInfo;
+}
+
+function LeetcodeQuestion(props: LeetcodeProp) {
+    return (
+        <div
+            key={props.questionDetails.quid}
+            className="flex justify-between bg-[#F9FAFB] p-2.5 rounded-[15px] my-2"
+        >
+            <div className="flex grow-[3] content-center">
+                <a
+                    className="hover:text-secondary font-bold self-center"
+                    href={"https://leetcode.com/problems/" + props.questionDetails.title_slug}
+                    target="_blank"
+                    referrerPolicy="no-referrer"
+                >
+                    {props.questionDetails.title}
+                </a>
+
+                {props.questionDetails.topics.map((topic) => (
+                    <Badge
+                        key={props.questionDetails.title + topic}
+                        className="bg-secondary-200 text-secondary px-3 py-1 rounded-full font-semibold ml-1"
+                    >
+                        {topic}
+                    </Badge>
+                ))}
+            </div>
+            <div className="flex grow justify-end content-center">
+                <p
+                    className="self-right text-right"
+                    style={{
+                        color:
+                            props.questionDetails.difficulty == Difficulty.EASY
+                                ? "green"
+                                : props.questionDetails.difficulty == Difficulty.MEDIUM
+                                  ? "#F9A93F"
+                                  : "red",
+                    }}
+                >
+                    {props.questionDetails.difficulty}
+                </p>
             </div>
         </div>
     );
@@ -76,22 +117,17 @@ function Question(props: QuestionProp) {
 
 interface AdminProp {
     toggler: React.Dispatch<React.SetStateAction<boolean>>;
-    useCase: React.Dispatch<React.SetStateAction<UUID | null>>;
 }
 
 function Admin(props: AdminProp) {
-    const [questions, setQuestions] = useState<QuestionInfo[]>([
-        {
-            quid: "5ddf750c-5777-4b24-b283-5930647f529e",
-            title: "",
-            topics: ["Algorithms"],
-            difficulty: "Easy",
-        },
-    ]);
+    const { setUseCase } = useUseCase();
+    const [questions, setQuestions] = useState<QuestionInfo[]>([]);
+    const [backupQuestions, setBackup] = useState<QuestionInfo[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [popularQuestions, setPopularQuestions] = useState<String[]>([]);
-
+    const [leetcodeQuestions, setLeetcodeQuestions] = useState<LeetcodeInfo[]>([]);
+    const { topics } = useTopics();
     useEffect(() => {
         const fetchQuestions = async () => {
             const newQuestions = await getQuestions();
@@ -99,6 +135,7 @@ function Admin(props: AdminProp) {
             //get questions
             if (newQuestions != null) {
                 setQuestions(newQuestions);
+                setBackup(newQuestions);
             }
 
             //get popular questions
@@ -106,23 +143,30 @@ function Admin(props: AdminProp) {
             if (popular != null) {
                 setPopularQuestions(popular);
             }
+            //get leetcode questions
+            const leetcode = await getLeetcodeQuestions();
+            if (leetcode != null) {
+                setLeetcodeQuestions(leetcode);
+            }
             setLoading(false);
         };
         fetchQuestions();
     }, [props.toggler]);
 
+    function revertDefault() {
+        setQuestions(backupQuestions);
+    }
     if (loading) {
         return <div>Loading</div>;
     }
 
     return (
-        <div style={{ height: "100vh", width: "100vw", display: "flex", flexDirection: "column" }}>
-            <header style={{ display: "flex", height: "10vh", justifyContent: "space-between" }}>
-                <div style={{ display: "flex" }}>
+        <div className="flex h-screen w-screen flex-col">
+            <header className="flex h-[10vh] justify-between px-8">
+                <div className="flex self-center">
                     <div
+                        className="bg-secondary text-white"
                         style={{
-                            backgroundColor: "#5046E6",
-                            color: "white",
                             width: "30px",
                             height: "30px",
                             margin: "10px",
@@ -143,93 +187,96 @@ function Admin(props: AdminProp) {
                         Peer2Prep
                     </h1>
                 </div>
-                <div style={{ display: "flex" }}>
+                <div className="flex">
                     <a
                         href="/account/profile"
-                        style={{
-                            alignSelf: "center",
-                            background: "#5046E6",
-                            padding: "0.5rem 1.1rem",
-                            color: "white",
-                            borderRadius: "1rem",
-                            fontWeight: "500",
-                            margin: "10px",
-                            textDecoration: "none",
-                        }}
+                        className="self-center bg-secondary hover:bg-secondary-700 px-[1.1rem] py-2 text-white rounded-2xl font-medium m-[10px] no-underline"
                     >
                         Back to profile
                     </a>
                 </div>
             </header>
-            <div style={{ backgroundColor: "#F9FAFB", flexGrow: "1" }}>
+            <div
+                style={{
+                    backgroundColor: "#F9FAFB",
+                    flexGrow: "1",
+                    display: "flex",
+                    flexDirection: "column",
+                }}
+            >
                 {/* Banner */}
-                <div style={{ padding: "2rem", display: "flex", justifyContent: "space-between" }}>
-                    <h2 style={{ display: "inline", fontSize: "32px", fontWeight: "bold" }}>
-                        Welcome back, Admin!
-                    </h2>
-                    <button
-                        style={{
-                            background: "#5046E6",
-                            padding: "0.5rem 1.1rem",
-                            color: "white",
-                            borderRadius: "1rem",
-                            fontWeight: "500",
-                        }}
+                <div className="flex justify-between p-8">
+                    <h2 className="inline font-bold text-4xl">Welcome back, Admin!</h2>
+                    <Button
+                        className="bg-secondary hover:bg-secondary-700 text-white rounded-3xl px-4 py-6 text-lg"
                         onClick={() => {
-                            props.useCase(null);
+                            setUseCase(null);
                             props.toggler(false);
                         }}
                     >
                         Add New Question
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Question View */}
-                <div
-                    style={{
-                        margin: "2rem",
-                        border: "5px solid #E7E9EC",
-                        borderRadius: "25px",
-                        padding: "25px",
-                        backgroundColor: "white",
-                    }}
-                >
-                    <h3 style={{ fontWeight: "bold" }}>Question List</h3>
+                <BorderedDiv>
+                    <div className="flex">
+                        <h3 className="font-bold pr-10">Question List</h3>
+                        <QuestionSearch
+                            updateQuestionList={setQuestions}
+                            revertDefault={revertDefault}
+                        />
+                    </div>
+
                     <div>
                         {questions.map((question, index) => (
                             <Question
                                 key={index.toString() + question}
                                 questionDetails={question}
                                 toggler={props.toggler}
-                                useCase={props.useCase}
                             />
                         ))}
                     </div>
-                </div>
+                </BorderedDiv>
 
-                <div style={{ display: "flex", margin: "2rem", gap: 20, height: "30vh" }}>
-                    <div
-                        style={{
-                            flexGrow: 3,
-                            border: "5px solid #E7E9EC",
-                            borderRadius: "25px",
-                            padding: "25px",
-                            backgroundColor: "white",
-                        }}
-                    >
-                        <h3 style={{ fontWeight: "bold" }}>Questions you might like to add</h3>
-                        <div></div>
+                {/* Topic View */}
+                <BorderedDiv>
+                    <h3 className="font-bold">Topic List</h3>
+                    <div className="flex">
+                        <div className="grow-[9]">
+                            {topics !== null ? (
+                                Object.keys(topics).map((key) => (
+                                    <Badge
+                                        key={key}
+                                        className="bg-secondary-200 text-secondary px-3 py-1 rounded-full font-semibold ml-1"
+                                    >
+                                        {topics[key as UUID]}
+                                        {/* <Button>x</Button> */}
+                                    </Badge>
+                                ))
+                            ) : (
+                                <div></div>
+                            )}
+                        </div>
+                        <TopicEdit />
                     </div>
-                    <div
-                        style={{
-                            flexGrow: 1,
-                            backgroundColor: "#5046E6",
-                            borderRadius: "25px",
-                            padding: "25px",
-                            color: "white",
-                        }}
-                    >
-                        <h3 style={{ fontWeight: "bold" }}>Popular Questions</h3>
+                </BorderedDiv>
+
+                {/* Additional */}
+                <div className="flex m-8 gap-5">
+                    <BorderedDiv className="m-0 box-content flex-grow-[3]">
+                        <h3 className="font-bold">Questions you might like to add</h3>
+                        <div>
+                            {leetcodeQuestions.map((question, index) => (
+                                <LeetcodeQuestion
+                                    key={index.toString() + question}
+                                    questionDetails={question}
+                                />
+                            ))}
+                        </div>
+                    </BorderedDiv>
+                    <div className="grow bg-secondary text-white rounded-3xl p-[25px]">
+                        <h3 className="font-bold">Popular Questions</h3>
                         <div>
                             {popularQuestions.map((question, index) => (
                                 <p key={"pop" + index.toString()}>{`${index + 1}. ${question}`}</p>

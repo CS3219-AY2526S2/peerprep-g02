@@ -3,14 +3,14 @@ import { UUID } from "node:crypto";
 export type QuestionInfo = {
     quid: UUID;
     title: string;
-    topics: string[];
+    topics: UUID[];
     difficulty: string;
 };
 
 export type QuestionData = {
     quid: UUID;
     title: string;
-    topics: string[];
+    topics: UUID[];
     difficulty: string;
     testCase: TestCase[];
     description: string;
@@ -22,7 +22,7 @@ export interface FormData {
     testCase: TestCase[];
     qnImage?: File | null;
     difficulty: Difficulty;
-    qnTopics: string;
+    qnTopics: UUID[];
 }
 
 export interface TestCase {
@@ -35,3 +35,32 @@ export enum Difficulty {
     MEDIUM = "Medium",
     HARD = "Hard",
 }
+
+export type LeetcodeInfo = {
+    quid: UUID,
+    title: string,
+    title_slug: string,
+    topics: string[],
+    difficulty: string
+}
+
+export type Props = {
+    children: React.ReactNode;
+}
+
+export type TopicMap = Record<UUID, string> | null;
+
+export type TopicContextType = {
+    topics: TopicMap;
+    setTopics: React.Dispatch<React.SetStateAction<TopicMap>>;
+}
+
+export type UseCaseContextType = {
+    useCase: UUID | null;
+    setUseCase: React.Dispatch<React.SetStateAction<UUID | null>>;
+}
+
+export type TopicInfo = {
+    tid: UUID | null;
+    topic: string;
+};

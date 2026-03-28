@@ -7,11 +7,12 @@ import {
     GetQuestions,
     GetPopularQuestions,
     SearchQuestion,
-} from "@/services/questionDatabase";
-import { requireAdminAuth } from "@/middlewares/requireAdminAuth";
+    SearchQuestionDatabase,
+} from "../services/questionDatabase";
+import { requireAdminAuth } from "../middlewares/requireAdminAuth";
 import { UUID } from "node:crypto";
-import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "@/services/topicsDatabase";
-import { getLeetCode } from "@/services/leetcodeQueries";
+import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDatabase";
+import { getLeetCode, getLeetCodeAuto } from "../services/leetcodeQueries";
 
 const router = Router();
 
@@ -127,9 +128,39 @@ router.post("/questions/search", async (req, res) => {
     })
 })
 
+//Search for matching question in question database
+router.post("/questions/search-database", async (req, res) => {
+    var result = await SearchQuestionDatabase(req.body.title);
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to find matching questions in the database."
+        })
+    }
+
+    return res.status(200).json({
+        message: "Get matching questions success.",
+        body: result
+    })
+})
+
 //Get leetcode question
 router.post('/questions/leetcode', async (req, res) => {
     const result = await getLeetCode(req.body.topic);
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to retrieve leetcode questions."
+        })
+    }
+    return res.status(200).json({
+        message: "Get leetcode questions success.",
+        body: result
+    })
+});
+
+router.get('/questions/leetcode', async (req, res) => {
+    const result = await getLeetCodeAuto();
 
     if (!result) {
         return res.status(400).json({
@@ -159,7 +190,9 @@ router.get("/topics", async (req, res) => {
 
 //Save topic
 router.post("/topics", async (req, res) => {
-    var result = await AddTopic(req.body.topic);
+    console.log("RECEIVED");
+    console.log(req.body);
+    var result = await AddTopic(req.body);
     var result = true;
     if (!result) {
         return res.status(400).json({
@@ -175,7 +208,7 @@ router.post("/topics", async (req, res) => {
 //Edit topic
 router.put("/topics", async (req, res) => {
     var result = false;
-    var result = await EditTopic(req.body.tid, req.body.topic);
+    var result = await EditTopic(req.body);
 
     if (!result) {
         return res.status(400).json({
@@ -190,6 +223,7 @@ router.put("/topics", async (req, res) => {
 
 //Delete topic
 router.delete("/topics/:id", async (req, res) => {
+    console.log(req.params.id);
     const result = await DeleteTopic(req.params.id as UUID);
 
     if (!result) {

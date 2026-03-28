@@ -1,5 +1,5 @@
 import express from "express";
-import questionRoute from "@/routes/routes";
+import questionRoute from "./routes/routes";
 import cors from "cors";
 
 const app = express();

@@ -1,5 +1,5 @@
 import { UUID } from "node:crypto";
-import pool from "@/database";
+import pool from "../database";
 
 type TestCase = {
     input: string;
@@ -11,7 +11,7 @@ type QuestionData = {
     qnDesc: string;
     testCase: TestCase[];
     difficulty: string;
-    qnTopics: string;
+    qnTopics: UUID[];
     qnImage?: File | null;
 }
 
@@ -21,7 +21,7 @@ type QuestionEdit = {
     qnDesc: string;
     testCase: TestCase[];
     difficulty: string;
-    qnTopics: string;
+    qnTopics: UUID[];
     qnImage?: File | null;
 }
 
@@ -66,7 +66,7 @@ export async function GetQuestion(quid: UUID) {
 export async function CreateQuestion(data: QuestionData) {
     var success = false;
     const insert = "INSERT INTO questions(title, description,test_case,difficulty, topics) VALUES($1, $2, $3, $4, $5) RETURNING quid";
-    const topics = data.qnTopics.split(",");
+    const topics = data.qnTopics.map((topic) => topic as UUID);
     const cases = JSON.stringify(data.testCase)
     const values = [data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
     try {
@@ -85,7 +85,7 @@ export async function EditQuestion(data: QuestionEdit) {
 
     var success = false;
     const update = "UPDATE questions SET title = $2, description = $3,test_case = $4, difficulty = $5, topics = $6  WHERE quid = $1 RETURNING quid";
-    const topics = data.qnTopics.split(",");
+    const topics = data.qnTopics.map((topic) => topic as UUID);
     const cases = JSON.stringify(data.testCase)
 
     const values = [data.quid, data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
@@ -156,6 +156,22 @@ export async function SearchQuestion(topic: string, difficulty: string, userA: U
         //     return defaultQuestion[0];
         // }
         return defaultQuestion[0];
+    }
+    catch (e) {
+        console.log(e);
+        return null;
+    }
+
+}
+
+export async function SearchQuestionDatabase(title: string) {
+    try {
+        console.log(title);
+        const result = await pool.query(
+            'SELECT * FROM questions WHERE LOWER(title) LIKE $1',
+            [`%${title.trim().toLowerCase()}%`]
+        );
+        return result.rows;
     }
     catch (e) {
         console.log(e);
