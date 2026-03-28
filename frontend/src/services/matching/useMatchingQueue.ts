@@ -193,6 +193,7 @@ export function useMatchingQueue(
                         message:
                             "No match found within 60 seconds. Try broadening your topic or language.",
                     });
+                    clearInterval(relaxationTimer);
                 }
             }, 1000);
         }
