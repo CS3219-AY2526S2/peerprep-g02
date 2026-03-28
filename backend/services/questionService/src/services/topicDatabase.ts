@@ -18,8 +18,6 @@ export async function GetTopics() {
 }
 
 export async function AddTopic(data: TopicInfo[]) {
-    let success = false;
-
     let valueStr = "";
     for (let i = 0; i < data.length; i++) {
         const topic = data[i].topic.replace(/'/g, "''"); // escape single quotes
@@ -32,22 +30,17 @@ export async function AddTopic(data: TopicInfo[]) {
 
     const insert = `INSERT INTO topics(topic) VALUES ${valueStr} RETURNING tid;`;
 
-    console.log(insert);
-
     try {
         const result = await pool.query(insert);
-        success = true;
+        return result.rowCount;
     } catch (err) {
         console.error("Insert failed:", err);
-        success = false;
     }
 
-    return success;
+    return 0;
 }
 
 export async function EditTopic(data: TopicInfo[]) {
-    console.log(data);
-    let success = false;
     const update = "UPDATE topics SET topic = $2 WHERE tid = $1 RETURNING tid";
     try {
         const result = await Promise.all(
@@ -55,17 +48,15 @@ export async function EditTopic(data: TopicInfo[]) {
                 pool.query(update, [topicInfo.tid, topicInfo.topic]),
             ),
         );
-        success = true;
+        return result;
     } catch (e) {
         console.log(e);
-        success = false;
     }
 
-    return success;
+    return null;
 }
 
 export async function DeleteTopic(tid: UUID) {
-    let success = false;
     try {
         const allQuid = await pool.query("SELECT quid FROM qn_topics WHERE tid = $1", [tid]);
         await Promise.all(
@@ -74,11 +65,10 @@ export async function DeleteTopic(tid: UUID) {
             ),
         );
         const result = await pool.query("DELETE FROM topics WHERE tid = $1", [tid]);
-        success = true;
+        return result.rowCount;
     } catch (e) {
         console.log(e);
-        success = false;
     }
 
-    return success;
+    return 0;
 }

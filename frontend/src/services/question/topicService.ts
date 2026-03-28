@@ -21,7 +21,7 @@ export const getTopics = async (): Promise<TopicMap | null> => {
             return mapping;
         }, {});
         return topics;
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
         return null;
     }

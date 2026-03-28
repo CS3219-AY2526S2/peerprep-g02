@@ -150,12 +150,11 @@ export function TopicEdit() {
                                     <Button
                                         type="button"
                                         className="bg-secondary-200 text-secondary hover:bg-primary-200 px-3 py-1 rounded-full font-semibold ml-1"
-                                        onClick={() => {
-                                            (setTarget(item.tid),
-                                                item.tid == null
-                                                    ? RemoveTopic(index)
-                                                    : setOpenConfirm(true));
-                                        }}
+                                        onClick={() =>
+                                            item.tid == null
+                                                ? (setTarget(item.tid), RemoveTopic(index))
+                                                : (setTarget(item.tid), setOpenConfirm(true))
+                                        }
                                     >
                                         Delete
                                     </Button>

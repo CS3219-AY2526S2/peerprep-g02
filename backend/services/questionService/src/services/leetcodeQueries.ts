@@ -74,8 +74,8 @@ export async function getLeetCode(topic: string) {
 
 export async function getLeetCodeAuto() {
     const total = await getLeetCodeTotal("").then((result) => result.total);
-    console.log(total);
-    let topics = null;
+    let topics;
+    
     try {
         const query = `SELECT t.topic, COUNT(qt.quid) AS question_count
                   FROM topics t
@@ -84,7 +84,7 @@ export async function getLeetCodeAuto() {
                   HAVING COUNT(qt.quid) <= 5
                   ORDER BY question_count ASC;`;
         topics = await pool.query(query);
-        console.log(topics.rows);
+
         if (topics.rows.length === 0) {
             return [];
         }

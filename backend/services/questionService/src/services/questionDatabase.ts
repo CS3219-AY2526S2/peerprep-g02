@@ -59,7 +59,6 @@ export async function GetQuestion(quid: UUID) {
 }
 
 export async function CreateQuestion(data: QuestionData) {
-    let success = false;
     const insert =
         "INSERT INTO questions(title, description,test_case,difficulty, topics) VALUES($1, $2, $3, $4, $5) RETURNING quid";
     const topics = data.qnTopics.map((topic) => topic as UUID);
@@ -67,17 +66,15 @@ export async function CreateQuestion(data: QuestionData) {
     const values = [data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
     try {
         const result = await pool.query(insert, values);
-        success = true;
+        return result.rowCount;
     } catch (err) {
         console.error("Insert failed:", err);
-        success = false;
     }
 
-    return success;
+    return 0;
 }
 
 export async function EditQuestion(data: QuestionEdit) {
-    let success = false;
     const update =
         "UPDATE questions SET title = $2, description = $3,test_case = $4, difficulty = $5, topics = $6  WHERE quid = $1 RETURNING quid";
     const topics = data.qnTopics.map((topic) => topic as UUID);
@@ -86,26 +83,23 @@ export async function EditQuestion(data: QuestionEdit) {
     const values = [data.quid, data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
     try {
         const result = await pool.query(update, values);
-        success = true;
+        return result.rowCount;
     } catch (e) {
         console.log("Edit failed:", e);
-        success = false;
     }
 
-    return success;
+    return 0;
 }
 
 export async function DeleteQuestion(questionId: UUID) {
-    let success = false;
     try {
         const result = await pool.query("DELETE FROM questions WHERE quid = $1", [questionId]);
-        success = true;
+        return result.rowCount;
     } catch (e) {
         console.log(e);
-        success = false;
     }
 
-    return success;
+    return 0;
 }
 
 async function randomQuestion(questions: UUID[]) {

@@ -68,9 +68,9 @@ router.post("/get", async (req, res) => {
 
 //Save question
 router.post("", async (req, res) => {
-    var result = await CreateQuestion(req.body);
-    var result = true;
-    if (!result) {
+    const result = await CreateQuestion(req.body);
+
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to add question to the database.",
         });
@@ -83,10 +83,9 @@ router.post("", async (req, res) => {
 
 //Edit question
 router.put("", async (req, res) => {
-    var result = false;
-    var result = await EditQuestion(req.body);
+    const result = await EditQuestion(req.body);
 
-    if (!result) {
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to update question in database.",
         });
@@ -101,7 +100,7 @@ router.put("", async (req, res) => {
 router.delete("/:id", async (req, res) => {
     const result = await DeleteQuestion(req.params.id as UUID);
 
-    if (!result) {
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to delete question from database.",
         });
@@ -191,11 +190,9 @@ router.get("/topics", async (req, res) => {
 
 //Save topic
 router.post("/topics", async (req, res) => {
-    console.log("RECEIVED");
-    console.log(req.body);
-    var result = await AddTopic(req.body);
-    var result = true;
-    if (!result) {
+    const result = await AddTopic(req.body);
+
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to add topic to the database.",
         });
@@ -208,8 +205,7 @@ router.post("/topics", async (req, res) => {
 
 //Edit topic
 router.put("/topics", async (req, res) => {
-    var result = false;
-    var result = await EditTopic(req.body);
+    const result = await EditTopic(req.body);
 
     if (!result) {
         return res.status(400).json({
@@ -224,10 +220,9 @@ router.put("/topics", async (req, res) => {
 
 //Delete topic
 router.delete("/topics/:id", async (req, res) => {
-    console.log(req.params.id);
     const result = await DeleteTopic(req.params.id as UUID);
 
-    if (!result) {
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to delete topic from database.",
         });

@@ -75,7 +75,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
             testCase: cases,
             description: data.description,
         };
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
         return null;
     }
@@ -84,7 +84,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
 export const SearchQuestionDatabase = async (title: string): Promise<QuestionInfo[] | null> => {
     try {
         if (title.trim().length == 0) return null;
-        console.log(title);
+
         const res = await apiFetch(API_ENDPOINTS.QUESTIONS.SEARCH_DATABASE, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -92,11 +92,11 @@ export const SearchQuestionDatabase = async (title: string): Promise<QuestionInf
         });
 
         const result = await res.json();
-        console.log(result);
+
         const data = result?.body;
 
         if (!data) return null;
-        console.log(data);
+
         const questions: QuestionInfo[] = data.map((item: any) => ({
             quid: item.quid,
             title: item.title,
@@ -105,7 +105,7 @@ export const SearchQuestionDatabase = async (title: string): Promise<QuestionInf
         }));
 
         return questions;
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
         return null;
     }
@@ -184,7 +184,7 @@ export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => 
             difficulty: item.difficulty,
         }));
         return questions;
-    } catch (e: any) {
+    } catch (e) {
         console.log(e);
         return null;
     }
