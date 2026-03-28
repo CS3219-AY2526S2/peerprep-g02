@@ -1,7 +1,8 @@
-import { LeetcodeInfo, QuestionData, QuestionInfo, TestCase } from "@/models/question/questionType";
-import { apiFetch } from "@/utils/apiClient";
-import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { UUID } from "node:crypto";
+
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { apiFetch } from "@/utils/apiClient";
+import { LeetcodeInfo, QuestionData, QuestionInfo, TestCase } from "@/models/question/questionType";
 
 export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
     try {
@@ -80,7 +81,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
     }
 };
 
-export const SearchQuestionDatabase = async (title: String): Promise<QuestionInfo[] | null> => {
+export const SearchQuestionDatabase = async (title: string): Promise<QuestionInfo[] | null> => {
     try {
         if (title.trim().length == 0) return null;
         console.log(title);
@@ -136,7 +137,7 @@ export const deleteQuestion = async (id: UUID): Promise<number> => {
         },
     });
     return res.status;
-}
+};
 
 // export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => {
 //     try {
@@ -171,7 +172,7 @@ export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => 
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "cache-control": "no-cache"
+                "cache-control": "no-cache",
             },
         });
         const data = await res.json();
@@ -183,10 +184,8 @@ export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => 
             difficulty: item.difficulty,
         }));
         return questions;
-
     } catch (e: any) {
         console.log(e);
         return null;
     }
-
-}
+};

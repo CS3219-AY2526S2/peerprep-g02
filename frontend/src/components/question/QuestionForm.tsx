@@ -1,34 +1,6 @@
 import { ChangeEvent, JSX, useEffect, useState } from "react";
-import { Difficulty, FormData } from "../../models/question/questionType";
-import { Label } from "@/components/ui/label";
 
-import {
-    createQuestion,
-    deleteQuestion,
-    editQuestion,
-    getQuestion,
-} from "@/services/question/questionService";
-
-import { useTopics, useUseCase } from "@/services/question/TopicProvider";
-import { BorderedDiv } from "./QuestionComponents";
-
-import {
-    Field,
-    FieldDescription,
-    FieldGroup,
-    FieldLabel,
-    FieldLegend,
-} from "@/components/ui/field";
-
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { UUID } from "crypto";
 
 import {
     AlertDialog,
@@ -40,11 +12,37 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Field,
+    FieldDescription,
+    FieldGroup,
+    FieldLabel,
+    FieldLegend,
+} from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
-import { UUID } from "crypto";
+import { Difficulty, FormData } from "../../models/question/questionType";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Badge } from "../ui/badge";
+
+import { BorderedDiv } from "./QuestionComponents";
+import {
+    createQuestion,
+    deleteQuestion,
+    editQuestion,
+    getQuestion,
+} from "@/services/question/questionService";
+import { useTopics, useUseCase } from "@/services/question/TopicProvider";
 
 interface ITestCase {
     input: string;
@@ -195,7 +193,7 @@ export function TopicSearch(props: SearchFieldProps) {
                 placeholder="Type to search..."
                 value={query}
                 onChange={handleSearch}
-            /> 
+            />
 
             {/* Render results */}
             <ul className="mt-2 border rounded-md p-2 space-y-1 max-h-40 overflow-auto">
@@ -323,7 +321,7 @@ function QuestionForm(props: FormProp): JSX.Element {
         }));
     };
 
-    const handleSelectChange = (value: String) => {
+    const handleSelectChange = (value: string) => {
         setFormData((prev) => ({ ...prev, difficulty: value as Difficulty }));
     };
 

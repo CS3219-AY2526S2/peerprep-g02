@@ -1,12 +1,7 @@
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+
+import { UUID } from "crypto";
+
 import {
     AlertDialog,
     AlertDialogAction,
@@ -17,14 +12,23 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { useTopics } from "@/services/question/TopicProvider";
-import { UUID } from "crypto";
-import { useEffect, useState } from "react";
-import { createTopic, deleteTopic, editTopic } from "@/services/question/topicService";
 import { TopicInfo } from "@/models/question/questionType";
+
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+
+import { useTopics } from "@/services/question/TopicProvider";
+import { createTopic, deleteTopic, editTopic } from "@/services/question/topicService";
 
 export function TopicEdit() {
     const { topics } = useTopics();

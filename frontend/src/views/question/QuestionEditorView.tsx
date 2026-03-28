@@ -1,17 +1,21 @@
+import { useEffect, useState } from "react";
+
+import { UUID } from "crypto";
+
+import { BorderedDiv } from "@/components/question/QuestionComponents";
+import QuestionSearch from "@/components/question/QuestionSearchComponent";
+import TopicEdit from "@/components/question/TopicForm";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
+import { Difficulty, LeetcodeInfo, QuestionInfo } from "@/models/question/questionType";
+
 import {
     getLeetcodeQuestions,
     getPopularQuestions,
     getQuestions,
 } from "@/services/question/questionService";
-import { useState, useEffect } from "react";
 import { useTopics, useUseCase } from "@/services/question/TopicProvider";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { UUID } from "crypto";
-import { Difficulty, LeetcodeInfo, QuestionInfo } from "@/models/question/questionType";
-import { BorderedDiv } from "@/components/question/QuestionComponents";
-import TopicEdit from "@/components/question/TopicForm";
-import QuestionSearch from "@/components/question/QuestionSearchComponent";
 
 interface QuestionProp {
     toggler: React.Dispatch<React.SetStateAction<boolean>>;
@@ -125,7 +129,7 @@ function Admin(props: AdminProp) {
     const [backupQuestions, setBackup] = useState<QuestionInfo[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const [popularQuestions, setPopularQuestions] = useState<String[]>([]);
+    const [popularQuestions, setPopularQuestions] = useState<string[]>([]);
     const [leetcodeQuestions, setLeetcodeQuestions] = useState<LeetcodeInfo[]>([]);
     const { topics } = useTopics();
     useEffect(() => {

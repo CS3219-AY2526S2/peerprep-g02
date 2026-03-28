@@ -1,4 +1,5 @@
 import { UUID } from "node:crypto";
+
 import pool from "../database";
 
 type TestCase = {
@@ -13,67 +14,61 @@ type QuestionData = {
     difficulty: string;
     qnTopics: UUID[];
     qnImage?: File | null;
-}
+};
 
 type QuestionEdit = {
-    quid: UUID,
+    quid: UUID;
     qnTitle: string;
     qnDesc: string;
     testCase: TestCase[];
     difficulty: string;
     qnTopics: UUID[];
     qnImage?: File | null;
-}
+};
 
 export async function GetQuestions() {
     try {
-
-        const result = await pool.query('SELECT * FROM questions LIMIT 5');
+        const result = await pool.query("SELECT * FROM questions LIMIT 5");
         return result.rows;
-    }
-    catch (e) {
-        console.log(e)
+    } catch (e) {
+        console.log(e);
         return null;
     }
-
 }
 
 export async function GetPopularQuestions() {
     try {
-
-        const result = await pool.query('SELECT title FROM questions ORDER BY popularity_score DESC LIMIT 3');
+        const result = await pool.query(
+            "SELECT title FROM questions ORDER BY popularity_score DESC LIMIT 3",
+        );
         return result.rows;
-    }
-    catch (e) {
-        console.log(e)
+    } catch (e) {
+        console.log(e);
         return null;
     }
-
 }
 
 export async function GetQuestion(quid: UUID) {
     try {
-        const result = await pool.query('SELECT * FROM questions WHERE quid = $1', [quid]);
+        const result = await pool.query("SELECT * FROM questions WHERE quid = $1", [quid]);
         return result.rows;
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e);
         return null;
     }
-
 }
 
 export async function CreateQuestion(data: QuestionData) {
-    var success = false;
-    const insert = "INSERT INTO questions(title, description,test_case,difficulty, topics) VALUES($1, $2, $3, $4, $5) RETURNING quid";
+    let success = false;
+    const insert =
+        "INSERT INTO questions(title, description,test_case,difficulty, topics) VALUES($1, $2, $3, $4, $5) RETURNING quid";
     const topics = data.qnTopics.map((topic) => topic as UUID);
-    const cases = JSON.stringify(data.testCase)
+    const cases = JSON.stringify(data.testCase);
     const values = [data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
     try {
         const result = await pool.query(insert, values);
         success = true;
-    }
-    catch (err) {
+    } catch (err) {
         console.error("Insert failed:", err);
         success = false;
     }
@@ -82,18 +77,17 @@ export async function CreateQuestion(data: QuestionData) {
 }
 
 export async function EditQuestion(data: QuestionEdit) {
-
-    var success = false;
-    const update = "UPDATE questions SET title = $2, description = $3,test_case = $4, difficulty = $5, topics = $6  WHERE quid = $1 RETURNING quid";
+    let success = false;
+    const update =
+        "UPDATE questions SET title = $2, description = $3,test_case = $4, difficulty = $5, topics = $6  WHERE quid = $1 RETURNING quid";
     const topics = data.qnTopics.map((topic) => topic as UUID);
-    const cases = JSON.stringify(data.testCase)
+    const cases = JSON.stringify(data.testCase);
 
     const values = [data.quid, data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
     try {
         const result = await pool.query(update, values);
         success = true;
-    }
-    catch (e) {
+    } catch (e) {
         console.log("Edit failed:", e);
         success = false;
     }
@@ -102,12 +96,11 @@ export async function EditQuestion(data: QuestionEdit) {
 }
 
 export async function DeleteQuestion(questionId: UUID) {
-    var success = false;
+    let success = false;
     try {
-        const result = await pool.query('DELETE FROM questions WHERE quid = $1', [questionId]);
+        const result = await pool.query("DELETE FROM questions WHERE quid = $1", [questionId]);
         success = true;
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e);
         success = false;
     }
@@ -121,10 +114,18 @@ async function randomQuestion(questions: UUID[]) {
     return result;
 }
 
-export async function SearchQuestion(topic: string, difficulty: string, userA: UUID | null, userB: UUID | null) {
+export async function SearchQuestion(
+    topic: string,
+    difficulty: string,
+    userA: UUID | null,
+    userB: UUID | null,
+) {
     try {
         //Default random question
-        const result = await pool.query('SELECT quid FROM qn_topics WHERE tid = $1 AND difficulty = $2', [topic, difficulty]);
+        const result = await pool.query(
+            "SELECT quid FROM qn_topics WHERE tid = $1 AND difficulty = $2",
+            [topic, difficulty],
+        );
         if (result == undefined || result.rows.length == 0) return null;
         const allQuestions: UUID[] = result.rows.map((r: any) => r.quid);
         const defaultQuestion = await randomQuestion(allQuestions);
@@ -156,26 +157,21 @@ export async function SearchQuestion(topic: string, difficulty: string, userA: U
         //     return defaultQuestion[0];
         // }
         return defaultQuestion[0];
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e);
         return null;
     }
-
 }
 
 export async function SearchQuestionDatabase(title: string) {
     try {
         console.log(title);
-        const result = await pool.query(
-            'SELECT * FROM questions WHERE LOWER(title) LIKE $1',
-            [`%${title.trim().toLowerCase()}%`]
-        );
+        const result = await pool.query("SELECT * FROM questions WHERE LOWER(title) LIKE $1", [
+            `%${title.trim().toLowerCase()}%`,
+        ]);
         return result.rows;
-    }
-    catch (e) {
+    } catch (e) {
         console.log(e);
         return null;
     }
-
 }

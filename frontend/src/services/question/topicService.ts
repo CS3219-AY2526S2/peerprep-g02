@@ -1,7 +1,8 @@
-import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import { TopicInfo, TopicMap } from "@/models/question/questionType";
-import { apiFetch } from "@/utils/apiClient";
 import { UUID } from "crypto";
+
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { apiFetch } from "@/utils/apiClient";
+import { TopicInfo, TopicMap } from "@/models/question/questionType";
 
 export const getTopics = async (): Promise<TopicMap | null> => {
     try {
@@ -52,4 +53,4 @@ export const deleteTopic = async (id: UUID): Promise<number> => {
         },
     });
     return res.status;
-}
+};
