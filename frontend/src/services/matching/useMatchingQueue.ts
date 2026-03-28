@@ -110,7 +110,7 @@ export function useMatchingQueue(
             socketInstance.on(SocketEvents.MATCH_WAITING, (data: MatchWaitingPayload) => {
                 console.log(data.message);
                 setIsSearching(true);
-                if (data.startTime) searchStartTime.current = parseInt(data.startTime, 10);
+                if (data.startTime) searchStartTime.current = data.startTime;
             });
 
             const resetSearchState = () => {

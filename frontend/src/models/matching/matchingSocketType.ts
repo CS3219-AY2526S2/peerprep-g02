@@ -22,7 +22,7 @@ export interface MatchResultSuccess {
 
 export interface MatchResultWaiting {
     matchFound: false;
-    startTime: string;
+    startTime: number;
     message: string;
 }
 
