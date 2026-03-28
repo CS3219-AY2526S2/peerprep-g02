@@ -109,9 +109,7 @@ export class InternalUserScoreController {
 
             if (
                 normalizedUpdates.some(
-                    (update) =>
-                        update.clerkUserId.length === 0 ||
-                        !Number.isInteger(update.delta),
+                    (update) => update.clerkUserId.length === 0 || !Number.isInteger(update.delta),
                 )
             ) {
                 return res.status(400).json({

@@ -164,4 +164,27 @@ export class AttemptService {
             },
         };
     }
+
+    async listAttemptHistory(clerkUserId: string): Promise<{
+        message: string;
+        data: {
+            clerkUserId: string;
+            attempts: AttemptRecord[];
+        };
+    }> {
+        const normalizedClerkUserId = clerkUserId.trim();
+        if (!normalizedClerkUserId) {
+            throw new ServiceError(400, "clerkUserId is required.");
+        }
+
+        const attempts = await attemptRepository.listByClerkUserId(normalizedClerkUserId);
+
+        return {
+            message: "Attempt history fetched successfully.",
+            data: {
+                clerkUserId: normalizedClerkUserId,
+                attempts,
+            },
+        };
+    }
 }

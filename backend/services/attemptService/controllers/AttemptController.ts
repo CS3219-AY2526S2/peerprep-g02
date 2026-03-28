@@ -78,4 +78,19 @@ export class AttemptController {
             handleError(res, error, "fetch attempted questions");
         }
     }
+
+    async listAttemptsForCurrentUser(_req: Request, res: Response): Promise<Response | void> {
+        const clerkUserId = res.locals.clerkUserId as string | undefined;
+
+        if (!clerkUserId) {
+            return res.status(500).json({ error: "Authenticated user context is missing." });
+        }
+
+        try {
+            const response = await this.attemptService.listAttemptHistory(clerkUserId);
+            return res.status(200).json(response);
+        } catch (error) {
+            handleError(res, error, "fetch attempt history");
+        }
+    }
 }

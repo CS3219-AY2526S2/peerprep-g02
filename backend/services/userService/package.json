@@ -14,8 +14,6 @@
         "test": "vitest run --config vitest.config.ts",
         "test:watch": "vitest --config vitest.config.ts",
         "test:coverage": "vitest run --coverage --config vitest.config.ts",
-        "format": "prettier --write .",
-        "format:check": "prettier --check .",
         "lint": "eslint .",
         "lint:fix": "prettier --write . && eslint . --fix"
     },

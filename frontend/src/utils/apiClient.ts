@@ -6,9 +6,32 @@ type ApiRequestInit = RequestInit & {
 };
 
 let getTokenRef: TokenGetter | undefined;
+let resolveAuthInterceptorReady: ((value: TokenGetter | undefined) => void) | undefined;
+let authInterceptorReady = false;
+const authInterceptorReadyPromise = new Promise<TokenGetter | undefined>((resolve) => {
+    resolveAuthInterceptorReady = resolve;
+});
 
 export function injectAuthInterceptor(getToken?: TokenGetter): void {
     getTokenRef = getToken;
+
+    if (!authInterceptorReady) {
+        authInterceptorReady = true;
+        resolveAuthInterceptorReady?.(getToken);
+        resolveAuthInterceptorReady = undefined;
+    }
+}
+
+async function waitForAuthInterceptor(): Promise<TokenGetter | undefined> {
+    if (getTokenRef) {
+        return getTokenRef;
+    }
+
+    if (authInterceptorReady) {
+        return undefined;
+    }
+
+    return authInterceptorReadyPromise;
 }
 
 // automatically injects auth token from Clerk
@@ -32,8 +55,9 @@ export async function apiFetch(url: string, init: ApiRequestInit = {}): Promise<
     }
 
     // Inject Authorization header if not skipped
-    if (!skipAuth && getTokenRef && !headers.has("Authorization")) {
-        const token = await getTokenRef({ template: tokenTemplate });
+    if (!skipAuth && !headers.has("Authorization")) {
+        const tokenGetter = await waitForAuthInterceptor();
+        const token = tokenGetter ? await tokenGetter({ template: tokenTemplate }) : null;
         if (token) {
             headers.set("Authorization", `Bearer ${token}`);
         }
@@ -49,9 +73,6 @@ export async function apiFetch(url: string, init: ApiRequestInit = {}): Promise<
 }
 
 export async function getAuthToken(): Promise<string | null> {
-    if (!getTokenRef) {
-        console.warn("Auth interceptor not yet initialized. Retrying...");
-        return null;
-    }
-    return await getTokenRef({ template: "jwt" });
+    const tokenGetter = await waitForAuthInterceptor();
+    return tokenGetter ? await tokenGetter({ template: "jwt" }) : null;
 }

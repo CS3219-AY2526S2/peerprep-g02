@@ -94,4 +94,54 @@ describe("AttemptController", () => {
             },
         });
     });
+
+    it("returns 200 for the current user's attempt history", async () => {
+        vi.spyOn(AttemptService.prototype, "listAttemptHistory").mockResolvedValue({
+            message: "Attempt history fetched successfully.",
+            data: {
+                clerkUserId: "user_123",
+                attempts: [
+                    {
+                        id: "attempt-1",
+                        clerkUserId: "user_123",
+                        questionId: "question-1",
+                        language: "typescript",
+                        difficulty: "Easy",
+                        success: true,
+                        duration: 1200,
+                        attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+                        createdAt: new Date("2026-03-24T00:00:00.000Z"),
+                    },
+                ],
+            },
+        });
+
+        const controller = new AttemptController();
+        const req = createMockRequest();
+        const res = createMockResponse();
+        res.locals.clerkUserId = "user_123";
+
+        await controller.listAttemptsForCurrentUser(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({
+            message: "Attempt history fetched successfully.",
+            data: {
+                clerkUserId: "user_123",
+                attempts: [
+                    {
+                        id: "attempt-1",
+                        clerkUserId: "user_123",
+                        questionId: "question-1",
+                        language: "typescript",
+                        difficulty: "Easy",
+                        success: true,
+                        duration: 1200,
+                        attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+                        createdAt: new Date("2026-03-24T00:00:00.000Z"),
+                    },
+                ],
+            },
+        });
+    });
 });

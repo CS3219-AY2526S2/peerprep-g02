@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/authRoute/ProtectedRoute";
 
 import { ROUTES } from "@/constants/routes";
 
+import AttemptHistoryView from "@/views/attempt/AttemptHistoryView";
 import CollaborationSessionView from "@/views/collaboration/CollaborationSessionView";
 import HomeView from "@/views/HomeView";
 import QuestionMainView from "@/views/question/QuestionMainView";
@@ -39,6 +40,7 @@ export default function App() {
 
                 <Route element={<ProtectedRoute />}>
                     <Route path={ROUTES.DASHBOARD} element={<HomeView />} />
+                    <Route path={ROUTES.ATTEMPT_HISTORY} element={<AttemptHistoryView />} />
                     <Route path={ROUTES.COLLABORATION} element={<CollaborationSessionView />} />
                 </Route>
 

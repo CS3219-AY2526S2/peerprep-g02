@@ -3,6 +3,7 @@ export const ROUTES = {
     REGISTER: "/account/register",
 
     DASHBOARD: "/home",
+    ATTEMPT_HISTORY: "/attempt/history",
     COLLABORATION: "/collaboration/:collaborationId",
 
     USER_ADMIN: "/account/admin",
