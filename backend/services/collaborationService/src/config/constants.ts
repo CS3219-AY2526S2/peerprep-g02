@@ -63,6 +63,14 @@ export const SOCKET_EVENTS = {
     CODE_ACK: "code:ack",
     CODE_SYNC: "code:sync",
 
+    // Code execution events
+    CODE_RUN: "code:run",
+    CODE_SUBMIT: "code:submit",
+    CODE_RUNNING: "code:running",
+
     // Output events
     OUTPUT_UPDATED: "output:updated",
+
+    // Submission events
+    SUBMISSION_COMPLETE: "submission:complete",
 } as const;

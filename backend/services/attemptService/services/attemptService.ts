@@ -13,10 +13,13 @@ export type RecordAttemptInput = {
     userAId: string;
     userBId: string;
     questionId: string;
+    questionTitle: string;
     language: string;
     difficulty: string;
     success: boolean;
     duration: number;
+    totalTestCases: number;
+    testCasesPassed: number;
     attemptedAt?: string;
 };
 
@@ -105,14 +108,21 @@ export class AttemptService {
         const attemptedAt = parseAttemptedAt(input.attemptedAt);
         const scoreDelta = calculateScoreDelta(difficulty, input.success);
         const userIds = [userAId, userBId];
+        const questionTitle = input.questionTitle.trim();
+        const totalTestCases = input.totalTestCases;
+        const testCasesPassed = input.testCasesPassed;
+
         const attemptInputs: CreateAttemptInput[] = userIds.map((clerkUserId) => ({
             id: randomUUID(),
             clerkUserId,
             questionId,
+            questionTitle,
             language,
             difficulty,
             success: input.success,
             duration: input.duration,
+            totalTestCases,
+            testCasesPassed,
             attemptedAt,
         }));
 

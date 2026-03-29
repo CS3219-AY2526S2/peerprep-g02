@@ -54,6 +54,26 @@ export async function createCollaborationSession(
 
         if (!response.ok) {
             const errorBody = await response.text();
+
+            // If an active session already exists for this user pair, reuse it
+            if (response.status === 409) {
+                try {
+                    const parsed = JSON.parse(errorBody) as {
+                        error?: string;
+                        details?: { collaborationId?: string };
+                    };
+                    if (parsed.details?.collaborationId) {
+                        socketLogger.info(
+                            { collaborationId: parsed.details.collaborationId },
+                            "Reusing existing active collaboration session",
+                        );
+                        return parsed.details.collaborationId;
+                    }
+                } catch {
+                    // Fall through to generic error handling
+                }
+            }
+
             socketLogger.error(
                 { status: response.status, body: errorBody },
                 "Failed to create collaboration session",

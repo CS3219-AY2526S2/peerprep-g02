@@ -65,10 +65,6 @@ describe("CollaborationSessionService", () => {
                 deleteOutput: vi.fn(),
             } as never,
             {
-                insertSession: vi.fn(),
-                updateSessionEnded: vi.fn(),
-            } as never,
-            {
                 cacheActiveSession: vi.fn().mockResolvedValue(true),
             } as never,
             {
@@ -126,10 +122,6 @@ describe("CollaborationSessionService", () => {
                 setOutput: vi.fn(),
                 getOutput: vi.fn(),
                 deleteOutput: vi.fn(),
-            } as never,
-            {
-                insertSession: vi.fn(),
-                updateSessionEnded: vi.fn(),
             } as never,
             {
                 cacheActiveSession: vi.fn().mockResolvedValue(false),

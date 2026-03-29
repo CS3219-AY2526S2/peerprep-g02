@@ -7,10 +7,13 @@ type RecordAttemptRequest = {
     userAId?: string;
     userBId?: string;
     questionId?: string;
+    questionTitle?: string;
     language?: string;
     difficulty?: string;
     success?: boolean;
     duration?: number;
+    totalTestCases?: number;
+    testCasesPassed?: number;
     attemptedAt?: string;
     timestamp?: string;
 };
@@ -45,15 +48,30 @@ export class AttemptController {
             return badRequest(res, "duration is required.");
         }
 
+        if (typeof body?.questionTitle !== "string") {
+            return badRequest(res, "questionTitle is required.");
+        }
+
+        if (typeof body?.totalTestCases !== "number" || body.totalTestCases < 0) {
+            return badRequest(res, "totalTestCases must be a non-negative number.");
+        }
+
+        if (typeof body?.testCasesPassed !== "number" || body.testCasesPassed < 0) {
+            return badRequest(res, "testCasesPassed must be a non-negative number.");
+        }
+
         try {
             const response = await this.attemptService.recordAttempt({
                 userAId: body.userAId,
                 userBId: body.userBId,
                 questionId: body.questionId,
+                questionTitle: body.questionTitle,
                 language: body.language,
                 difficulty: body.difficulty,
                 success: body.success,
                 duration: body.duration,
+                totalTestCases: body.totalTestCases,
+                testCasesPassed: body.testCasesPassed,
                 attemptedAt:
                     typeof body.attemptedAt === "string" ? body.attemptedAt : body.timestamp,
             });

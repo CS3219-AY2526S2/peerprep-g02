@@ -4,8 +4,13 @@ import type { Server, Socket } from "socket.io";
 import { ERROR_CODES, SOCKET_EVENTS } from "@/config/constants.js";
 import { env } from "@/config/env.js";
 import type { OTOperation } from "@/models/session.js";
+import { AttemptRecordingService } from "@/services/attemptRecordingService.js";
+import { CodeExecutionService } from "@/services/codeExecutionService.js";
 import { collaborationSessionService } from "@/services/collaborationSessionService.js";
 import { logger } from "@/utils/logger.js";
+
+const codeExecutionService = new CodeExecutionService();
+const attemptRecordingService = new AttemptRecordingService();
 
 type JoinSessionPayload = {
     collaborationId?: string;
@@ -18,6 +23,10 @@ type CodeChangePayload = {
 };
 
 type LeaveSessionPayload = {
+    collaborationId: string;
+};
+
+type CodeRunPayload = {
     collaborationId: string;
 };
 
@@ -264,6 +273,219 @@ export function registerSocketHandlers(io: Server): void {
                 );
 
                 ack?.({ ok: true });
+            },
+        );
+
+        /**
+         * Code execution - Run code against test cases (no attempt recorded)
+         */
+        socket.on(
+            SOCKET_EVENTS.CODE_RUN,
+            async (payload: CodeRunPayload, ack?: (response: { ok: boolean; error?: string }) => void) => {
+                if (!payload?.collaborationId) {
+                    ack?.({ ok: false, error: "collaborationId is required." });
+                    return;
+                }
+
+                try {
+                    // Notify room that execution is starting
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.CODE_RUNNING,
+                        { collaborationId: payload.collaborationId },
+                    );
+
+                    const execData = await collaborationSessionService.getSessionForExecution(
+                        payload.collaborationId,
+                    );
+                    if (!execData) {
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.OUTPUT_UPDATED,
+                            { collaborationId: payload.collaborationId, output: { error: "Session not found or inactive." } },
+                        );
+                        ack?.({ ok: false, error: "Session not found or inactive." });
+                        return;
+                    }
+
+                    const result = await codeExecutionService.execute(
+                        execData.code,
+                        execData.session.language,
+                        execData.functionName,
+                        execData.testCases,
+                    );
+
+                    // Store structured results in Redis
+                    await collaborationSessionService.updateOutput(
+                        payload.collaborationId,
+                        JSON.stringify(result),
+                    );
+
+                    // Broadcast results to all users in the room
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                        {
+                            collaborationId: payload.collaborationId,
+                            output: result,
+                        },
+                    );
+
+                    ack?.({ ok: true });
+
+                    logger.info(
+                        {
+                            collaborationId: payload.collaborationId,
+                            userId,
+                            testCasesPassed: result.testCasesPassed,
+                            totalTestCases: result.totalTestCases,
+                        },
+                        "Code execution completed",
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof Error ? error.message : "Code execution failed.";
+                    logger.error(
+                        { err: error, collaborationId: payload.collaborationId },
+                        "Code execution failed",
+                    );
+
+                    // Broadcast error to all users so their spinners stop
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                        {
+                            collaborationId: payload.collaborationId,
+                            output: { error: message },
+                        },
+                    );
+
+                    ack?.({ ok: false, error: message });
+                }
+            },
+        );
+
+        /**
+         * Code submission - Run code + record attempt for both users
+         */
+        socket.on(
+            SOCKET_EVENTS.CODE_SUBMIT,
+            async (payload: CodeRunPayload, ack?: (response: { ok: boolean; error?: string }) => void) => {
+                if (!payload?.collaborationId) {
+                    ack?.({ ok: false, error: "collaborationId is required." });
+                    return;
+                }
+
+                try {
+                    // Notify room that execution is starting
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.CODE_RUNNING,
+                        { collaborationId: payload.collaborationId },
+                    );
+
+                    const execData = await collaborationSessionService.getSessionForExecution(
+                        payload.collaborationId,
+                    );
+                    if (!execData) {
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.OUTPUT_UPDATED,
+                            { collaborationId: payload.collaborationId, output: { error: "Session not found or inactive." } },
+                        );
+                        ack?.({ ok: false, error: "Session not found or inactive." });
+                        return;
+                    }
+
+                    // Execute code against test cases
+                    const result = await codeExecutionService.execute(
+                        execData.code,
+                        execData.session.language,
+                        execData.functionName,
+                        execData.testCases,
+                    );
+
+                    // Store results
+                    await collaborationSessionService.updateOutput(
+                        payload.collaborationId,
+                        JSON.stringify(result),
+                    );
+
+                    // Broadcast execution results
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                        {
+                            collaborationId: payload.collaborationId,
+                            output: result,
+                        },
+                    );
+
+                    // Record attempt for both users
+                    const session = execData.session;
+                    const duration = Math.round(
+                        (Date.now() - new Date(session.createdAt).getTime()) / 1000,
+                    );
+                    const success =
+                        result.testCasesPassed === result.totalTestCases &&
+                        result.totalTestCases > 0;
+
+                    try {
+                        await attemptRecordingService.recordAttempt({
+                            userAId: session.userAId,
+                            userBId: session.userBId,
+                            questionId: session.questionId,
+                            questionTitle: execData.questionTitle,
+                            language: session.language,
+                            difficulty: session.difficulty,
+                            success,
+                            duration,
+                            totalTestCases: result.totalTestCases,
+                            testCasesPassed: result.testCasesPassed,
+                        });
+
+                        // Broadcast submission confirmation
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.SUBMISSION_COMPLETE,
+                            {
+                                collaborationId: payload.collaborationId,
+                                success,
+                                totalTestCases: result.totalTestCases,
+                                testCasesPassed: result.testCasesPassed,
+                            },
+                        );
+
+                        ack?.({ ok: true });
+                    } catch (attemptError) {
+                        logger.error(
+                            { err: attemptError, collaborationId: payload.collaborationId },
+                            "Failed to record attempt",
+                        );
+                        ack?.({ ok: false, error: "Code executed but failed to record attempt." });
+                    }
+
+                    logger.info(
+                        {
+                            collaborationId: payload.collaborationId,
+                            userId,
+                            success,
+                            testCasesPassed: result.testCasesPassed,
+                            totalTestCases: result.totalTestCases,
+                        },
+                        "Code submitted and attempt recorded",
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof Error ? error.message : "Code submission failed.";
+                    logger.error(
+                        { err: error, collaborationId: payload.collaborationId },
+                        "Code submission failed",
+                    );
+
+                    // Broadcast error to all users so their spinners stop
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                        {
+                            collaborationId: payload.collaborationId,
+                            output: { error: message },
+                        },
+                    );
+
+                    ack?.({ ok: false, error: message });
+                }
             },
         );
 

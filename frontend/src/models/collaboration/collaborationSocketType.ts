@@ -25,6 +25,12 @@ export const COLLABORATION_SOCKET_EVENTS = {
 
     // Output events
     OUTPUT_UPDATED: "output:updated",
+
+    // Code execution events
+    CODE_RUN: "code:run",
+    CODE_SUBMIT: "code:submit",
+    CODE_RUNNING: "code:running",
+    SUBMISSION_COMPLETE: "submission:complete",
 } as const;
 
 export type CollaborationJoinAck =

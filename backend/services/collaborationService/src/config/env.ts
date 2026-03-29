@@ -59,9 +59,12 @@ export const env = {
         process.env.CS_INACTIVITY_CHECK_INTERVAL_MS,
         DEFAULTS.INACTIVITY_CHECK_INTERVAL_MS,
     ),
-    databaseUri: process.env.CS_DATABASE_URI ?? "postgresql://localhost:5432/collaboration_service",
     userServiceUrl:
         trimTrailingSlash(process.env.CS_USER_SERVICE_URL) ?? "http://user-service:3001",
     questionsServiceUrl:
         trimTrailingSlash(process.env.CS_QUESTIONS_SERVICE_URL) ?? "http://questions-service:3005",
+    executionServiceUrl:
+        trimTrailingSlash(process.env.CS_EXECUTION_SERVICE_URL) ?? "http://execution-service:3006",
+    attemptServiceUrl:
+        trimTrailingSlash(process.env.CS_ATTEMPT_SERVICE_URL) ?? "http://attempts-service:3004",
 };

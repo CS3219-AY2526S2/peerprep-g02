@@ -69,10 +69,6 @@ describe("CollaborationSessionService join flow", () => {
                 getOutput: vi.fn(),
                 deleteOutput: vi.fn(),
             } as never,
-            {
-                insertSession: vi.fn(),
-                updateSessionEnded: vi.fn(),
-            } as never,
             {} as never,
             {} as never,
             {} as never,
@@ -129,10 +125,6 @@ describe("CollaborationSessionService join flow", () => {
                 setOutput: vi.fn(),
                 getOutput: vi.fn(),
                 deleteOutput: vi.fn(),
-            } as never,
-            {
-                insertSession: vi.fn(),
-                updateSessionEnded: vi.fn(),
             } as never,
             {} as never,
             {} as never,

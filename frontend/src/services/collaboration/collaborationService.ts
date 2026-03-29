@@ -61,6 +61,16 @@ class CollaborationService {
         });
     }
 
+    async runCode(collaborationId: string): Promise<void> {
+        const socket = await this.connect();
+        socket.emit(COLLABORATION_SOCKET_EVENTS.CODE_RUN, { collaborationId });
+    }
+
+    async submitCode(collaborationId: string): Promise<void> {
+        const socket = await this.connect();
+        socket.emit(COLLABORATION_SOCKET_EVENTS.CODE_SUBMIT, { collaborationId });
+    }
+
     disconnect(): void {
         this.socket?.disconnect();
         this.socket = null;
