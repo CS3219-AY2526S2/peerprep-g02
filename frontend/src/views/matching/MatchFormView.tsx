@@ -1,4 +1,4 @@
-import { Rocket, Users } from "lucide-react";
+import { Rocket, Trophy, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
@@ -24,14 +24,32 @@ export default function MatchFormView({
     difficulty,
     setDifficulty,
     onFindMatch,
+    userScore,
 }: MatchFormViewProps) {
     return (
         <CardContent className="p-6 sm:p-8 bg-white/90 transition-opacity">
             <div className="mb-8 flex items-start justify-between gap-6">
-                <div>
-                    <h2 className="text-3xl font-extrabold tracking-tight text-slate-950">
-                        Start a Practice Session
-                    </h2>
+                <div className="space-y-3">
+                    {" "}
+                    {/* Increased spacing for the sub-text */}
+                    <div>
+                        <h2 className="text-3xl font-extrabold tracking-tight text-slate-950">
+                            Start a Practice Session
+                        </h2>
+                    </div>
+                    {/* User Score Badge - Positioned below the text */}
+                    <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
+                        <div className="relative ">
+                            <Trophy className="size-4 text-amber-500" />
+                            <span className="absolute inset-0 size-4 bg-amber-400 blur-sm opacity-40 animate-pulse" />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-600">
+                            Your Rating:
+                            <span className="text-sm ml-2 text-slate-950 font-black">
+                                {userScore ?? "---"}
+                            </span>
+                        </span>
+                    </div>
                 </div>
                 <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
                     <Rocket className="size-7" />

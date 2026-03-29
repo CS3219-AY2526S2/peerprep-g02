@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
         ADMIN_LIST: `${US_PREFIX}/users/admin/users`,
         UPDATE_ROLE: (clerkId: string) => `${US_PREFIX}/users/admin/users/${clerkId}/role`,
         UPDATE_STATUS: (clerkId: string) => `${US_PREFIX}/users/admin/users/${clerkId}/status`,
+        SCORE: (clerkId: string) => `${US_PREFIX}/users/internal/${clerkId}/score`,
     },
 
     MATCHING: {
