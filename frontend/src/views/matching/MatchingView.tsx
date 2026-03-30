@@ -1,12 +1,13 @@
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Card } from "@/components/ui/card";
 
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { collaborationRoute } from "@/constants/routes";
+import { apiFetch } from "@/utils/apiClient";
 import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
-import { Difficulty } from "@/models/question/questionType";
-import { languageOptions, topicOptions } from "@/models/question/tempStubType";
+import { Difficulty, Language, LANGUAGE_OPTIONS } from "@/models/question/questionType";
 
 import MatchFormView from "@/views/matching/MatchFormView";
 import MatchSearchingView from "@/views/matching/MatchSearchingView";
@@ -15,9 +16,38 @@ import { useMatchingQueue } from "@/services/matching/useMatchingQueue";
 
 export function MatchingView() {
     const navigate = useNavigate();
-    const [topics, setTopics] = useState<string[]>([topicOptions[0]]);
-    const [languages, setLanguages] = useState<string[]>([languageOptions[0]]);
+
+    const [topicOptions, setTopicOptions] = useState<string[]>([]);
+
+    const [topics, setTopics] = useState<string[]>([]);
+    const [languages, setLanguages] = useState<Language[]>([LANGUAGE_OPTIONS[0]]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
+
+    useEffect(() => {
+        const fetchTopics = async () => {
+            try {
+                const response = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch topics: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const topicStrings: string[] = data.body.map(
+                    (item: { topic: string }) => item.topic,
+                );
+
+                setTopicOptions(topicStrings);
+
+                if (topicStrings.length > 0 && topics.length === 0) {
+                    setTopics([topicStrings[0]]);
+                }
+            } catch (error) {
+                console.error("Error fetching topics:", error);
+            }
+        };
+
+        fetchTopics();
+    }, []);
 
     const { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected } =
         useMatchingQueue(topics, languages, difficulty, (payload) => {
@@ -43,6 +73,8 @@ export function MatchingView() {
                 />
             ) : (
                 <MatchFormView
+                    topicOptions={topicOptions}
+                    languageOptions={LANGUAGE_OPTIONS}
                     topics={topics}
                     setTopics={setTopics}
                     userScore={userScore}

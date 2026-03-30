@@ -35,3 +35,15 @@ export enum Difficulty {
     MEDIUM = "Medium",
     HARD = "Hard",
 }
+
+export const LANGUAGE_OPTIONS = [
+    "Python",
+    "Java",
+    "C++",
+    "JavaScript",
+    "TypeScript",
+    "Go",
+    "Rust",
+] as const;
+
+export type Language = (typeof LANGUAGE_OPTIONS)[number];

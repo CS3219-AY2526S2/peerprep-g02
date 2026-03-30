@@ -1,10 +1,12 @@
-import { Difficulty } from "@/models/question/questionType";
+import { Difficulty, Language } from "@/models/question/questionType";
 
 export interface MatchFormViewProps {
+    topicOptions: string[];
+    languageOptions: readonly Language[];
     topics: string[];
     setTopics: (value: string[]) => void;
-    languages: string[];
-    setLanguages: (value: string[]) => void;
+    languages: Language[];
+    setLanguages: (value: Language[]) => void;
     difficulty: Difficulty;
     setDifficulty: (value: Difficulty) => void;
     onFindMatch: () => void;
@@ -14,7 +16,7 @@ export interface MatchFormViewProps {
 
 export interface MatchSearchingViewProps {
     topics: string[];
-    languages: string[];
+    languages: Language[];
     difficulties: Difficulty[];
     relaxationTier: number;
     onCancel: () => void;

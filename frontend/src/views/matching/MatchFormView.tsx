@@ -1,4 +1,4 @@
-import { Rocket, Trophy, Users } from "lucide-react";
+import { Flame, Rocket, Sprout, Trophy, Users, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CardContent } from "@/components/ui/card";
@@ -18,10 +18,32 @@ import { Label } from "@/components/ui/label";
 
 import { cn } from "@/lib/utils";
 import { MatchFormViewProps } from "@/models/matching/matchingViewType";
-import { Difficulty } from "@/models/question/questionType";
-import { difficultyOptions, languageOptions, topicOptions } from "@/models/question/tempStubType";
+import { Difficulty, Language } from "@/models/question/questionType";
+
+const difficultyOptions = [
+    {
+        value: Difficulty.EASY,
+        label: "Easy",
+        icon: Sprout,
+        activeClassName: "border-emerald-400 bg-emerald-50 text-emerald-700",
+    },
+    {
+        value: Difficulty.MEDIUM,
+        label: "Medium",
+        icon: Flame,
+        activeClassName: "border-amber-400 bg-amber-50 text-amber-700",
+    },
+    {
+        value: Difficulty.HARD,
+        label: "Hard",
+        icon: Zap,
+        activeClassName: "border-slate-900 bg-slate-900 text-white",
+    },
+] as const;
 
 export default function MatchFormView({
+    topicOptions,
+    languageOptions,
     topics,
     setTopics,
     languages,
@@ -43,7 +65,7 @@ export default function MatchFormView({
                             Start a Practice Session
                         </h2>
                     </div>
-                    {/* User Score Badge - Positioned below the text */}
+                    {/* User Score Badge */}
                     <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-amber-50 border border-amber-200 shadow-sm">
                         <div className="relative ">
                             <Trophy className="size-4 text-amber-500" />
@@ -160,7 +182,7 @@ export default function MatchFormView({
                             className="w-full min-h-14 rounded-xl border-2 border-slate-200 bg-white px-2 py-1 shadow-sm focus-within:border-indigo-400"
                         >
                             <ComboboxValue>
-                                {(values: string[]) => (
+                                {(values: Language[]) => (
                                     <>
                                         {values.map((val) => (
                                             <ComboboxChip

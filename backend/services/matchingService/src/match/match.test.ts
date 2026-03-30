@@ -96,7 +96,14 @@ describe("Matchmaking Service", () => {
         });
 
         it("should fallback to MatchResultWaiting if collaboration creation fails", async () => {
-            mockRedis.eval.mockResolvedValue(["matched", "user-2", "strings", "Easy", "python", "12345678"]);
+            mockRedis.eval.mockResolvedValue([
+                "matched",
+                "user-2",
+                "strings",
+                "Easy",
+                "python",
+                "12345678",
+            ]);
             (createCollaborationSession as any).mockResolvedValue(null);
 
             const result = await findMatch(mockRequest);

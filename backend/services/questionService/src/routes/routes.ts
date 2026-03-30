@@ -16,7 +16,7 @@ import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicsD
 
 const router = Router();
 
-router.use(requireAdminAuth);
+// --- PUBLIC / USER ROUTES (No Admin Required) ---
 
 //Get all question
 router.get("/", async (req, res) => {
@@ -65,10 +65,46 @@ router.post("/get", async (req, res) => {
     });
 });
 
+//Search for matching question
+router.post("/search", async (req, res) => {
+    const { topic, difficulty, userA, userB } = req.body;
+    const result = await SearchQuestion(topic, difficulty, userA, userB);
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to find matching question in the database.",
+        });
+    }
+
+    return res.status(200).json({
+        message: "Get matching question success.",
+        body: result,
+    });
+});
+
+//Get topics
+router.get("/topics", async (req, res) => {
+    const result = await GetTopics();
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to find topics in the database.",
+        });
+    }
+    return res.status(200).json({
+        message: "Get topics success",
+        body: result,
+    });
+});
+
+
+// --- ADMIN ONLY ROUTES (Middleware applied here) ---
+
+router.use(requireAdminAuth);
+
 //Save question
 router.post("", async (req, res) => {
-    var result = await CreateQuestion(req.body);
-    var result = true;
+    const result = await CreateQuestion(req.body);
     if (!result) {
         return res.status(400).json({
             message: "Unable to add question to the database.",
@@ -82,8 +118,7 @@ router.post("", async (req, res) => {
 
 //Edit question
 router.put("", async (req, res) => {
-    var result = false;
-    var result = await EditQuestion(req.body);
+    const result = await EditQuestion(req.body);
 
     if (!result) {
         return res.status(400).json({
@@ -111,23 +146,6 @@ router.delete("/:id", async (req, res) => {
     });
 });
 
-//Search for matching question
-router.post("/search", async (req, res) => {
-    const { topic, difficulty, userA, userB } = req.body;
-    const result = await SearchQuestion(topic, difficulty, userA, userB);
-
-    if (!result) {
-        return res.status(400).json({
-            message: "Unable to find matching question in the database.",
-        });
-    }
-
-    return res.status(200).json({
-        message: "Get matching question success.",
-        body: result,
-    });
-});
-
 //Get leetcode question
 router.post("/leetcode", async (req, res) => {
     const result = await getLeetCode(req.body.topic);
@@ -143,25 +161,9 @@ router.post("/leetcode", async (req, res) => {
     });
 });
 
-//Get topics
-router.get("/topics", async (req, res) => {
-    const result = await GetTopics();
-
-    if (!result) {
-        return res.status(400).json({
-            message: "Unable to find topics in the database.",
-        });
-    }
-    return res.status(200).json({
-        message: "Get topics success",
-        body: result,
-    });
-});
-
 //Save topic
 router.post("/topics", async (req, res) => {
-    var result = await AddTopic(req.body.topic);
-    var result = true;
+    const result = await AddTopic(req.body.topic);
     if (!result) {
         return res.status(400).json({
             message: "Unable to add topic to the database.",
@@ -175,8 +177,7 @@ router.post("/topics", async (req, res) => {
 
 //Edit topic
 router.put("/topics", async (req, res) => {
-    var result = false;
-    var result = await EditTopic(req.body.tid, req.body.topic);
+    const result = await EditTopic(req.body.tid, req.body.topic);
 
     if (!result) {
         return res.status(400).json({

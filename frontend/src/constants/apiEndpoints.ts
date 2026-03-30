@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
 
     QUESTIONS: {
         BASE: `${QS_PREFIX}/`,
+        TOPICS: `${QS_PREFIX}/topics`,
         POPULAR: `${QS_PREFIX}/popular`,
         GET_ONE: `${QS_PREFIX}/get`,
         DELETE: `${QS_PREFIX}/delete`,
