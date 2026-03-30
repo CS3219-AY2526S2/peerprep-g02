@@ -4,8 +4,8 @@ import { AttemptService } from "@/services/attemptService.js";
 import { badRequest, handleError } from "@/utils/ResponseHelpers.js";
 
 type RecordAttemptRequest = {
-    userAId?: string;
-    userBId?: string;
+    userId?: string;
+    collaborationId?: string;
     questionId?: string;
     questionTitle?: string;
     language?: string;
@@ -24,8 +24,12 @@ export class AttemptController {
     async create(req: Request, res: Response): Promise<Response | void> {
         const body = req.body as RecordAttemptRequest | undefined;
 
-        if (typeof body?.userAId !== "string" || typeof body?.userBId !== "string") {
-            return badRequest(res, "userAId and userBId are required.");
+        if (typeof body?.userId !== "string" || body.userId.trim().length === 0) {
+            return badRequest(res, "userId is required.");
+        }
+
+        if (typeof body?.collaborationId !== "string" || body.collaborationId.trim().length === 0) {
+            return badRequest(res, "collaborationId is required.");
         }
 
         if (typeof body?.questionId !== "string" || body.questionId.trim().length === 0) {
@@ -62,8 +66,8 @@ export class AttemptController {
 
         try {
             const response = await this.attemptService.recordAttempt({
-                userAId: body.userAId,
-                userBId: body.userBId,
+                userId: body.userId,
+                collaborationId: body.collaborationId,
                 questionId: body.questionId,
                 questionTitle: body.questionTitle,
                 language: body.language,

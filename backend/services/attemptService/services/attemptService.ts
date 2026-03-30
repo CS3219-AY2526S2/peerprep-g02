@@ -10,8 +10,8 @@ import { UserScoreService } from "@/services/userScoreService.js";
 import { ServiceError } from "@/utils/ResponseHelpers.js";
 
 export type RecordAttemptInput = {
-    userAId: string;
-    userBId: string;
+    userId: string;
+    collaborationId: string;
     questionId: string;
     questionTitle: string;
     language: string;
@@ -75,21 +75,21 @@ export class AttemptService {
     async recordAttempt(input: RecordAttemptInput): Promise<{
         message: string;
         data: {
-            attempts: AttemptRecord[];
+            attempt: AttemptRecord;
             scoreUpdates: ScoreUpdate[];
         };
     }> {
-        const userAId = input.userAId.trim();
-        const userBId = input.userBId.trim();
+        const userId = input.userId.trim();
+        const collaborationId = input.collaborationId.trim();
         const questionId = input.questionId.trim();
         const language = input.language.trim();
 
-        if (!userAId || !userBId) {
-            throw new ServiceError(400, "userAId and userBId are required.");
+        if (!userId) {
+            throw new ServiceError(400, "userId is required.");
         }
 
-        if (userAId === userBId) {
-            throw new ServiceError(400, "userAId and userBId must be different.");
+        if (!collaborationId) {
+            throw new ServiceError(400, "collaborationId is required.");
         }
 
         if (!questionId) {
@@ -106,47 +106,50 @@ export class AttemptService {
 
         const difficulty = parseDifficulty(input.difficulty);
         const attemptedAt = parseAttemptedAt(input.attemptedAt);
-        const scoreDelta = calculateScoreDelta(difficulty, input.success);
-        const userIds = [userAId, userBId];
+        const newDelta = calculateScoreDelta(difficulty, input.success);
         const questionTitle = input.questionTitle.trim();
-        const totalTestCases = input.totalTestCases;
-        const testCasesPassed = input.testCasesPassed;
 
-        const attemptInputs: CreateAttemptInput[] = userIds.map((clerkUserId) => ({
+        // Check for existing attempt to handle overwrite + score reversal
+        const existing = await attemptRepository.findByUserAndCollaboration(userId, collaborationId);
+        let netDelta = newDelta;
+
+        if (existing) {
+            const oldDelta = calculateScoreDelta(existing.difficulty, existing.success);
+            netDelta = newDelta - oldDelta;
+            await attemptRepository.deleteByIds([existing.id]);
+        }
+
+        const attemptInput: CreateAttemptInput = {
             id: randomUUID(),
-            clerkUserId,
+            clerkUserId: userId,
             questionId,
             questionTitle,
+            collaborationId,
             language,
             difficulty,
             success: input.success,
             duration: input.duration,
-            totalTestCases,
-            testCasesPassed,
+            totalTestCases: input.totalTestCases,
+            testCasesPassed: input.testCasesPassed,
             attemptedAt,
-        }));
+        };
 
-        const attempts = await Promise.all(
-            attemptInputs.map((attemptInput) => attemptRepository.insert(attemptInput)),
-        );
+        const attempt = await attemptRepository.insert(attemptInput);
 
         try {
-            const scoreUpdates = await this.userScoreService.applyScoreDeltas(
-                userIds.map((clerkUserId) => ({
-                    clerkUserId,
-                    delta: scoreDelta,
-                })),
-            );
+            const scoreUpdates = await this.userScoreService.applyScoreDeltas([
+                { clerkUserId: userId, delta: netDelta },
+            ]);
 
             return {
                 message: "Attempt recorded successfully.",
                 data: {
-                    attempts,
+                    attempt,
                     scoreUpdates,
                 },
             };
         } catch (error) {
-            await attemptRepository.deleteByIds(attempts.map((attempt) => attempt.id));
+            await attemptRepository.deleteByIds([attempt.id]);
             throw error;
         }
     }

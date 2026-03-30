@@ -414,7 +414,7 @@ export function registerSocketHandlers(io: Server): void {
                         },
                     );
 
-                    // Record attempt for both users
+                    // Record attempt for the submitting user only
                     const session = execData.session;
                     const duration = Math.round(
                         (Date.now() - new Date(session.createdAt).getTime()) / 1000,
@@ -425,8 +425,8 @@ export function registerSocketHandlers(io: Server): void {
 
                     try {
                         await attemptRecordingService.recordAttempt({
-                            userAId: session.userAId,
-                            userBId: session.userBId,
+                            userId,
+                            collaborationId: payload.collaborationId,
                             questionId: session.questionId,
                             questionTitle: execData.questionTitle,
                             language: session.language,
@@ -437,8 +437,8 @@ export function registerSocketHandlers(io: Server): void {
                             testCasesPassed: result.testCasesPassed,
                         });
 
-                        // Broadcast submission confirmation
-                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                        // Send submission confirmation to the submitter only
+                        socket.emit(
                             SOCKET_EVENTS.SUBMISSION_COMPLETE,
                             {
                                 collaborationId: payload.collaborationId,

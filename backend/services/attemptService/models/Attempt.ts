@@ -7,6 +7,7 @@ type AttemptRow = {
     clerk_user_id: string;
     question_id: string;
     question_title: string;
+    collaboration_id: string | null;
     language: string;
     difficulty: AttemptDifficulty;
     success: boolean;
@@ -22,6 +23,7 @@ export type AttemptRecord = {
     clerkUserId: string;
     questionId: string;
     questionTitle: string;
+    collaborationId: string | null;
     language: string;
     difficulty: AttemptDifficulty;
     success: boolean;
@@ -37,6 +39,7 @@ export type CreateAttemptInput = {
     clerkUserId: string;
     questionId: string;
     questionTitle: string;
+    collaborationId: string | null;
     language: string;
     difficulty: AttemptDifficulty;
     success: boolean;
@@ -52,6 +55,7 @@ function mapAttemptRow(row: AttemptRow): AttemptRecord {
         clerkUserId: row.clerk_user_id,
         questionId: row.question_id,
         questionTitle: row.question_title,
+        collaborationId: row.collaboration_id,
         language: row.language,
         difficulty: row.difficulty,
         success: row.success,
@@ -69,6 +73,7 @@ class AttemptRepository {
         clerk_user_id,
         question_id,
         question_title,
+        collaboration_id,
         language,
         difficulty,
         success,
@@ -87,6 +92,7 @@ class AttemptRepository {
                     clerk_user_id,
                     question_id,
                     question_title,
+                    collaboration_id,
                     language,
                     difficulty,
                     success,
@@ -95,7 +101,7 @@ class AttemptRepository {
                     test_cases_passed,
                     attempted_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING ${this.selectColumns}
             `,
             [
@@ -103,6 +109,7 @@ class AttemptRepository {
                 input.clerkUserId,
                 input.questionId,
                 input.questionTitle,
+                input.collaborationId,
                 input.language,
                 input.difficulty,
                 input.success,
@@ -114,6 +121,22 @@ class AttemptRepository {
         );
 
         return mapAttemptRow(result.rows[0]);
+    }
+
+    async findByUserAndCollaboration(
+        clerkUserId: string,
+        collaborationId: string,
+    ): Promise<AttemptRecord | null> {
+        const result = await query<AttemptRow>(
+            `
+                SELECT ${this.selectColumns}
+                FROM attempts
+                WHERE clerk_user_id = $1 AND collaboration_id = $2
+            `,
+            [clerkUserId, collaborationId],
+        );
+
+        return result.rows.length > 0 ? mapAttemptRow(result.rows[0]) : null;
     }
 
     async deleteByIds(ids: string[]): Promise<void> {

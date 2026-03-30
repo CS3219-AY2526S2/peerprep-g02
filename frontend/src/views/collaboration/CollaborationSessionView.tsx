@@ -324,7 +324,7 @@ export default function CollaborationSessionView() {
                                 <Button
                                     size="lg"
                                     className="rounded-2xl bg-blue-500 px-5 text-white hover:bg-blue-400"
-                                    disabled={isExecuting || !!sessionEnded || !!submissionResult}
+                                    disabled={isExecuting || !!sessionEnded}
                                     onClick={() => void submitCode()}
                                 >
                                     {isExecuting ? (

@@ -2,8 +2,8 @@ import { env } from "@/config/env.js";
 import { logger } from "@/utils/logger.js";
 
 export type RecordAttemptPayload = {
-    userAId: string;
-    userBId: string;
+    userId: string;
+    collaborationId: string;
     questionId: string;
     questionTitle: string;
     language: string;
