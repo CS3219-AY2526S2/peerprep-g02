@@ -91,7 +91,6 @@ export function useMatchingQueue(
                 }
                 setIsConnected(true);
                 if (isSearchingRef.current) {
-                    console.log("Reconnected!");
                     matchingService.joinQueue({
                         topic,
                         difficulties: [difficulty],
@@ -120,18 +119,15 @@ export function useMatchingQueue(
                 setActiveTier(0);
             };
 
-            socketInstance.on(SocketEvents.MATCH_CANCELLED, (data: MatchCancelledPayload) => {
-                console.log(data.message);
+            socketInstance.on(SocketEvents.MATCH_CANCELLED, (_data: MatchCancelledPayload) => {
                 resetSearchState();
             });
 
-            socketInstance.on(SocketEvents.MATCH_ERROR, (data: MatchErrorPayload) => {
-                console.error("Match Error:", data.message);
+            socketInstance.on(SocketEvents.MATCH_ERROR, (_data: MatchErrorPayload) => {
                 resetSearchState();
             });
 
             socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
-                console.log("Partner found!", data);
                 resetSearchState();
 
                 if (data.collaborationId && onMatchFoundRef.current) {
@@ -191,7 +187,6 @@ export function useMatchingQueue(
                         isUpdate: true,
                     });
                 };
-
                 if (secondsPassed >= 12 && relaxationTier.current === 0) {
                     upgradeTier(1);
                 } else if (secondsPassed >= 24 && relaxationTier.current <= 1) {

@@ -32,6 +32,7 @@ type QuestionDetailsResponse = {
             difficulty?: string;
             topics?: string[];
             testCase?: Array<{ input: unknown; output: unknown }>;
+            functionName?: string;
         };
     };
 };
@@ -146,10 +147,8 @@ export class QuestionSelectionService {
                 description: question.description ?? "",
                 difficulty: question.difficulty ?? "",
                 topics: question.topics ?? [],
-                testCase: (question.testCase ?? []).map((tc) => ({
-                    input: typeof tc.input === "string" ? tc.input : JSON.stringify(tc.input),
-                    output: typeof tc.output === "string" ? tc.output : JSON.stringify(tc.output),
-                })),
+                testCase: question.testCase ?? [],
+                functionName: question.functionName ?? "",
             };
         } catch (error) {
             logger.error({ err: error, questionId }, "Error fetching question details");

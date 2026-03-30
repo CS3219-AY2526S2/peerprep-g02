@@ -13,45 +13,36 @@ export async function GetTopics() {
 }
 
 export async function AddTopic(data: string) {
-    let success = false;
     const insert = "INSERT INTO topics(topic) VALUES($1) RETURNING tid";
     const values = [data];
     try {
-        const result = await pool.query(insert, values);
-        success = true;
+        await pool.query(insert, values);
+        return true;
     } catch (err) {
         console.error("Insert failed:", err);
-        success = false;
+        return false;
     }
-
-    return success;
 }
 
 export async function EditTopic(tid: UUID, data: string) {
-    let success = false;
     const update = "UPDATE topics SET topic = $2 WHERE tid = $1 RETURNING tid";
     const values = [tid, data];
 
     try {
-        const result = await pool.query(update, values);
-        success = true;
+        await pool.query(update, values);
+        return true;
     } catch (e) {
         console.log(e);
-        success = false;
+        return false;
     }
-
-    return success;
 }
 
 export async function DeleteTopic(tid: UUID) {
-    let success = false;
     try {
-        const result = await pool.query("DELETE FROM topics WHERE tid = $1", [tid]);
-        success = true;
+        await pool.query("DELETE FROM topics WHERE tid = $1", [tid]);
+        return true;
     } catch (e) {
         console.log(e);
-        success = false;
+        return false;
     }
-
-    return success;
 }

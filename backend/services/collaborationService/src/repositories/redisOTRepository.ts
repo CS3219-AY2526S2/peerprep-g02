@@ -105,6 +105,7 @@ export class RedisOTRepository {
         newRevision: number,
         operation: StoredOperation,
     ): Promise<boolean> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ioredis eval() not on typed interface
         const result = await (this.redis as any).eval(
             UPDATE_IF_REVISION_MATCHES_SCRIPT,
             3,

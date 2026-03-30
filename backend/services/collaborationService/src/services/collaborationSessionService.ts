@@ -9,7 +9,6 @@ import type {
     RoomState,
     SessionJoinState,
 } from "@/models/session.js";
-import { PostgresSessionRepository } from "@/repositories/postgresSessionRepository.js";
 import { RedisOTRepository } from "@/repositories/redisOTRepository.js";
 import { RedisOutputRepository } from "@/repositories/redisOutputRepository.js";
 import { RedisPresenceRepository } from "@/repositories/redisPresenceRepository.js";
@@ -83,7 +82,6 @@ export class CollaborationSessionService {
         private readonly redisPresenceRepository: RedisPresenceRepository,
         redisOTRepository: RedisOTRepository,
         private readonly redisOutputRepository: RedisOutputRepository,
-        private readonly postgresSessionRepository: PostgresSessionRepository,
         private readonly sessionCacheRepository: SessionCacheRepository,
         private readonly userValidationService: UserValidationService,
         private readonly questionSelectionService: QuestionSelectionService,
@@ -111,19 +109,9 @@ export class CollaborationSessionService {
             );
         }
 
-        // If this is a new session, initialize OT document and save to PostgreSQL
+        // If this is a new session, initialize OT document
         if (result.created) {
             await this.otManager.initializeDocument(result.session.collaborationId, "");
-
-            // Save to PostgreSQL for history
-            try {
-                await this.postgresSessionRepository.insertSession(result.session);
-            } catch (error) {
-                logger.error(
-                    { err: error, collaborationId: result.session.collaborationId },
-                    "Failed to save session to PostgreSQL - continuing with Redis only",
-                );
-            }
         }
 
         const cacheWriteSucceeded = await this.sessionCacheRepository.cacheActiveSession(
@@ -240,6 +228,22 @@ export class CollaborationSessionService {
 
         // Fetch question details from question service
         const question = await this.questionSelectionService.getQuestionDetails(session.questionId);
+
+        // Cache question details in Redis for execution/submission
+        if (question && isFirstConnection) {
+            try {
+                await this.redisSessionRepository.storeQuestionDetails(input.collaborationId, {
+                    questionTitle: question.title,
+                    testCases: JSON.stringify(question.testCase),
+                    functionName: question.functionName,
+                });
+            } catch (error) {
+                logger.warn(
+                    { err: error, collaborationId: input.collaborationId },
+                    "Failed to cache question details in Redis",
+                );
+            }
+        }
 
         // F4.6.5 - Return authoritative server state for reconciliation
         return {
@@ -436,20 +440,6 @@ export class CollaborationSessionService {
         // F4.9.3 - Mark session as inactive in Redis
         await this.redisSessionRepository.markSessionInactive(collaborationId);
 
-        // Save final state to PostgreSQL
-        try {
-            await this.postgresSessionRepository.updateSessionEnded(
-                collaborationId,
-                finalCode,
-                reason,
-            );
-        } catch (error) {
-            logger.error(
-                { err: error, collaborationId },
-                "Failed to save session end state to PostgreSQL",
-            );
-        }
-
         // F4.9.4 - Cleanup Redis data
         await this.redisSessionRepository.deleteSessionData(collaborationId);
         await this.redisPresenceRepository.cleanupSession(collaborationId);
@@ -531,6 +521,43 @@ export class CollaborationSessionService {
         await this.redisOutputRepository.setOutput(collaborationId, output);
     }
 
+    async getSessionForExecution(collaborationId: string): Promise<{
+        session: CollaborationSession;
+        code: string;
+        questionTitle: string;
+        testCases: Array<{ input: unknown; output: unknown }>;
+        functionName: string;
+    } | null> {
+        const session =
+            await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
+        if (!session || session.status !== "active") {
+            return null;
+        }
+
+        const code = await this.otManager.getContent(collaborationId);
+        const questionDetails =
+            await this.redisSessionRepository.getQuestionDetails(collaborationId);
+
+        if (!questionDetails) {
+            return null;
+        }
+
+        let testCases: Array<{ input: unknown; output: unknown }>;
+        try {
+            testCases = JSON.parse(questionDetails.testCases);
+        } catch {
+            testCases = [];
+        }
+
+        return {
+            session,
+            code,
+            questionTitle: questionDetails.questionTitle,
+            testCases,
+            functionName: questionDetails.functionName,
+        };
+    }
+
     async handleDisconnect(socketId: string): Promise<{
         collaborationId: string;
         userId: string;
@@ -566,7 +593,6 @@ const redisSessionRepository = new RedisSessionRepository();
 const redisPresenceRepository = new RedisPresenceRepository();
 const redisOTRepository = new RedisOTRepository();
 const redisOutputRepository = new RedisOutputRepository();
-const postgresSessionRepository = new PostgresSessionRepository();
 const sessionCacheRepository = new SessionCacheRepository();
 const userValidationService = new UserValidationService();
 const questionSelectionService = new QuestionSelectionService();
@@ -576,7 +602,6 @@ export const collaborationSessionService = new CollaborationSessionService(
     redisPresenceRepository,
     redisOTRepository,
     redisOutputRepository,
-    postgresSessionRepository,
     sessionCacheRepository,
     userValidationService,
     questionSelectionService,

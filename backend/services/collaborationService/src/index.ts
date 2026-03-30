@@ -8,7 +8,6 @@ import { env } from "@/config/env.js";
 import { socketAuthMiddleware } from "@/middleware/socketAuth.js";
 import { registerSocketHandlers } from "@/sockets/registerSocketHandlers.js";
 import { logger } from "@/utils/logger.js";
-import { initializePostgres } from "@/utils/postgres.js";
 import { getRedisClient } from "@/utils/redis.js";
 
 async function startServer(): Promise<void> {
@@ -16,16 +15,6 @@ async function startServer(): Promise<void> {
     const redis = getRedisClient();
     await redis.ping();
     logger.info("Redis connection verified");
-
-    // Initialize PostgreSQL connection
-    try {
-        await initializePostgres();
-    } catch (error) {
-        logger.warn(
-            { err: error },
-            "PostgreSQL initialization failed - session history will not be persisted",
-        );
-    }
 
     const server = createServer(app);
 
