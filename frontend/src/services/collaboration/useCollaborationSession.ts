@@ -39,7 +39,9 @@ export function useCollaborationSession(collaborationId: string | undefined) {
     const [language, setLanguage] = useState<string>("");
     const [isExecuting, setIsExecuting] = useState(false);
     const [executionResults, setExecutionResults] = useState<ExecutionResults | null>(null);
-    const [submissionResult, setSubmissionResult] = useState<SubmissionCompletePayload | null>(null);
+    const [submissionResult, setSubmissionResult] = useState<SubmissionCompletePayload | null>(
+        null,
+    );
     // F4.7.4 & F4.7.5 - Track offline changes
     const [offlineChanges, setOfflineChanges] = useState<OfflineChanges | null>(null);
     // F4.8 & F4.9 - Track session ended state

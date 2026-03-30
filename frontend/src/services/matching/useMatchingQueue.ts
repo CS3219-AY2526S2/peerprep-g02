@@ -55,7 +55,6 @@ export function useMatchingQueue(
 
             socketInstance.on(SocketEvents.CONNECT, () => {
                 if (isSearchingRef.current) {
-                    console.log("Reconnected! Rejoining queue...");
                     matchingService.joinQueue({
                         topic,
                         difficulties: [difficulty],
@@ -76,18 +75,15 @@ export function useMatchingQueue(
                 setActiveTier(0);
             };
 
-            socketInstance.on(SocketEvents.MATCH_CANCELLED, (data: MatchCancelledPayload) => {
-                console.log(data.message);
+            socketInstance.on(SocketEvents.MATCH_CANCELLED, (_data: MatchCancelledPayload) => {
                 resetSearchState();
             });
 
-            socketInstance.on(SocketEvents.MATCH_ERROR, (data: MatchErrorPayload) => {
-                console.error("Match Error:", data.message);
+            socketInstance.on(SocketEvents.MATCH_ERROR, (_data: MatchErrorPayload) => {
                 resetSearchState();
             });
 
             socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
-                console.log("Partner found!", data);
                 resetSearchState();
 
                 if (data.collaborationId && onMatchFoundRef.current) {
@@ -139,10 +135,8 @@ export function useMatchingQueue(
                 };
 
                 if (secondsPassed >= 15 && relaxationTier.current === 0) {
-                    console.log("15s passed: Relaxing search criteria!");
                     upgradeTier(1);
                 } else if (secondsPassed >= 30 && relaxationTier.current === 1) {
-                    console.log("30s passed: Max relaxation!");
                     upgradeTier(2);
                 }
             }, 1000);
