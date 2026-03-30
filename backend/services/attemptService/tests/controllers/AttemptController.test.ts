@@ -17,8 +17,8 @@ describe("AttemptController", () => {
         const controller = new AttemptController();
         const req = createMockRequest({
             body: {
-                userAId: "user_a",
-                userBId: "user_b",
+                userId: "user_a",
+                collaborationId: "collab-1",
                 language: "typescript",
                 difficulty: "Medium",
                 success: true,
@@ -34,10 +34,25 @@ describe("AttemptController", () => {
     });
 
     it("returns 201 when an attempt is created successfully", async () => {
+        const mockAttempt = {
+            id: "attempt-1",
+            clerkUserId: "user_a",
+            questionId: "question-1",
+            questionTitle: "Two Sum",
+            collaborationId: "collab-1",
+            language: "typescript",
+            difficulty: "Medium" as const,
+            success: true,
+            duration: 1200,
+            totalTestCases: 5,
+            testCasesPassed: 5,
+            attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+            createdAt: new Date("2026-03-24T00:00:00.000Z"),
+        };
         vi.spyOn(AttemptService.prototype, "recordAttempt").mockResolvedValue({
             message: "Attempt recorded successfully.",
             data: {
-                attempts: [],
+                attempt: mockAttempt,
                 scoreUpdates: [],
             },
         });
@@ -45,13 +60,16 @@ describe("AttemptController", () => {
         const controller = new AttemptController();
         const req = createMockRequest({
             body: {
-                userAId: "user_a",
-                userBId: "user_b",
+                userId: "user_a",
+                collaborationId: "collab-1",
                 questionId: "question-1",
+                questionTitle: "Two Sum",
                 language: "typescript",
                 difficulty: "Medium",
                 success: true,
                 duration: 1200,
+                totalTestCases: 5,
+                testCasesPassed: 5,
             },
         });
         const res = createMockResponse();
@@ -62,7 +80,7 @@ describe("AttemptController", () => {
         expect(res.json).toHaveBeenCalledWith({
             message: "Attempt recorded successfully.",
             data: {
-                attempts: [],
+                attempt: mockAttempt,
                 scoreUpdates: [],
             },
         });
@@ -96,23 +114,28 @@ describe("AttemptController", () => {
     });
 
     it("returns 200 for the current user's attempt history", async () => {
+        const mockAttempts = [
+            {
+                id: "attempt-1",
+                clerkUserId: "user_123",
+                questionId: "question-1",
+                questionTitle: "Two Sum",
+                collaborationId: "collab-1",
+                language: "typescript",
+                difficulty: "Easy" as const,
+                success: true,
+                duration: 1200,
+                totalTestCases: 5,
+                testCasesPassed: 5,
+                attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+                createdAt: new Date("2026-03-24T00:00:00.000Z"),
+            },
+        ];
         vi.spyOn(AttemptService.prototype, "listAttemptHistory").mockResolvedValue({
             message: "Attempt history fetched successfully.",
             data: {
                 clerkUserId: "user_123",
-                attempts: [
-                    {
-                        id: "attempt-1",
-                        clerkUserId: "user_123",
-                        questionId: "question-1",
-                        language: "typescript",
-                        difficulty: "Easy",
-                        success: true,
-                        duration: 1200,
-                        attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
-                        createdAt: new Date("2026-03-24T00:00:00.000Z"),
-                    },
-                ],
+                attempts: mockAttempts,
             },
         });
 
@@ -128,19 +151,7 @@ describe("AttemptController", () => {
             message: "Attempt history fetched successfully.",
             data: {
                 clerkUserId: "user_123",
-                attempts: [
-                    {
-                        id: "attempt-1",
-                        clerkUserId: "user_123",
-                        questionId: "question-1",
-                        language: "typescript",
-                        difficulty: "Easy",
-                        success: true,
-                        duration: 1200,
-                        attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
-                        createdAt: new Date("2026-03-24T00:00:00.000Z"),
-                    },
-                ],
+                attempts: mockAttempts,
             },
         });
     });

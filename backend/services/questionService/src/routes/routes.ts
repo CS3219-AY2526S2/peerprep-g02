@@ -67,8 +67,7 @@ router.post("/get", async (req, res) => {
 
 //Save question
 router.post("", async (req, res) => {
-    var result = await CreateQuestion(req.body);
-    var result = true;
+    const result = await CreateQuestion(req.body);
     if (!result) {
         return res.status(400).json({
             message: "Unable to add question to the database.",
@@ -82,8 +81,7 @@ router.post("", async (req, res) => {
 
 //Edit question
 router.put("", async (req, res) => {
-    var result = false;
-    var result = await EditQuestion(req.body);
+    const result = await EditQuestion(req.body);
 
     if (!result) {
         return res.status(400).json({
@@ -160,8 +158,7 @@ router.get("/topics", async (req, res) => {
 
 //Save topic
 router.post("/topics", async (req, res) => {
-    var result = await AddTopic(req.body.topic);
-    var result = true;
+    const result = await AddTopic(req.body.topic);
     if (!result) {
         return res.status(400).json({
             message: "Unable to add topic to the database.",
@@ -175,8 +172,7 @@ router.post("/topics", async (req, res) => {
 
 //Edit topic
 router.put("/topics", async (req, res) => {
-    var result = false;
-    var result = await EditTopic(req.body.tid, req.body.topic);
+    const result = await EditTopic(req.body.tid, req.body.topic);
 
     if (!result) {
         return res.status(400).json({

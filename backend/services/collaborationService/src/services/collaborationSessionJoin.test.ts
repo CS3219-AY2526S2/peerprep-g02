@@ -61,6 +61,7 @@ describe("CollaborationSessionService join flow", () => {
                 getActiveSessions: vi.fn(),
                 markSessionInactive: vi.fn(),
                 deleteSessionData: vi.fn(),
+                storeQuestionDetails: vi.fn(),
             } as never,
             presenceRepository as never,
             otRepository as never,
@@ -71,7 +72,9 @@ describe("CollaborationSessionService join flow", () => {
             } as never,
             {} as never,
             {} as never,
-            {} as never,
+            {
+                getQuestionDetails: vi.fn().mockResolvedValue(null),
+            } as never,
         );
 
         const firstJoin = await service.joinSession({
