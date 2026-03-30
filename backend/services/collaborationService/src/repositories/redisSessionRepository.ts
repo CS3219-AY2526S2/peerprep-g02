@@ -77,7 +77,6 @@ export class RedisSessionRepository {
     private readonly ttlMs = env.sessionTtlMs;
 
     async createActiveSession(input: CreateSessionInput): Promise<CreateSessionResult> {
-        const pairKey = buildPairKey(input.userAId, input.userBId);
         const idempotencyKey = buildIdempotencyKey(input);
 
         // Check idempotency key first

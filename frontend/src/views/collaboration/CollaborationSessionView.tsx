@@ -103,10 +103,18 @@ export default function CollaborationSessionView() {
                 const result = executionResults?.results.find((r) => r.testCaseIndex === index);
                 return {
                     id: index + 1,
-                    input: Array.isArray(testCase.input) && testCase.input.length === 1
-                        ? (typeof testCase.input[0] === "string" ? testCase.input[0] : JSON.stringify(testCase.input[0]))
-                        : (typeof testCase.input === "string" ? testCase.input : JSON.stringify(testCase.input)),
-                    expectedOutput: typeof testCase.output === "string" ? testCase.output : JSON.stringify(testCase.output),
+                    input:
+                        Array.isArray(testCase.input) && testCase.input.length === 1
+                            ? typeof testCase.input[0] === "string"
+                                ? testCase.input[0]
+                                : JSON.stringify(testCase.input[0])
+                            : typeof testCase.input === "string"
+                              ? testCase.input
+                              : JSON.stringify(testCase.input),
+                    expectedOutput:
+                        typeof testCase.output === "string"
+                            ? testCase.output
+                            : JSON.stringify(testCase.output),
                     actualOutput: result?.actualOutput ?? "-",
                     status: result ? (result.passed ? "passed" : "failed") : "pending",
                     error: result?.error,
@@ -389,8 +397,7 @@ export default function CollaborationSessionView() {
                                                 : "text-amber-300",
                                         )}
                                     >
-                                        Solution submitted!{" "}
-                                        {submissionResult.testCasesPassed}/
+                                        Solution submitted! {submissionResult.testCasesPassed}/
                                         {submissionResult.totalTestCases} test cases passed.
                                     </span>
                                 </div>
@@ -521,7 +528,8 @@ export default function CollaborationSessionView() {
                                                                     "inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold",
                                                                     testRow.status === "passed"
                                                                         ? "bg-emerald-500/15 text-emerald-300"
-                                                                        : testRow.status === "failed"
+                                                                        : testRow.status ===
+                                                                            "failed"
                                                                           ? "bg-red-500/15 text-red-300"
                                                                           : "bg-slate-500/15 text-slate-400",
                                                                 )}
