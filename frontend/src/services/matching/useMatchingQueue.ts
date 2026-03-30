@@ -19,8 +19,8 @@ import { Difficulty } from "@/models/question/questionType";
 import { matchingService } from "@/services/matching/matchingService";
 
 export function useMatchingQueue(
-    topic: string,
-    language: string,
+    topics: string[],
+    languages: string[],
     difficulty: Difficulty,
     onMatchFound?: (payload: MatchSuccessPayload) => void,
 ) {
@@ -83,19 +83,15 @@ export function useMatchingQueue(
 
             socketInstance.on(SocketEvents.CONNECT, () => {
                 if (userScore === null) {
-                    pushToast({
-                        tone: "error",
-                        message: "Still loading your profile. Please try again in a moment.",
-                    });
                     return;
                 }
                 setIsConnected(true);
                 if (isSearchingRef.current) {
                     console.log("Reconnected!");
                     matchingService.joinQueue({
-                        topic,
+                        topics: topics,
                         difficulties: [difficulty],
-                        languages: [language],
+                        languages: languages,
                         userScore: userScore,
                         scoreRange: SCORE_RANGE.DEFAULT,
                     });
@@ -160,7 +156,7 @@ export function useMatchingQueue(
                 socketInstance.off(SocketEvents.DISCONNECT);
             }
         };
-    }, [topic, language, difficulty, userScore]);
+    }, [topics, languages, difficulty, userScore]);
 
     // 2. Relaxation Timer Logic
     useEffect(() => {
@@ -174,18 +170,14 @@ export function useMatchingQueue(
 
                 const upgradeTier = (newTier: number) => {
                     if (userScore === null) {
-                        pushToast({
-                            tone: "error",
-                            message: "Still loading your profile. Please try again in a moment.",
-                        });
                         return;
                     }
                     relaxationTier.current = newTier;
                     setActiveTier(newTier);
                     matchingService.joinQueue({
-                        topic,
+                        topics: topics,
                         difficulties: getRelaxedDifficulties(difficulty, newTier),
-                        languages: [language],
+                        languages: languages,
                         userScore: userScore,
                         scoreRange: getRelaxedRange(newTier),
                         isUpdate: true,
@@ -215,14 +207,10 @@ export function useMatchingQueue(
         return () => {
             if (relaxationTimer) clearInterval(relaxationTimer);
         };
-    }, [isSearching, isConnected, topic, difficulty, language, userScore]);
+    }, [isSearching, isConnected, topics, difficulty, languages, userScore]);
 
     const startSearch = async () => {
         if (userScore === null) {
-            pushToast({
-                tone: "error",
-                message: "Still loading your profile. Please try again in a moment.",
-            });
             return;
         }
         setIsSearching(true);
@@ -232,9 +220,9 @@ export function useMatchingQueue(
 
         await matchingService.connect();
         matchingService.joinQueue({
-            topic,
+            topics: topics,
             difficulties: [difficulty],
-            languages: [language],
+            languages: languages,
             userScore: userScore,
             scoreRange: SCORE_RANGE.DEFAULT,
         });

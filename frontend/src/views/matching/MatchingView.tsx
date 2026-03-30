@@ -15,12 +15,12 @@ import { useMatchingQueue } from "@/services/matching/useMatchingQueue";
 
 export function MatchingView() {
     const navigate = useNavigate();
-    const [topic, setTopic] = useState(topicOptions[0]);
-    const [language, setLanguage] = useState(languageOptions[0]);
+    const [topics, setTopics] = useState<string[]>([topicOptions[0]]);
+    const [languages, setLanguages] = useState<string[]>([languageOptions[0]]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
     const { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected } =
-        useMatchingQueue(topic, language, difficulty, (payload) => {
+        useMatchingQueue(topics, languages, difficulty, (payload) => {
             if (!payload.collaborationId) {
                 return;
             }
@@ -34,8 +34,8 @@ export function MatchingView() {
         <Card className="overflow-hidden rounded-[30px] border border-white/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur relative transition-all duration-500">
             {isSearching ? (
                 <MatchSearchingView
-                    topic={topic}
-                    languages={[language]}
+                    topics={topics}
+                    languages={languages}
                     difficulties={getRelaxedDifficulties(difficulty, activeTier)}
                     relaxationTier={activeTier}
                     onCancel={cancelSearch}
@@ -43,11 +43,11 @@ export function MatchingView() {
                 />
             ) : (
                 <MatchFormView
+                    topics={topics}
+                    setTopics={setTopics}
                     userScore={userScore}
-                    topic={topic}
-                    setTopic={setTopic}
-                    language={language}
-                    setLanguage={setLanguage}
+                    languages={languages}
+                    setLanguages={setLanguages}
                     difficulty={difficulty}
                     setDifficulty={setDifficulty}
                     onFindMatch={startSearch}
