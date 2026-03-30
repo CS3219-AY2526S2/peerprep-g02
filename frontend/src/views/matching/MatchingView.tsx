@@ -1,6 +1,8 @@
 import { startTransition, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useUser } from "@clerk/clerk-react";
+
 import { Card } from "@/components/ui/card";
 
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
@@ -17,11 +19,24 @@ import { useMatchingQueue } from "@/services/matching/useMatchingQueue";
 export function MatchingView() {
     const navigate = useNavigate();
 
+    const { isLoaded, user } = useUser();
+
     const [topicOptions, setTopicOptions] = useState<string[]>([]);
 
     const [topics, setTopics] = useState<string[]>([]);
     const [languages, setLanguages] = useState<Language[]>([LANGUAGE_OPTIONS[0]]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
+
+    useEffect(() => {
+        if (isLoaded && user) {
+            const metadata = (user.unsafeMetadata || {}) as Record<string, unknown>;
+            const defaultLang = metadata.defaultLanguage as Language;
+
+            if (defaultLang && (LANGUAGE_OPTIONS as readonly string[]).includes(defaultLang)) {
+                setLanguages([defaultLang]);
+            }
+        }
+    }, [isLoaded, user]);
 
     useEffect(() => {
         const fetchTopics = async () => {
