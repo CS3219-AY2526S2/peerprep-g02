@@ -33,6 +33,8 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
                 Date.now().toString(),
                 queueKeys.length.toString(),
                 JSON.stringify(queueKeys),
+                req.userScore.toString(),
+                req.scoreRange.toString(),
             ],
         },
     )) as [string, string, string, string, string];

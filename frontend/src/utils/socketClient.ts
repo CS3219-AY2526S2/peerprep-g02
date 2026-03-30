@@ -10,6 +10,7 @@ export async function createAuthenticatedSocket(fullUrl: string): Promise<Socket
     const customPath = url.pathname;
 
     const socket = io(baseUrl, {
+        transports: ["websocket"],
         path: `${customPath}/socket.io/`,
         auth: {
             token: token,

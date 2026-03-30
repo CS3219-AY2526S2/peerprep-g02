@@ -19,11 +19,8 @@ export function MatchingView() {
     const [language, setLanguage] = useState(languageOptions[0]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
-    const { isSearching, activeTier, startSearch, cancelSearch } = useMatchingQueue(
-        topic,
-        language,
-        difficulty,
-        (payload) => {
+    const { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected } =
+        useMatchingQueue(topic, language, difficulty, (payload) => {
             if (!payload.collaborationId) {
                 return;
             }
@@ -31,8 +28,7 @@ export function MatchingView() {
             startTransition(() => {
                 navigate(collaborationRoute(payload.collaborationId));
             });
-        },
-    );
+        });
 
     return (
         <Card className="overflow-hidden rounded-[30px] border border-white/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur relative transition-all duration-500">
@@ -43,9 +39,11 @@ export function MatchingView() {
                     difficulties={getRelaxedDifficulties(difficulty, activeTier)}
                     relaxationTier={activeTier}
                     onCancel={cancelSearch}
+                    isConnected={isConnected}
                 />
             ) : (
                 <MatchFormView
+                    userScore={userScore}
                     topic={topic}
                     setTopic={setTopic}
                     language={language}
