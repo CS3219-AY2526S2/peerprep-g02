@@ -21,3 +21,15 @@ export const SCORE_RANGE = {
     RELAXED_3: 300,
     RELAXED_4: 400,
 };
+
+export const LANGUAGE_OPTIONS = [
+    "Python",
+    "Java",
+    "C++",
+    "JavaScript",
+    "TypeScript",
+    "Go",
+    "Rust",
+] as const;
+
+export type Language = (typeof LANGUAGE_OPTIONS)[number];

@@ -9,7 +9,8 @@ import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { collaborationRoute } from "@/constants/routes";
 import { apiFetch } from "@/utils/apiClient";
 import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
-import { Difficulty, Language, LANGUAGE_OPTIONS } from "@/models/question/questionType";
+import { Language, LANGUAGE_OPTIONS } from "@/models/matching/matchingDetailsType";
+import { Difficulty } from "@/models/question/questionType";
 
 import MatchFormView from "@/views/matching/MatchFormView";
 import MatchSearchingView from "@/views/matching/MatchSearchingView";

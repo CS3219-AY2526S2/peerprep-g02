@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import { useUser } from "@clerk/clerk-react";
 
-import { Language, LANGUAGE_OPTIONS } from "@/models/question/questionType";
+import { Language, LANGUAGE_OPTIONS } from "@/models/matching/matchingDetailsType";
 
 const CLERK_FONT_FAMILY = "var(--clerk-font-family, inherit)";
 
