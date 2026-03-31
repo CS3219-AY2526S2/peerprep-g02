@@ -1,12 +1,16 @@
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import { useUser } from "@clerk/clerk-react";
 
 import { Card } from "@/components/ui/card";
 
+import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { collaborationRoute } from "@/constants/routes";
+import { apiFetch } from "@/utils/apiClient";
 import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
+import { Language, LANGUAGE_OPTIONS } from "@/models/matching/matchingDetailsType";
 import { Difficulty } from "@/models/question/questionType";
-import { languageOptions, topicOptions } from "@/models/question/tempStubType";
 
 import MatchFormView from "@/views/matching/MatchFormView";
 import MatchSearchingView from "@/views/matching/MatchSearchingView";
@@ -15,12 +19,54 @@ import { useMatchingQueue } from "@/services/matching/useMatchingQueue";
 
 export function MatchingView() {
     const navigate = useNavigate();
-    const [topic, setTopic] = useState(topicOptions[0]);
-    const [language, setLanguage] = useState(languageOptions[0]);
+
+    const { isLoaded, user } = useUser();
+
+    const [topicOptions, setTopicOptions] = useState<string[]>([]);
+
+    const [topics, setTopics] = useState<string[]>([]);
+    const [languages, setLanguages] = useState<Language[]>([LANGUAGE_OPTIONS[0]]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
+    useEffect(() => {
+        if (isLoaded && user) {
+            const metadata = (user.unsafeMetadata || {}) as Record<string, unknown>;
+            const defaultLang = metadata.defaultLanguage as Language;
+
+            if (defaultLang && (LANGUAGE_OPTIONS as readonly string[]).includes(defaultLang)) {
+                setLanguages([defaultLang]);
+            }
+        }
+    }, [isLoaded, user]);
+
+    useEffect(() => {
+        const fetchTopics = async () => {
+            try {
+                const response = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch topics: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const topicStrings: string[] = data.body.map(
+                    (item: { topic: string }) => item.topic,
+                );
+
+                setTopicOptions(topicStrings);
+
+                if (topicStrings.length > 0 && topics.length === 0) {
+                    setTopics([topicStrings[0]]);
+                }
+            } catch (error) {
+                console.error("Error fetching topics:", error);
+            }
+        };
+
+        fetchTopics();
+    }, []);
+
     const { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected } =
-        useMatchingQueue(topic, language, difficulty, (payload) => {
+        useMatchingQueue(topics, languages, difficulty, (payload) => {
             if (!payload.collaborationId) {
                 return;
             }
@@ -34,8 +80,8 @@ export function MatchingView() {
         <Card className="overflow-hidden rounded-[30px] border border-white/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur relative transition-all duration-500">
             {isSearching ? (
                 <MatchSearchingView
-                    topic={topic}
-                    languages={[language]}
+                    topics={topics}
+                    languages={languages}
                     difficulties={getRelaxedDifficulties(difficulty, activeTier)}
                     relaxationTier={activeTier}
                     onCancel={cancelSearch}
@@ -43,11 +89,13 @@ export function MatchingView() {
                 />
             ) : (
                 <MatchFormView
+                    topicOptions={topicOptions}
+                    languageOptions={LANGUAGE_OPTIONS}
+                    topics={topics}
+                    setTopics={setTopics}
                     userScore={userScore}
-                    topic={topic}
-                    setTopic={setTopic}
-                    language={language}
-                    setLanguage={setLanguage}
+                    languages={languages}
+                    setLanguages={setLanguages}
                     difficulty={difficulty}
                     setDifficulty={setDifficulty}
                     onFindMatch={startSearch}

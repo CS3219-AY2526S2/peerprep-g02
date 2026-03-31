@@ -69,11 +69,15 @@ export const registerSocketHandlers = (io: Server) => {
                 const matchResult = await findMatch(matchRequest);
 
                 if (matchResult.matchFound) {
-                    socketLogger.info(`Match Found: ${userId} & ${matchResult.partnerId}`);
+                    socketLogger.info(
+                        `Match Found: ${userId} & ${matchResult.partnerId} on ${matchResult.matchedTopic} (${matchResult.matchedDifficulty}, ${matchResult.matchedLanguage})`,
+                    );
                     io.to(userId).emit("match_success", matchResult);
                     io.to(matchResult.partnerId).emit("match_success", matchResult);
                 } else {
-                    socketLogger.info(`User ${userId} added to queue for ${matchRequest.topic}.`);
+                    socketLogger.info(
+                        `User ${userId} added to queue for ${matchRequest.topics.join(", ")} for ${matchRequest.difficulties.join(", ")} in ${matchRequest.languages.join(", ")}.`,
+                    );
                     socket.emit("match_waiting", {
                         message: "Added to queue, waiting for a match...",
                         startTime: matchResult.startTime,

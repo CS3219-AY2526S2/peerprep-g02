@@ -109,6 +109,10 @@ services:
     env_file:
       - ./backend/services/matchingService/.env
     depends_on:
+      user-service:
+        condition: service_started
+      questions-service:
+        condition: service_started
       matching-redis:
         condition: service_started
     networks:

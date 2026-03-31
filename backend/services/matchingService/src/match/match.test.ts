@@ -5,7 +5,6 @@ import { attemptRejoin, cancelMatch, findMatch, handleDisconnect } from "@/match
 import { createCollaborationSession } from "@/services/collaborationService.js";
 import { type Difficulty, type MatchRequest } from "@/types/match.js";
 
-// Mock dependencies
 vi.mock("@/managers/redisManager.js");
 vi.mock("@/services/collaborationService.js");
 vi.mock("uuid", () => ({ v4: () => "test-uuid-123" }));
@@ -16,7 +15,6 @@ describe("Matchmaking Service", () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
-        // Setup Redis mock
         mockRedis = {
             eval: vi.fn(),
         };
@@ -26,7 +24,7 @@ describe("Matchmaking Service", () => {
     describe("findMatch", () => {
         const mockRequest: MatchRequest = {
             userId: "user-1",
-            topic: "strings",
+            topics: ["strings"],
             difficulties: ["Easy"],
             languages: ["python"],
             userScore: 1250,
@@ -35,6 +33,7 @@ describe("Matchmaking Service", () => {
         };
 
         it("should return MatchResultSuccess when a partner is found", async () => {
+            const matchedTopic = "strings";
             const matchedDifficulty: Difficulty = "Easy";
             const matchedLanguage = "python";
             const partnerId = "user-2";
@@ -42,6 +41,7 @@ describe("Matchmaking Service", () => {
             mockRedis.eval.mockResolvedValue([
                 "matched",
                 partnerId,
+                matchedTopic,
                 matchedDifficulty,
                 matchedLanguage,
                 "12345678",
@@ -62,12 +62,12 @@ describe("Matchmaking Service", () => {
                 }),
             );
 
-            // Asserting against MatchResultSuccess interface
             expect(result.matchFound).toBe(true);
             if (result.matchFound) {
                 expect(result.collaborationId).toBe("collab-id-999");
                 expect(result.matchId).toBe("test-uuid-123");
                 expect(result.partnerId).toBe(partnerId);
+                expect(result.matchedTopic).toBe(matchedTopic);
                 expect(result.matchedDifficulty).toBe(matchedDifficulty);
                 expect(result.matchedLanguage).toBe(matchedLanguage);
             }
@@ -78,13 +78,14 @@ describe("Matchmaking Service", () => {
                     userBId: partnerId,
                     difficulty: matchedDifficulty,
                     language: matchedLanguage,
+                    topic: matchedTopic,
                 }),
             );
         });
 
         it("should return MatchResultWaiting if no partner is found", async () => {
             const startTimeStr = "1700000000";
-            mockRedis.eval.mockResolvedValue(["waiting", "", "", "", startTimeStr]);
+            mockRedis.eval.mockResolvedValue(["enqueued", "", "", "", "", startTimeStr]);
 
             const result = await findMatch(mockRequest);
 
@@ -95,7 +96,14 @@ describe("Matchmaking Service", () => {
         });
 
         it("should fallback to MatchResultWaiting if collaboration creation fails", async () => {
-            mockRedis.eval.mockResolvedValue(["matched", "user-2", "Easy", "python", "12345678"]);
+            mockRedis.eval.mockResolvedValue([
+                "matched",
+                "user-2",
+                "strings",
+                "Easy",
+                "python",
+                "12345678",
+            ]);
             (createCollaborationSession as any).mockResolvedValue(null);
 
             const result = await findMatch(mockRequest);

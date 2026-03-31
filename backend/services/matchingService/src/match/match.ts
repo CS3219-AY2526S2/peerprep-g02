@@ -19,15 +19,15 @@ import { buildQueueKey, buildUserStatusKey } from "@/utils/match.js";
 export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     const redis = RedisManager.getInstance();
 
-    const queueKeys = req.difficulties.flatMap((diff) =>
-        req.languages.map((lang) => buildQueueKey(req.topic, diff, lang)),
+    const queueKeys = req.topics.flatMap((topic) =>
+        req.difficulties.flatMap((diff) =>
+            req.languages.map((lang) => buildQueueKey(topic, diff, lang)),
+        ),
     );
     const seekerKey = buildUserStatusKey(req.userId);
 
-    // run atomic matchmaking logic using a Lua script
-    const [status, partnerId, matchedDifficulty, matchedLanguage, startTimeStr] = (await redis.eval(
-        FIND_MATCH_LUA_SCRIPT,
-        {
+    const [status, partnerId, matchedTopic, matchedDifficulty, matchedLanguage, startTimeStr] =
+        (await redis.eval(FIND_MATCH_LUA_SCRIPT, {
             keys: [...queueKeys, seekerKey],
             arguments: [
                 Date.now().toString(),
@@ -36,25 +36,21 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
                 req.userScore.toString(),
                 req.scoreRange.toString(),
             ],
-        },
-    )) as [string, string, string, string, string];
+        })) as [string, string, string, string, string, string];
 
     if (status === "matched") {
         const matchId = uuidv4();
 
-        // Create collaboration session via HTTP
         const collaborationId = await createCollaborationSession({
             matchId,
             userAId: req.userId,
             userBId: partnerId,
             difficulty: matchedDifficulty,
             language: matchedLanguage,
-            topic: req.topic,
+            topic: matchedTopic,
         });
 
         if (!collaborationId) {
-            // Failed to create collaboration session - return as waiting
-            // The user will need to retry matching
             return { matchFound: false, startTime: Date.now() };
         }
 
@@ -62,7 +58,7 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
             matchFound: true,
             matchId,
             collaborationId,
-            matchedTopic: req.topic,
+            matchedTopic,
             matchedDifficulty: matchedDifficulty as Difficulty,
             matchedLanguage,
             userId: req.userId,

@@ -6,7 +6,7 @@ import { CardContent } from "@/components/ui/card";
 import { MatchSearchingViewProps, TIER_METADATA } from "@/models/matching/matchingViewType";
 
 export default function MatchSearchingView({
-    topic,
+    topics,
     languages,
     difficulties,
     relaxationTier,
@@ -22,7 +22,6 @@ export default function MatchSearchingView({
             <div className="relative flex items-center justify-center mb-10">
                 {isConnected ? (
                     <>
-                        {/* Active Animations */}
                         <div
                             className="absolute inset-0 rounded-full bg-indigo-500/30 animate-ping"
                             style={{ animationDuration: "3s" }}
@@ -37,7 +36,6 @@ export default function MatchSearchingView({
                     </>
                 ) : (
                     <>
-                        {/* Paused/Offline State */}
                         <div className="absolute inset-0 rounded-full bg-red-500/20"></div>
                         <div className="relative z-10 bg-red-500/20 p-5 rounded-full backdrop-blur-md border border-red-500/40">
                             <WifiOff className="size-12 text-red-200" />
@@ -72,18 +70,20 @@ export default function MatchSearchingView({
 
             {/* Selected Settings Summary Box */}
             <div className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 mb-10 space-y-5 shadow-inner">
-                {/* Topic */}
+                {/* Topics */}
                 <div className="flex items-start gap-3 text-indigo-100">
                     <BookOpen className="size-5 text-purple-300 mt-0.5 shrink-0" />
                     <div className="flex flex-col">
                         <span className="text-xs uppercase tracking-wider font-semibold opacity-60">
-                            Topic
+                            Topics
                         </span>
-                        <span className="font-bold text-white">{topic}</span>
+                        <span className="font-bold text-white leading-tight">
+                            {topics.join(", ")}
+                        </span>
                     </div>
                 </div>
 
-                {/* Difficulties - Handles multiple levels */}
+                {/* Difficulties */}
                 <div className="flex items-start gap-3 text-indigo-100">
                     <Brain className="size-5 text-purple-300 mt-0.5 shrink-0" />
                     <div className="flex flex-col">
@@ -96,7 +96,7 @@ export default function MatchSearchingView({
                     </div>
                 </div>
 
-                {/* Languages - Handles multiple languages */}
+                {/* Languages */}
                 <div className="flex items-start gap-3 text-indigo-100">
                     <Code className="size-5 text-purple-300 mt-0.5 shrink-0" />
                     <div className="flex flex-col">
