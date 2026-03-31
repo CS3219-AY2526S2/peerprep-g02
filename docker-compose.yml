@@ -40,7 +40,7 @@ services:
     depends_on:
       - gateway
     env_file:
-      - ./.env.ngrok
+      - ./.env
     command: http --url=nonjuridical-unflaunting-hudson.ngrok-free.dev gateway:8080
     ports:
       - "4040:4040"
