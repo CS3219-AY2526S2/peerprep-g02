@@ -206,14 +206,17 @@ function AttemptHistoryTable({ attempts }: { attempts: AttemptHistoryItem[] }) {
             <Table className="table-fixed">
                 <TableHeader>
                     <TableRow className="border-slate-200 bg-slate-50 hover:bg-slate-50">
-                        <TableHead className="w-[30%] px-4 text-slate-950">Question</TableHead>
-                        <TableHead className="w-[12%] px-4 text-center text-slate-950">
+                        <TableHead className="w-[26%] px-4 text-slate-950">Question</TableHead>
+                        <TableHead className="w-[10%] px-4 text-center text-slate-950">
                             Result
                         </TableHead>
-                        <TableHead className="w-[12%] px-4 text-center text-slate-950">
+                        <TableHead className="w-[10%] px-4 text-center text-slate-950">
+                            Test Cases
+                        </TableHead>
+                        <TableHead className="w-[10%] px-4 text-center text-slate-950">
                             Difficulty
                         </TableHead>
-                        <TableHead className="w-[14%] px-4 text-center text-slate-950">
+                        <TableHead className="w-[12%] px-4 text-center text-slate-950">
                             Language
                         </TableHead>
                         <TableHead className="w-[12%] px-4 text-center text-slate-950">
@@ -233,7 +236,7 @@ function AttemptHistoryTable({ attempts }: { attempts: AttemptHistoryItem[] }) {
                             <TableCell className="px-4 py-4">
                                 <div>
                                     <p className="truncate text-[0.95rem] font-semibold text-slate-950">
-                                        {attempt.questionId}
+                                        {attempt.questionTitle || attempt.questionId}
                                     </p>
                                 </div>
                             </TableCell>
@@ -241,6 +244,19 @@ function AttemptHistoryTable({ attempts }: { attempts: AttemptHistoryItem[] }) {
                                 <div className="flex justify-center">
                                     <StatusBadge success={attempt.success} />
                                 </div>
+                            </TableCell>
+                            <TableCell className="px-4 py-4 text-center">
+                                <span
+                                    className={cn(
+                                        "text-[0.9rem] font-semibold",
+                                        attempt.testCasesPassed === attempt.totalTestCases &&
+                                            attempt.totalTestCases > 0
+                                            ? "text-emerald-600"
+                                            : "text-slate-700",
+                                    )}
+                                >
+                                    {attempt.testCasesPassed}/{attempt.totalTestCases}
+                                </span>
                             </TableCell>
                             <TableCell className="px-4 py-4 text-center">
                                 <div className="flex justify-center">
@@ -317,6 +333,7 @@ export default function AttemptHistoryView() {
 
         return attempts.filter((attempt) =>
             [
+                attempt.questionTitle,
                 attempt.questionId,
                 attempt.language,
                 attempt.difficulty,

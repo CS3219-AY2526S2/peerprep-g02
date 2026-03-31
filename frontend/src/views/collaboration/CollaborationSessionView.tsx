@@ -11,6 +11,7 @@ import {
     MessageSquareText,
     Play,
     Radio,
+    Send,
     TerminalSquare,
     UsersRound,
     Wifi,
@@ -82,6 +83,11 @@ export default function CollaborationSessionView() {
         submitOfflineChanges,
         discardOfflineChanges,
         sessionEnded,
+        runCode,
+        submitCode,
+        isExecuting,
+        executionResults,
+        submissionResult,
     } = useCollaborationSession(collaborationId);
 
     useEffect(() => {
@@ -93,14 +99,28 @@ export default function CollaborationSessionView() {
     const elapsed = formatElapsed(session?.createdAt, now);
     const testRows = useMemo(
         () =>
-            (question?.testCase ?? []).map((testCase, index) => ({
-                id: index + 1,
-                input: testCase.input,
-                output: testCase.output,
-                expectedOutput: testCase.output,
-                status: index === 1 ? "pending" : "ready",
-            })),
-        [question?.testCase],
+            (question?.testCase ?? []).map((testCase, index) => {
+                const result = executionResults?.results.find((r) => r.testCaseIndex === index);
+                return {
+                    id: index + 1,
+                    input:
+                        Array.isArray(testCase.input) && testCase.input.length === 1
+                            ? typeof testCase.input[0] === "string"
+                                ? testCase.input[0]
+                                : JSON.stringify(testCase.input[0])
+                            : typeof testCase.input === "string"
+                              ? testCase.input
+                              : JSON.stringify(testCase.input),
+                    expectedOutput:
+                        typeof testCase.output === "string"
+                            ? testCase.output
+                            : JSON.stringify(testCase.output),
+                    actualOutput: result?.actualOutput ?? "-",
+                    status: result ? (result.passed ? "passed" : "failed") : "pending",
+                    error: result?.error,
+                };
+            }),
+        [question?.testCase, executionResults],
     );
 
     const connectionBadge =
@@ -295,13 +315,34 @@ export default function CollaborationSessionView() {
                                 {connectionBadge}
                             </div>
 
-                            <Button
-                                size="lg"
-                                className="rounded-2xl bg-emerald-500 px-5 text-white hover:bg-emerald-400"
-                            >
-                                <Play className="size-4" />
-                                Run Code
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    size="lg"
+                                    className="rounded-2xl bg-emerald-500 px-5 text-white hover:bg-emerald-400"
+                                    disabled={isExecuting || !!sessionEnded}
+                                    onClick={() => void runCode()}
+                                >
+                                    {isExecuting ? (
+                                        <LoaderCircle className="size-4 animate-spin" />
+                                    ) : (
+                                        <Play className="size-4" />
+                                    )}
+                                    Run Code
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    className="rounded-2xl bg-blue-500 px-5 text-white hover:bg-blue-400"
+                                    disabled={isExecuting || !!sessionEnded}
+                                    onClick={() => void submitCode()}
+                                >
+                                    {isExecuting ? (
+                                        <LoaderCircle className="size-4 animate-spin" />
+                                    ) : (
+                                        <Send className="size-4" />
+                                    )}
+                                    Submit Solution
+                                </Button>
+                            </div>
                         </div>
                     </div>
 
@@ -329,6 +370,37 @@ export default function CollaborationSessionView() {
                                 >
                                     Return to Dashboard
                                 </Button>
+                            </div>
+                        )}
+
+                        {/* Submission result banner */}
+                        {submissionResult && (
+                            <div
+                                className={cn(
+                                    "flex items-center justify-between border-b px-5 py-4",
+                                    submissionResult.success
+                                        ? "border-emerald-500/30 bg-emerald-500/10"
+                                        : "border-amber-500/30 bg-amber-500/10",
+                                )}
+                            >
+                                <div className="flex items-center gap-3">
+                                    {submissionResult.success ? (
+                                        <CheckCircle2 className="size-5 text-emerald-400" />
+                                    ) : (
+                                        <XCircle className="size-5 text-amber-400" />
+                                    )}
+                                    <span
+                                        className={cn(
+                                            "font-medium",
+                                            submissionResult.success
+                                                ? "text-emerald-300"
+                                                : "text-amber-300",
+                                        )}
+                                    >
+                                        Solution submitted! {submissionResult.testCasesPassed}/
+                                        {submissionResult.totalTestCases} test cases passed.
+                                    </span>
+                                </div>
                             </div>
                         )}
 
@@ -388,14 +460,36 @@ export default function CollaborationSessionView() {
                                     </div>
                                 </div>
 
-                                {/* F4.4.4 - Shared execution output visible to all users */}
-                                {executionOutput && (
-                                    <div className="border-b border-white/10 bg-black/50 p-4">
-                                        <p className="mb-2 text-sm font-medium text-slate-400">
-                                            Execution Output:
+                                {executionResults && (
+                                    <div className="border-b border-white/10 bg-black/50 px-5 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-slate-400">
+                                                Results
+                                            </span>
+                                            <span
+                                                className={cn(
+                                                    "text-sm font-semibold",
+                                                    executionResults.testCasesPassed ===
+                                                        executionResults.totalTestCases &&
+                                                        executionResults.totalTestCases > 0
+                                                        ? "text-emerald-400"
+                                                        : "text-amber-400",
+                                                )}
+                                            >
+                                                {executionResults.testCasesPassed}/
+                                                {executionResults.totalTestCases} passed
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {executionResults?.stderr && (
+                                    <div className="border-b border-white/10 bg-red-500/5 p-4">
+                                        <p className="mb-2 text-sm font-medium text-red-400">
+                                            Stderr:
                                         </p>
-                                        <pre className="whitespace-pre-wrap font-mono text-sm text-slate-200">
-                                            {executionOutput}
+                                        <pre className="whitespace-pre-wrap font-mono text-sm text-red-300">
+                                            {executionResults.stderr}
                                         </pre>
                                     </div>
                                 )}
@@ -419,32 +513,37 @@ export default function CollaborationSessionView() {
                                                         className="border-t border-white/5 text-slate-200"
                                                     >
                                                         <td className="px-5 py-4">{testRow.id}</td>
-                                                        <td className="px-5 py-4">
+                                                        <td className="max-w-[150px] truncate px-5 py-4 font-mono text-xs">
                                                             {testRow.input}
                                                         </td>
-                                                        <td className="px-5 py-4">
-                                                            {testRow.output}
+                                                        <td className="max-w-[150px] truncate px-5 py-4 font-mono text-xs">
+                                                            {testRow.actualOutput}
                                                         </td>
-                                                        <td className="px-5 py-4">
+                                                        <td className="max-w-[150px] truncate px-5 py-4 font-mono text-xs">
                                                             {testRow.expectedOutput}
                                                         </td>
                                                         <td className="px-5 py-4">
                                                             <span
                                                                 className={cn(
                                                                     "inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold",
-                                                                    testRow.status === "ready"
+                                                                    testRow.status === "passed"
                                                                         ? "bg-emerald-500/15 text-emerald-300"
-                                                                        : "bg-amber-500/15 text-amber-300",
+                                                                        : testRow.status ===
+                                                                            "failed"
+                                                                          ? "bg-red-500/15 text-red-300"
+                                                                          : "bg-slate-500/15 text-slate-400",
                                                                 )}
                                                             >
-                                                                {testRow.status === "ready" ? (
+                                                                {testRow.status === "passed" ? (
                                                                     <CheckCircle2 className="size-4" />
-                                                                ) : (
+                                                                ) : testRow.status === "failed" ? (
                                                                     <XCircle className="size-4" />
-                                                                )}
-                                                                {testRow.status === "ready"
-                                                                    ? "Ready"
-                                                                    : "Pending"}
+                                                                ) : null}
+                                                                {testRow.status === "passed"
+                                                                    ? "Passed"
+                                                                    : testRow.status === "failed"
+                                                                      ? "Failed"
+                                                                      : "Pending"}
                                                             </span>
                                                         </td>
                                                     </tr>

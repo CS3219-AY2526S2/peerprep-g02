@@ -22,8 +22,7 @@ export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
             difficulty: item.difficulty,
         }));
         return questions;
-    } catch (e) {
-        console.error(e);
+    } catch {
         return null;
     }
 };
@@ -40,8 +39,7 @@ export const getPopularQuestions = async (): Promise<string[] | null> => {
         if (!data || !data.body) return null;
 
         return data.body.map((item: QuestionInfo) => item.title);
-    } catch (e) {
-        console.error(e);
+    } catch {
         return null;
     }
 };
@@ -75,8 +73,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
             testCase: cases,
             description: data.description,
         };
-    } catch (e) {
-        console.error(e);
+    } catch {
         return null;
     }
 };

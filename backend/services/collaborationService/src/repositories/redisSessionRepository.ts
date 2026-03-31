@@ -77,7 +77,6 @@ export class RedisSessionRepository {
     private readonly ttlMs = env.sessionTtlMs;
 
     async createActiveSession(input: CreateSessionInput): Promise<CreateSessionResult> {
-        const pairKey = buildPairKey(input.userAId, input.userBId);
         const idempotencyKey = buildIdempotencyKey(input);
 
         // Check idempotency key first
@@ -201,6 +200,38 @@ export class RedisSessionRepository {
         pipeline.del(KEYS.sessionByPair(session.userAId, session.userBId));
 
         await pipeline.exec();
+    }
+
+    async storeQuestionDetails(
+        collaborationId: string,
+        details: { questionTitle: string; testCases: string; functionName: string },
+    ): Promise<void> {
+        const sessionKey = KEYS.session(collaborationId);
+        await this.redis.hset(sessionKey, {
+            questionTitle: details.questionTitle,
+            testCases: details.testCases,
+            functionName: details.functionName,
+        });
+    }
+
+    async getQuestionDetails(
+        collaborationId: string,
+    ): Promise<{ questionTitle: string; testCases: string; functionName: string } | null> {
+        const sessionKey = KEYS.session(collaborationId);
+        const [questionTitle, testCases, functionName] = await this.redis.hmget(
+            sessionKey,
+            "questionTitle",
+            "testCases",
+            "functionName",
+        );
+        if (!questionTitle && !testCases && !functionName) {
+            return null;
+        }
+        return {
+            questionTitle: questionTitle ?? "",
+            testCases: testCases ?? "[]",
+            functionName: functionName ?? "",
+        };
     }
 
     async getActiveSessions(): Promise<CollaborationSession[]> {

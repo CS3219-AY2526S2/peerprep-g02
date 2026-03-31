@@ -72,9 +72,33 @@ export type UserLeftPayload = {
     userId: string;
 };
 
+export type TestCaseResult = {
+    testCaseIndex: number;
+    passed: boolean;
+    actualOutput: string;
+    expectedOutput: string;
+    error?: string;
+    executionTimeMs: number;
+};
+
+export type ExecutionResults = {
+    results: TestCaseResult[];
+    totalTestCases: number;
+    testCasesPassed: number;
+    stderr: string;
+};
+
 export type OutputUpdatedPayload = {
     collaborationId: string;
     output: string;
+    executionResults?: ExecutionResults;
+};
+
+export type SubmissionCompletePayload = {
+    collaborationId: string;
+    success: boolean;
+    totalTestCases: number;
+    testCasesPassed: number;
 };
 
 export type RoomState = {

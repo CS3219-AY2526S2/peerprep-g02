@@ -37,6 +37,7 @@ router.post("/get", async (req, res) => {
                 difficulty: question.difficulty,
                 topics: question.topics,
                 testCase: question.test_case,
+                functionName: question.function_name,
             },
         },
     });
