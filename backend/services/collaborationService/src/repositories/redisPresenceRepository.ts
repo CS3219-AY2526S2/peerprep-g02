@@ -396,8 +396,8 @@ export class RedisPresenceRepository {
         return { canRejoin, disconnectDurationMs, gracePeriodMs };
     }
 
-    async cleanupSession(collaborationId: string): Promise<void> {
-        // Get all sockets for this session
+    async cleanupSession(collaborationId: string, assignedUserIds?: string[]): Promise<void> {
+        // Get all sockets for this session (may already be empty if users left)
         const socketIds = await this.redis.smembers(KEYS.sockets(collaborationId));
 
         const pipeline = this.redis.pipeline();
@@ -416,18 +416,20 @@ export class RedisPresenceRepository {
         // Delete activity timestamp
         pipeline.del(KEYS.activity(collaborationId));
 
-        // Note: We need to find and delete presence keys for users
-        // Since we track sockets, we can get user IDs from there
-        const userIds = new Set<string>();
-        for (const socketId of socketIds) {
-            const binding = await this.redis.hgetall(KEYS.socket(socketId));
-            if (binding.userId) {
-                userIds.add(binding.userId);
+        // Delete presence keys for assigned users directly
+        // (don't rely on sockets set — it may already be empty after leaveSession)
+        if (assignedUserIds && assignedUserIds.length > 0) {
+            for (const userId of assignedUserIds) {
+                pipeline.del(KEYS.presence(collaborationId, userId));
             }
-        }
-
-        for (const userId of userIds) {
-            pipeline.del(KEYS.presence(collaborationId, userId));
+        } else {
+            // Fallback: try to find user IDs from remaining sockets
+            for (const socketId of socketIds) {
+                const binding = await this.redis.hgetall(KEYS.socket(socketId));
+                if (binding.userId) {
+                    pipeline.del(KEYS.presence(collaborationId, binding.userId));
+                }
+            }
         }
 
         await pipeline.exec();

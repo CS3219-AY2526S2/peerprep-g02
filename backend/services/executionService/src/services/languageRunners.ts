@@ -31,6 +31,14 @@ function generatePython(userCode: string, functionName: string): string {
 ${userCode}
 # --- End user code ---
 
+# Resolve function: try global, then Solution().method
+if '${functionName}' in dir():
+    _fn = ${functionName}
+elif 'Solution' in dir():
+    _fn = getattr(Solution(), '${functionName}')
+else:
+    _fn = ${functionName}
+
 _test_cases = json.loads(sys.stdin.read())
 _results = []
 for _tc in _test_cases:
@@ -38,7 +46,7 @@ for _tc in _test_cases:
     if not isinstance(_args, list):
         _args = [_args]
     try:
-        _r = ${functionName}(*_args)
+        _r = _fn(*_args)
         _results.append({"output": json.dumps(_r), "error": None})
     except Exception as _e:
         _results.append({"output": None, "error": str(_e)})
@@ -55,12 +63,17 @@ ${userCode}
 
 const _input = _fs.readFileSync(0, 'utf8');
 const _testCases = JSON.parse(_input);
+const _fn = typeof ${functionName} === 'function'
+    ? ${functionName}
+    : typeof Solution !== 'undefined'
+        ? new Solution().${functionName}.bind(new Solution())
+        : ${functionName};
 const _results = [];
 for (const _tc of _testCases) {
     const _args = Array.isArray(_tc.input) ? _tc.input : [_tc.input];
     try {
-        const _r = ${functionName}(..._args);
-        _results.push({ output: JSON.stringify(_r), error: null });
+        const _r = _fn(..._args);
+        _results.push({ output: _r === undefined ? "null" : JSON.stringify(_r), error: null });
     } catch (_e) {
         _results.push({ output: null, error: String(_e) });
     }
@@ -78,12 +91,17 @@ ${userCode}
 
 const _input = _fs.readFileSync(0, 'utf8');
 const _testCases = JSON.parse(_input);
+const _fn = typeof ${functionName} === 'function'
+    ? ${functionName}
+    : typeof Solution !== 'undefined'
+        ? new Solution().${functionName}.bind(new Solution())
+        : ${functionName};
 const _results: Array<{ output: string | null; error: string | null }> = [];
 for (const _tc of _testCases) {
     const _args = Array.isArray(_tc.input) ? _tc.input : [_tc.input];
     try {
-        const _r = ${functionName}(..._args);
-        _results.push({ output: JSON.stringify(_r), error: null });
+        const _r = _fn(..._args);
+        _results.push({ output: _r === undefined ? "null" : JSON.stringify(_r), error: null });
     } catch (_e) {
         _results.push({ output: null, error: String(_e) });
     }

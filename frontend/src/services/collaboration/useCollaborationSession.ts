@@ -129,7 +129,11 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         setIsExecuting(true);
         setExecutionResults(null);
         try {
-            await collaborationService.runCode(collaborationId);
+            const ack = await collaborationService.runCode(collaborationId);
+            if (!ack.ok) {
+                pushToast({ tone: "error", message: ack.error ?? "Failed to run code" });
+                setIsExecuting(false);
+            }
         } catch {
             pushToast({ tone: "error", message: "Failed to run code" });
             setIsExecuting(false);
@@ -142,7 +146,11 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         setExecutionResults(null);
         setSubmissionResult(null);
         try {
-            await collaborationService.submitCode(collaborationId);
+            const ack = await collaborationService.submitCode(collaborationId);
+            if (!ack.ok) {
+                pushToast({ tone: "error", message: ack.error ?? "Failed to submit code" });
+                setIsExecuting(false);
+            }
         } catch {
             pushToast({ tone: "error", message: "Failed to submit code" });
             setIsExecuting(false);
@@ -258,10 +266,13 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             }
         };
 
-        void joinSession();
+        let hasJoined = false;
 
         const handleConnect = () => {
-            void joinSession();
+            if (hasJoined) {
+                // Only re-join on reconnection, not on initial connect
+                void joinSession();
+            }
         };
 
         const handleDisconnect = () => {
@@ -381,9 +392,19 @@ export function useCollaborationSession(collaborationId: string | undefined) {
 
             // The server sends execution results as payload.output directly
             const output = payload.output as unknown as ExecutionResults | { error?: string };
-            setExecutionOutput(payload.output);
             if (output && "results" in output) {
+                setExecutionOutput(JSON.stringify(output, null, 2));
                 setExecutionResults(output);
+            } else if (output && "error" in output && output.error) {
+                setExecutionOutput(output.error);
+                setExecutionResults(null);
+                pushToast({ tone: "error", message: output.error });
+            } else {
+                setExecutionOutput(
+                    typeof payload.output === "string"
+                        ? payload.output
+                        : JSON.stringify(payload.output),
+                );
             }
             setIsExecuting(false);
         };
@@ -444,6 +465,10 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             socket.on(COLLABORATION_SOCKET_EVENTS.CODE_RUNNING, handleCodeRunning);
             socket.on(COLLABORATION_SOCKET_EVENTS.SUBMISSION_COMPLETE, handleSubmissionComplete);
             socket.on(COLLABORATION_SOCKET_EVENTS.SESSION_ENDED, handleSessionEnded);
+
+            // Join once after all handlers are registered
+            hasJoined = true;
+            void joinSession();
         });
 
         return () => {

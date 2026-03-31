@@ -60,6 +60,34 @@ export function registerSocketHandlers(io: Server): void {
         socket.emit(SOCKET_EVENTS.CONNECTION_READY, { userId });
 
         /**
+         * Check if the authenticated user has an active collaboration session
+         */
+        socket.on(
+            SOCKET_EVENTS.SESSION_CHECK_ACTIVE,
+            async (
+                _payload: unknown,
+                ack?: (response: {
+                    ok: boolean;
+                    activeSession?: { collaborationId: string; topic: string; difficulty: string } | null;
+                }) => void,
+            ) => {
+                logger.info({ userId, socketId: socket.id }, "Received session:check-active request");
+                try {
+                    const activeSession =
+                        await collaborationSessionService.getActiveSessionForUser(userId);
+                    logger.info(
+                        { userId, hasActiveSession: !!activeSession, collaborationId: activeSession?.collaborationId },
+                        "Active session check result",
+                    );
+                    ack?.({ ok: true, activeSession: activeSession ?? null });
+                } catch (error) {
+                    logger.error({ err: error, userId }, "Failed to check active session");
+                    ack?.({ ok: true, activeSession: null });
+                }
+            },
+        );
+
+        /**
          * F4.3.2 - Handle session join
          * When a user joins, notify the other user
          */

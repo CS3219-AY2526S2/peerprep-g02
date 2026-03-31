@@ -67,6 +67,7 @@ export default function CollaborationSessionView() {
     const { collaborationId } = useParams<{ collaborationId: string }>();
     const navigate = useNavigate();
     const [now, setNow] = useState(() => Date.now());
+    const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
     const {
         connectionState,
         joinState,
@@ -94,6 +95,17 @@ export default function CollaborationSessionView() {
         const timer = window.setInterval(() => setNow(Date.now()), 1000);
         return () => window.clearInterval(timer);
     }, []);
+
+    // Auto-redirect home after successful submission
+    useEffect(() => {
+        if (!submissionResult?.success) return;
+        const timeout = setTimeout(() => {
+            void leaveSession().then(() => {
+                startTransition(() => navigate(ROUTES.DASHBOARD));
+            });
+        }, 3000);
+        return () => clearTimeout(timeout);
+    }, [submissionResult, leaveSession, navigate]);
 
     const session = joinState?.session;
     const elapsed = formatElapsed(session?.createdAt, now);
@@ -176,11 +188,7 @@ export default function CollaborationSessionView() {
                             variant="destructive"
                             size="lg"
                             className="rounded-2xl bg-red-500 px-5 text-white hover:bg-red-400"
-                            onClick={() => {
-                                void leaveSession().then(() => {
-                                    startTransition(() => navigate(ROUTES.DASHBOARD));
-                                });
-                            }}
+                            onClick={() => setShowLeaveConfirm(true)}
                         >
                             <LogOut className="size-4" />
                             Exit Session
@@ -288,7 +296,7 @@ export default function CollaborationSessionView() {
                                                 <span className="font-semibold text-slate-200">
                                                     Output:
                                                 </span>{" "}
-                                                {testRow.output}
+                                                {testRow.expectedOutput}
                                             </p>
                                         </CardContent>
                                     </Card>
@@ -401,6 +409,23 @@ export default function CollaborationSessionView() {
                                         {submissionResult.totalTestCases} test cases passed.
                                     </span>
                                 </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className={cn(
+                                        "bg-transparent",
+                                        submissionResult.success
+                                            ? "border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20"
+                                            : "border-amber-500/50 text-amber-300 hover:bg-amber-500/20",
+                                    )}
+                                    onClick={() => {
+                                        void leaveSession().then(() => {
+                                            startTransition(() => navigate(ROUTES.DASHBOARD));
+                                        });
+                                    }}
+                                >
+                                    Return Home
+                                </Button>
                             </div>
                         )}
 
@@ -516,8 +541,15 @@ export default function CollaborationSessionView() {
                                                         <td className="max-w-[150px] truncate px-5 py-4 font-mono text-xs">
                                                             {testRow.input}
                                                         </td>
-                                                        <td className="max-w-[150px] truncate px-5 py-4 font-mono text-xs">
-                                                            {testRow.actualOutput}
+                                                        <td className="max-w-[150px] px-5 py-4 font-mono text-xs">
+                                                            <span className="block truncate">
+                                                                {testRow.actualOutput || (testRow.error ? "" : "-")}
+                                                            </span>
+                                                            {testRow.error && (
+                                                                <span className="block truncate text-red-400">
+                                                                    {testRow.error}
+                                                                </span>
+                                                            )}
                                                         </td>
                                                         <td className="max-w-[150px] truncate px-5 py-4 font-mono text-xs">
                                                             {testRow.expectedOutput}
@@ -636,6 +668,49 @@ export default function CollaborationSessionView() {
                     </div>
                 </section>
             </main>
+
+            {/* Leave session confirmation dialog */}
+            {showLeaveConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <Card className="w-full max-w-md rounded-[24px] border border-white/10 bg-[#1e293b] p-0 shadow-2xl">
+                        <CardContent className="p-8">
+                            <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-red-500/15">
+                                <LogOut className="size-7 text-red-400" />
+                            </div>
+                            <CardTitle className="mb-2 text-2xl font-bold text-white">
+                                Leave Session?
+                            </CardTitle>
+                            <CardDescription className="text-base text-slate-400">
+                                Are you sure you want to leave this collaboration session? You will
+                                not be able to rejoin once you leave.
+                            </CardDescription>
+                            <div className="mt-8 flex items-center justify-end gap-3">
+                                <Button
+                                    variant="ghost"
+                                    size="lg"
+                                    className="rounded-2xl px-6 text-slate-300 hover:bg-white/10 hover:text-white"
+                                    onClick={() => setShowLeaveConfirm(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    size="lg"
+                                    className="rounded-2xl bg-red-500 px-6 text-white hover:bg-red-400"
+                                    onClick={() => {
+                                        setShowLeaveConfirm(false);
+                                        void leaveSession().then(() => {
+                                            startTransition(() => navigate(ROUTES.DASHBOARD));
+                                        });
+                                    }}
+                                >
+                                    Leave Session
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }

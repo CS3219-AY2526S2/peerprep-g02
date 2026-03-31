@@ -61,14 +61,79 @@ class CollaborationService {
         });
     }
 
-    async runCode(collaborationId: string): Promise<void> {
+    async runCode(collaborationId: string): Promise<{ ok: boolean; error?: string }> {
         const socket = await this.connect();
-        socket.emit(COLLABORATION_SOCKET_EVENTS.CODE_RUN, { collaborationId });
+        return new Promise((resolve) => {
+            socket.emit(
+                COLLABORATION_SOCKET_EVENTS.CODE_RUN,
+                { collaborationId },
+                (response: { ok: boolean; error?: string }) => {
+                    resolve(response);
+                },
+            );
+        });
     }
 
-    async submitCode(collaborationId: string): Promise<void> {
+    async submitCode(collaborationId: string): Promise<{ ok: boolean; error?: string }> {
         const socket = await this.connect();
-        socket.emit(COLLABORATION_SOCKET_EVENTS.CODE_SUBMIT, { collaborationId });
+        return new Promise((resolve) => {
+            socket.emit(
+                COLLABORATION_SOCKET_EVENTS.CODE_SUBMIT,
+                { collaborationId },
+                (response: { ok: boolean; error?: string }) => {
+                    resolve(response);
+                },
+            );
+        });
+    }
+
+    async checkActiveSession(): Promise<{
+        collaborationId: string;
+        topic: string;
+        difficulty: string;
+    } | null> {
+        // Use a dedicated socket so we don't interfere with the shared singleton
+        let dedicatedSocket: Socket | null = null;
+        try {
+            dedicatedSocket = await createAuthenticatedSocket(
+                API_ENDPOINTS.COLLABORATION.SOCKET_PATH,
+            );
+
+            return await new Promise<{
+                collaborationId: string;
+                topic: string;
+                difficulty: string;
+            } | null>((resolve) => {
+                const timeout = setTimeout(() => {
+                    dedicatedSocket?.disconnect();
+                    resolve(null);
+                }, 5000);
+
+                dedicatedSocket!.emit(
+                    COLLABORATION_SOCKET_EVENTS.SESSION_CHECK_ACTIVE,
+                    {},
+                    (response: {
+                        ok: boolean;
+                        activeSession?: {
+                            collaborationId: string;
+                            topic: string;
+                            difficulty: string;
+                        } | null;
+                    }) => {
+                        clearTimeout(timeout);
+                        dedicatedSocket?.disconnect();
+                        if (response.ok && response.activeSession) {
+                            resolve(response.activeSession);
+                        } else {
+                            resolve(null);
+                        }
+                    },
+                );
+            });
+        } catch {
+            dedicatedSocket?.disconnect();
+            return null;
+        }
     }
 
     disconnect(): void {

@@ -74,6 +74,22 @@ export type EndSessionResult = {
     finalCodeRevision: number;
 };
 
+function generateCodeTemplate(language: string, functionName: string): string {
+    const lang = language.toLowerCase();
+    switch (lang) {
+        case "python":
+            return `class Solution:\n    def ${functionName}(self):\n        pass\n`;
+        case "javascript":
+            return `class Solution {\n    ${functionName}() {\n        \n    }\n}\n`;
+        case "typescript":
+            return `class Solution {\n    ${functionName}() {\n        \n    }\n}\n`;
+        case "java":
+            return `class Solution {\n    public void ${functionName}() {\n        \n    }\n}\n`;
+        default:
+            return "";
+    }
+}
+
 export class CollaborationSessionService {
     private readonly otManager: OTDocumentManager;
 
@@ -87,6 +103,30 @@ export class CollaborationSessionService {
         private readonly questionSelectionService: QuestionSelectionService,
     ) {
         this.otManager = new OTDocumentManager(redisOTRepository);
+    }
+
+    async getActiveSessionForUser(
+        userId: string,
+    ): Promise<{ collaborationId: string; topic: string; difficulty: string } | null> {
+        const session = await this.redisSessionRepository.getActiveSessionForUser(userId);
+        if (!session) {
+            return null;
+        }
+
+        // Check if user has intentionally left
+        const hasLeft = await this.redisPresenceRepository.hasUserLeft(
+            session.collaborationId,
+            userId,
+        );
+        if (hasLeft) {
+            return null;
+        }
+
+        return {
+            collaborationId: session.collaborationId,
+            topic: session.topic,
+            difficulty: session.difficulty,
+        };
     }
 
     async createSession(payload: CreateSessionRequest): Promise<CreateSessionResponse> {
@@ -109,9 +149,26 @@ export class CollaborationSessionService {
             );
         }
 
-        // If this is a new session, initialize OT document
+        // If this is a new session, initialize OT document with a code template
         if (result.created) {
-            await this.otManager.initializeDocument(result.session.collaborationId, "");
+            let initialCode = "";
+            try {
+                const questionDetails = await this.questionSelectionService.getQuestionDetails(
+                    result.session.questionId,
+                );
+                if (questionDetails?.functionName) {
+                    initialCode = generateCodeTemplate(
+                        result.session.language,
+                        questionDetails.functionName,
+                    );
+                }
+            } catch (error) {
+                logger.warn(
+                    { err: error, collaborationId: result.session.collaborationId },
+                    "Failed to fetch question details for code template",
+                );
+            }
+            await this.otManager.initializeDocument(result.session.collaborationId, initialCode);
         }
 
         const cacheWriteSucceeded = await this.sessionCacheRepository.cacheActiveSession(
@@ -389,6 +446,9 @@ export class CollaborationSessionService {
         // Mark user as intentionally left
         await this.redisPresenceRepository.markUserAsLeft(binding.collaborationId, userId);
 
+        // Clear user → active session index so they won't see a stale rejoin prompt
+        await this.redisSessionRepository.clearUserActiveSession(userId);
+
         // Remove ALL socket connections for this user (they may have multiple tabs)
         const removedSocketIds = await this.redisPresenceRepository.removeAllUserSocketConnections(
             binding.collaborationId,
@@ -402,10 +462,24 @@ export class CollaborationSessionService {
         );
 
         // F4.8.2 - Check if both users have left
-        const sessionEnded = await this.redisPresenceRepository.haveBothUsersLeft(
+        let sessionEnded = await this.redisPresenceRepository.haveBothUsersLeft(
             binding.collaborationId,
             assignedUserIds,
         );
+
+        // Also end if this user left and the other is disconnected (not coming back)
+        if (!sessionEnded) {
+            const otherUserId = assignedUserIds.find((id) => id !== userId);
+            if (otherUserId) {
+                const otherStatus = await this.redisPresenceRepository.getUserPresenceStatus(
+                    binding.collaborationId,
+                    otherUserId,
+                );
+                if (otherStatus === "disconnected") {
+                    sessionEnded = true;
+                }
+            }
+        }
 
         if (sessionEnded) {
             await this.endSession(binding.collaborationId, "both_users_left");
@@ -437,12 +511,19 @@ export class CollaborationSessionService {
         const finalCode = await this.otManager.getContent(collaborationId);
         const finalCodeRevision = await this.otManager.getRevision(collaborationId);
 
+        const assignedUserIds = [session.userAId, session.userBId];
+
         // F4.9.3 - Mark session as inactive in Redis
         await this.redisSessionRepository.markSessionInactive(collaborationId);
 
+        // Clear user → active session index for both users
+        for (const uid of assignedUserIds) {
+            await this.redisSessionRepository.clearUserActiveSession(uid);
+        }
+
         // F4.9.4 - Cleanup Redis data
         await this.redisSessionRepository.deleteSessionData(collaborationId);
-        await this.redisPresenceRepository.cleanupSession(collaborationId);
+        await this.redisPresenceRepository.cleanupSession(collaborationId, assignedUserIds);
         await this.otManager.deleteDocument(collaborationId);
         await this.redisOutputRepository.deleteOutput(collaborationId);
 
