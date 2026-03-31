@@ -543,7 +543,8 @@ export default function CollaborationSessionView() {
                                                         </td>
                                                         <td className="max-w-[150px] px-5 py-4 font-mono text-xs">
                                                             <span className="block truncate">
-                                                                {testRow.actualOutput || (testRow.error ? "" : "-")}
+                                                                {testRow.actualOutput ||
+                                                                    (testRow.error ? "" : "-")}
                                                             </span>
                                                             {testRow.error && (
                                                                 <span className="block truncate text-red-400">

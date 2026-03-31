@@ -92,13 +92,13 @@ export function MatchingView() {
                 if (topicStrings.length > 0 && topics.length === 0) {
                     setTopics([topicStrings[0]]);
                 }
-            } catch (error) {
-                console.error("Error fetching topics:", error);
+            } catch {
+                // topic fetch failed
             }
         };
 
         fetchTopics();
-    }, []);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected } =
         useMatchingQueue(topics, languages, difficulty, (payload) => {
@@ -156,31 +156,31 @@ export function MatchingView() {
                 </Card>
             )}
 
-        <Card className="overflow-hidden rounded-[30px] border border-white/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur relative transition-all duration-500">
-            {isSearching ? (
-                <MatchSearchingView
-                    topics={topics}
-                    languages={languages}
-                    difficulties={getRelaxedDifficulties(difficulty, activeTier)}
-                    relaxationTier={activeTier}
-                    onCancel={cancelSearch}
-                    isConnected={isConnected}
-                />
-            ) : (
-                <MatchFormView
-                    topicOptions={topicOptions}
-                    languageOptions={LANGUAGE_OPTIONS}
-                    topics={topics}
-                    setTopics={setTopics}
-                    userScore={userScore}
-                    languages={languages}
-                    setLanguages={setLanguages}
-                    difficulty={difficulty}
-                    setDifficulty={setDifficulty}
-                    onFindMatch={startSearch}
-                />
-            )}
-        </Card>
+            <Card className="overflow-hidden rounded-[30px] border border-white/70 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur relative transition-all duration-500">
+                {isSearching ? (
+                    <MatchSearchingView
+                        topics={topics}
+                        languages={languages}
+                        difficulties={getRelaxedDifficulties(difficulty, activeTier)}
+                        relaxationTier={activeTier}
+                        onCancel={cancelSearch}
+                        isConnected={isConnected}
+                    />
+                ) : (
+                    <MatchFormView
+                        topicOptions={topicOptions}
+                        languageOptions={LANGUAGE_OPTIONS}
+                        topics={topics}
+                        setTopics={setTopics}
+                        userScore={userScore}
+                        languages={languages}
+                        setLanguages={setLanguages}
+                        difficulty={difficulty}
+                        setDifficulty={setDifficulty}
+                        onFindMatch={startSearch}
+                    />
+                )}
+            </Card>
         </div>
     );
 }

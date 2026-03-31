@@ -23,48 +23,77 @@ We use:
 - `Socket.IO` for real-time bidirectional communication
 - `Redis` for shared session state, presence, OT document state, and cross-request durability
 
+### Why Socket.IO over plain WebSocket
 
-### Why Socket.IO is appropriate
+A collaborative coding room requires more than raw bidirectional byte streams. We evaluated three real-time transport options:
 
-Socket.IO is a good fit here because the collaboration room is not just raw message streaming. We need:
+| Capability | Plain WebSocket | Socket.IO | Server-Sent Events (SSE) |
+|---|---|---|---|
+| Bidirectional | Yes | Yes | No (server→client only) |
+| Room-based broadcasting | Manual | Built-in | N/A |
+| Event acknowledgements (ack callbacks) | Manual | Built-in | N/A |
+| Heartbeat / disconnect detection | Manual | Built-in (`pingInterval`, `pingTimeout`) | Browser-managed |
+| Automatic reconnection with backoff | Manual | Built-in | Browser retry only |
+| Binary + JSON framing | Manual | Built-in | Text only |
+| Middleware (auth per connection) | Manual | Built-in (`io.use()`) | Separate HTTP middleware |
 
-- authenticated socket connections
-- room-based broadcasting
-- event acknowledgements
-- heartbeat-based disconnect detection
-- automatic reconnection support
-- browser-friendly fallback/recovery behavior
+Plain WebSocket would require us to implement our own room management, message acknowledgement protocol, heartbeat loop, and reconnection logic. That is a significant amount of custom protocol code for features that are not part of our core domain. Socket.IO provides all of these out of the box and is the most widely adopted real-time library in the Node.js ecosystem, with mature client SDKs for browsers.
 
-Compared with plain WebSocket, Socket.IO gives us these collaboration primitives out of the box and reduces custom protocol code.
+SSE was ruled out because the collaboration service requires bidirectional communication — the client sends code changes, join/leave events, and execution requests to the server, not just the other way around. SSE would require a separate HTTP channel for client-to-server messages, adding complexity without benefit.
 
-### Why Redis is appropriate
+Socket.IO was the right choice because it lets us focus on collaboration logic (OT, presence, execution) rather than transport plumbing.
 
-Redis is a good fit because collaboration state is:
+### Why Redis over a relational database
 
-- short-lived
-- highly mutable
-- latency-sensitive
-- naturally key-value or set based
+Collaboration state is fundamentally different from persistent application data. During a live session, we need to read and write presence status, code content, revision numbers, and socket bindings at high frequency with sub-millisecond latency. We evaluated Redis against PostgreSQL (already used by other services) and in-memory state:
 
-We do not need relational queries during a live session. Redis lets us keep:
+| Requirement | PostgreSQL | In-Memory (Node.js) | Redis |
+|---|---|---|---|
+| Sub-millisecond reads/writes | No (network + query parse + disk) | Yes | Yes (in-memory, network only) |
+| Atomic compare-and-swap | Possible (SELECT FOR UPDATE) | Possible (single-threaded) | Yes (Lua scripts, single-threaded) |
+| TTL-based auto-expiry | Manual (scheduled jobs) | Manual (setTimeout) | Built-in (`PEXPIRE`) |
+| Survives process restart | Yes | No | Yes |
+| Horizontal scaling | Complex (connection pooling) | Not possible | Yes (Redis Cluster / replicas) |
+| Natural data model fit | Poor (schema overhead for transient state) | Good | Good (hashes, sets, strings, lists) |
 
-- session metadata
-- live code document
-- code revision
-- recent OT history
-- presence and socket bindings
-- output cache
+PostgreSQL was ruled out because collaboration state is transient (sessions last minutes to hours, not days), changes on every keystroke, and does not benefit from relational queries or ACID transactions. The overhead of connection pooling, query parsing, and disk I/O would add unnecessary latency to the OT editing loop, which is the most latency-sensitive part of the system.
 
-all with TTLs and atomic updates.
+In-memory state (storing everything in Node.js `Map` objects) would be the fastest option but was ruled out because it does not survive process restarts, cannot be shared across multiple server instances, and makes the collaboration service a single point of failure. A user would lose their session if the Node.js process crashed or was redeployed.
 
-### Why this combination works well
+Redis is the right fit because it combines in-memory speed with network-accessible durability. Its data structures (hashes for session metadata, sets for socket membership, strings for code content, lists for OT history) map naturally to our domain model. TTLs handle cleanup of abandoned sessions automatically without background jobs. And Lua scripting gives us the atomic compare-and-swap we need for safe concurrent OT writes.
 
-Socket.IO handles transport and fan-out. Redis holds the authoritative state. That separation gives us:
+### Why Socket.IO + Redis work well together
 
-- fast real-time messaging
-- recovery after reconnect
-- clean service boundaries
-- a path to horizontal scaling because state is not trapped in process memory
+The two technologies have complementary strengths that produce a clean separation of concerns:
+
+- **Socket.IO handles transport and fan-out.** It manages the WebSocket connections, authenticates users via middleware, groups sockets into rooms, and broadcasts events to the right participants. It does not hold any persistent state.
+- **Redis holds the authoritative state.** It stores the session, the code document, the revision number, the OT history, and the presence of every user. It does not know about Socket.IO rooms or connections.
+
+This separation means:
+
+- **Recovery after reconnect is simple.** When a user's socket reconnects, the server reads the current state from Redis and sends it back. There is no in-memory state to reconstruct.
+- **Horizontal scaling is possible.** If the service needs multiple Node.js instances behind a load balancer, they can all read and write to the same Redis instance. Socket.IO's Redis adapter (`@socket.io/redis-adapter`) can synchronize room broadcasts across instances. We have not needed this yet (single instance is sufficient for our load), but the architecture does not prevent it.
+- **Testing and debugging are easier.** Redis state can be inspected with `redis-cli` at any time. Socket.IO events can be traced in logs. Neither system's state is hidden inside a process.
+
+### Why not a message broker (RabbitMQ, Kafka, etc.)
+
+In many microservice architectures, an event broker sits between services to decouple producers from consumers. We evaluated whether a message broker like RabbitMQ or Kafka belonged in our real-time collaboration pipeline and concluded it does not, for several reasons:
+
+| Concern | Message Broker (RabbitMQ / Kafka) | Our approach (Socket.IO + Redis) |
+|---|---|---|
+| Latency per message | 1–5 ms (broker enqueue → dequeue → deliver) | < 1 ms (Socket.IO emit is in-process, Redis ops are sub-ms) |
+| Delivery model | At-least-once / at-most-once to backend consumers | Direct to connected clients via Socket.IO rooms |
+| Ordering guarantee | Per-partition (Kafka) or per-queue (RabbitMQ) | Per-socket (TCP ordering) + server-side OT revision sequencing |
+| Infrastructure cost | Additional stateful service to deploy, monitor, and tune | Zero — Redis already exists for session state |
+| Useful when | Services are decoupled, events are durable, consumers may be offline | Consumers are live WebSocket connections, events are transient |
+
+**The core issue is audience.** A message broker is designed to decouple backend services that produce and consume events asynchronously. But our real-time events (code changes, cursor moves, execution output) are not destined for other backend services — they go directly to the two users in the room via their open WebSocket connections. Introducing a broker between the collaboration server and its own connected clients would add a hop of latency to every keystroke for no benefit, because Socket.IO already delivers events to the right sockets in < 1 ms.
+
+**Inter-service calls are synchronous and infrequent.** The Collaboration Service communicates with other backend services (Question Service, Execution Service, Attempt Service) via direct HTTP calls. These calls happen at most a few times per session (question fetch on join, code run, code submit), not on every keystroke. The volume is low enough that a broker's buffering and retry capabilities provide no advantage over a simple HTTP request with error handling.
+
+**Redis Pub/Sub covers the scaling case.** If we needed to scale to multiple Collaboration Service instances behind a load balancer, Socket.IO's `@socket.io/redis-adapter` uses Redis Pub/Sub to synchronize room broadcasts across instances. This gives us the cross-instance fan-out that a broker would provide, without introducing a separate system. Redis is already deployed and already holds our session state, so using it for Pub/Sub is operationally free.
+
+**When a broker would make sense.** If the system evolved to include features like persistent activity feeds, analytics pipelines, or audit logs that need to consume collaboration events asynchronously and independently of the live session, a broker like Kafka would be the right tool. But for the current scope — two users editing code in real time — the combination of Socket.IO (for transport) and Redis (for state and potential Pub/Sub) covers every requirement without the operational overhead of an additional stateful service.
 
 ---
 
@@ -643,76 +672,104 @@ The collaboration service stores all live room state in Redis with TTLs.
 
 ## 9. Conflict Resolution Mechanism
 
-### Chosen algorithm
+### The problem
 
-We use `Operational Transformation (OT)` with:
+Two users are editing the same code buffer simultaneously. Without a conflict resolution mechanism, one of three things happens:
 
-- a server-authoritative document
-- integer revision numbers
-- transformation of client operations against unseen remote operations
-- atomic compare-and-swap persistence in Redis using a Lua script
+1. **Last-write-wins** — whoever’s save hits the server last silently overwrites the other person’s edit. This is what happens with naive "save the whole file" approaches.
+2. **Locking** — only one user can edit at a time (turn-based editing). This destroys the collaborative experience.
+3. **Manual merge** — the system detects conflicts and asks users to resolve them (like git merge conflicts). This is disruptive in a real-time editor where conflicts happen on every keystroke.
 
-### How concurrent edits are handled
+None of these are acceptable for a live pair-programming tool. We need a mechanism that lets both users type simultaneously with the guarantee that their edits are preserved and merged automatically.
+
+### Approaches considered
+
+We evaluated three conflict resolution strategies:
+
+| Property | Last-Write-Wins | CRDT (Conflict-free Replicated Data Types) | OT (Operational Transformation) |
+|---|---|---|---|
+| Concurrent edit handling | One edit silently lost | Automatic merge, mathematically guaranteed | Automatic merge via transformation |
+| Server required | Optional | No (peer-to-peer capable) | Yes (server-authoritative) |
+| Consistency model | Eventual (lossy) | Strong eventual consistency | Strong consistency (server is authority) |
+| Storage overhead | None | High (tombstones, vector clocks, unique character IDs) | Low (document + revision + recent ops) |
+| Implementation complexity | Trivial | High (requires CRDT library or custom implementation) | Moderate (transform functions + CAS) |
+| Network overhead per edit | Full document or diff | Operation + metadata (character IDs, logical timestamps) | Operation only (type, position, text) |
+| Offline editing support | No | Yes (core strength) | Limited (requires server for transformation) |
+| Undo/redo | Trivial | Complex (need to invert distributed operations) | Straightforward (invert local operations) |
+| Suitable peer count | Any | Large groups, peer-to-peer | Small groups with a central server |
+
+### Why we chose OT
+
+**OT is the best fit for our constraints.** We have exactly two users, a central server, and no requirement for offline editing or peer-to-peer communication. In this context, OT’s strengths align precisely with our needs and its weaknesses do not apply:
+
+1. **Server-authoritative model matches our architecture.** We already have a central collaboration server that manages session lifecycle, presence, and execution. OT’s server-authoritative approach fits naturally — the server is the single source of truth for the document, and all edits flow through it. This makes reasoning about consistency straightforward: the server’s document is always correct.
+
+2. **Low storage overhead.** OT requires storing only the current document content (a single string), a revision counter (an integer), and a capped list of recent operations (for transforming late-arriving edits). In our Redis implementation, this is three keys per session. A CRDT, by contrast, would need to store a unique identifier for every character ever inserted (including deleted ones as tombstones), plus vector clocks or logical timestamps for ordering. For a code buffer that is actively being edited, the CRDT metadata can grow significantly larger than the visible document.
+
+3. **Compact wire format.** An OT operation is `{ type: "insert", position: 10, text: "x" }` — a few bytes. A CRDT operation must include the character’s globally unique ID, the IDs of its neighbors (for positional context), and a logical timestamp. This overhead is negligible for Google Docs-scale infrastructure but unnecessary for a two-user session on a single server.
+
+4. **Simpler implementation.** OT’s transformation logic for insert/delete operations on plain text is well-understood and can be implemented in ~200 lines of code. A production-quality text CRDT (e.g., RGA, Logoot, or YATA/Yjs) requires substantially more code and careful handling of edge cases like concurrent inserts at the same position, tombstone garbage collection, and vector clock management.
+
+### Why not CRDT
+
+CRDTs are a powerful technology, but they solve a harder problem than we have. Their core advantage is **decentralized consistency without coordination** — any node can accept writes independently and convergence is mathematically guaranteed. This is valuable when:
+
+- there is no central server (peer-to-peer)
+- users need to edit offline and sync later
+- there are many concurrent editors (10+)
+
+None of these apply to PeerPrep. We have a central server, we require users to be connected, and we have exactly two editors. Using a CRDT here would mean paying the storage and complexity costs of a decentralized algorithm while using it in a centralized topology — all overhead, no benefit.
+
+Additionally, popular CRDT libraries like Yjs are designed to be used as the primary document model (the client holds the CRDT state and syncs it). Integrating a CRDT with our existing architecture (Redis-backed server state, Socket.IO transport, OT-style event flow) would require either replacing the architecture or adding an awkward adapter layer.
+
+### How our OT implementation works
 
 When a client sends `code:change`, it includes:
 
 - the client’s last known `revision`
-- a list of text operations
+- a list of text operations (insert, delete, retain)
 
 Server flow:
 
 1. Read current document and revision from Redis.
 2. If client revision is behind server revision, fetch all server operations since that revision.
-3. Transform the incoming operations against those unseen operations.
+3. Transform the incoming operations against those unseen operations. This "rebases" the client’s edits onto the latest document state, preserving the intent of both users’ changes.
 4. Apply the transformed operations to the server document.
-5. Attempt atomic update only if the stored revision still matches.
-6. If the revision changed meanwhile, retry with fresh state.
+5. Attempt atomic update only if the stored revision still matches (compare-and-swap).
+6. If the revision changed meanwhile (another edit landed between read and write), retry with fresh state.
 7. On success, return the new revision to the sender and broadcast transformed operations to the other user.
 
 ### Why this prevents data loss
 
-- no client directly overwrites the full document
-- edits are represented as intent-preserving operations
-- transformation rebases concurrent edits instead of dropping one side
-- Redis compare-and-swap prevents race-condition writes from silently winning
-- if reconciliation fails, the client receives `code:sync` with authoritative full state
+- No client directly overwrites the full document — edits are expressed as intent-preserving operations ("insert ‘x’ at position 10").
+- Transformation rebases concurrent edits instead of dropping one side. If User A inserts at position 5 and User B inserts at position 10, the transformation adjusts B’s position to account for A’s insertion, so both edits land in the correct place.
+- Redis compare-and-swap prevents race-condition writes from silently winning (see below).
+- If reconciliation fails after 5 retry attempts, the client receives `code:sync` with the authoritative full document — a safe fallback that guarantees convergence even in extreme cases.
 
 ### Why compare-and-swap is necessary
 
-The CAS exists because two users can send `code:change` at nearly the same time. Without it, one user's edit could silently overwrite the other's.
+Even though Node.js is single-threaded, the OT apply operation is not atomic from Redis’s perspective. Between reading the document (step 1) and writing the updated document (step 5), another `code:change` request could have been processed (Node.js event loop interleaving between two async operations). Without CAS, the second write would silently overwrite the first.
 
-Here's the problem it solves:
+Here’s the concrete scenario:
 
-1. Server document is at revision 5
-2. User A sends an edit based on revision 5
-3. User B sends an edit based on revision 5 at the same time
-4. Both get transformed and try to write revision 6
+1. Server document is at revision 5.
+2. User A sends an edit based on revision 5.
+3. User B sends an edit based on revision 5 at the same time.
+4. Server starts processing A’s edit: reads revision 5, transforms, applies.
+5. Before A’s write completes, the event loop picks up B’s edit: reads revision 5, transforms, applies.
+6. Both try to write revision 6. Whoever writes last overwrites the other.
 
-Without CAS, whoever's write hits Redis last wins, and the other edit is lost. With the Lua CAS script, the flow is:
+The Lua CAS script solves this by making the read-check-write atomic:
 
-- Read the current revision (5)
-- Transform the operations
-- **Atomically:** check the revision is still 5, then write the new content + revision 6 + push to ops list — all in one Lua script that Redis executes without interleaving
-- If the revision changed between the read and the write (because the other user's edit landed first), the Lua script returns 0 (conflict) and the server retries with the new state
+- **Compare:** verify the revision in Redis is still the expected value.
+- **Swap:** write the new content, increment the revision, push to the ops list — all in a single Lua script that Redis executes without interleaving any other command.
+- If the revision changed (another edit landed first), the script returns 0 (conflict) and the server retries the entire transform-and-apply cycle with the new state.
 
-The "compare" is checking the revision hasn't changed. The "swap" is writing the new content + revision. Because Lua scripts in Redis are atomic (no other command can run in between), this guarantees exactly one writer wins per revision, and the loser retries with full knowledge of what changed. This is what prevents data loss during concurrent edits.
-
-### Why OT instead of CRDT
-
-OT was chosen because this is a 2-user plain-text code editor and OT is a strong fit for:
-
-- centralized server authority
-- low-latency text editing
-- compact operations
-- simpler storage than tombstone-heavy CRDTs
-
-CRDTs are better for offline-first and peer-heavy systems, but for this project they would add:
-- more metadata overhead
-- more implementation complexity
-- less need for server arbitration benefits we already want
+This guarantees exactly one writer wins per revision. The loser retries with full knowledge of what changed, so no edit is ever lost.
 
 ### Technical justification summary
-For a centralized collaborative code editor with only two active peers, OT gives a better complexity-to-value trade-off than CRDT.
+
+For a centralized collaborative code editor with exactly two active peers, a central server, and no offline editing requirement, OT provides the best complexity-to-value trade-off. It gives us automatic conflict resolution with minimal storage overhead, a compact wire format, and a straightforward implementation that integrates naturally with our Redis + Socket.IO architecture. CRDTs solve a harder (decentralized, offline-first) problem that we do not have, and last-write-wins is unacceptable for a real-time collaborative editor.
 
 ---
 

@@ -59,10 +59,12 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
 
         if (!data) return null;
 
-        const cases: TestCase[] = data.test_case.map((item: { input: unknown; output: unknown }) => ({
-            input: JSON.stringify(item.input),
-            output: JSON.stringify(item.output),
-        }));
+        const cases: TestCase[] = data.test_case.map(
+            (item: { input: unknown; output: unknown }) => ({
+                input: JSON.stringify(item.input),
+                output: JSON.stringify(item.output),
+            }),
+        );
 
         return {
             quid: data.quid,
