@@ -2,7 +2,6 @@ import { MouseEvent, PointerEvent, useState } from "react";
 
 import { useClerk } from "@clerk/clerk-react";
 
-import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { apiFetch } from "@/utils/apiClient";
 import { pushToast } from "@/utils/toast";
 
@@ -27,7 +26,7 @@ export default function DeleteAccount() {
         setIsDeleting(true);
 
         try {
-            const response = await apiFetch(API_ENDPOINTS.USERS.ME, { method: "DELETE" });
+            const response = await apiFetch("/users/me", { method: "DELETE" });
             if (!response.ok) {
                 const payload = await response.json().catch(() => null);
                 const message =
