@@ -34,6 +34,20 @@ services:
       - gateway-network
     restart: unless-stopped
 
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: peerprep-ngrok
+    depends_on:
+      - gateway
+    env_file:
+      - ./.env.ngrok
+    command: http --url=nonjuridical-unflaunting-hudson.ngrok-free.dev gateway:8080
+    ports:
+      - "4040:4040"
+    networks:
+      - gateway-network
+    restart: unless-stopped
+
   dozzle:
     container_name: dozzle
     image: amir20/dozzle:latest
