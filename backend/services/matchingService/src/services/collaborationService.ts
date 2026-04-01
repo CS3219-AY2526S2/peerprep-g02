@@ -43,6 +43,11 @@ export async function createCollaborationSession(
     }
 
     try {
+        socketLogger.info(
+            { request },
+            "Creating collaboration session for matched users",
+        );
+
         const response = await fetch(`http://collaboration-service:3003/sessions`, {
             method: "POST",
             headers: {
