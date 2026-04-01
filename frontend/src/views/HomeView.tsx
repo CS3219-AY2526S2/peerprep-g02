@@ -113,14 +113,6 @@ export default function HomeView() {
                             <p className="text-3xl font-extrabold tracking-tight">PeerPrep</p>
 
                             <div className="flex flex-wrap items-center gap-2">
-                                <Button
-                                    asChild
-                                    variant="outline"
-                                    className="rounded-full border-slate-300 bg-white px-4"
-                                >
-                                    <Link to={ROUTES.ATTEMPT_HISTORY}>Attempt History</Link>
-                                </Button>
-
                                 {isAdmin ? (
                                     <>
                                         <Button
