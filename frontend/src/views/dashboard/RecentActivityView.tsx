@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { Check, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,11 @@ type ActivityItem = {
     timeAgo: string;
     icon: typeof Check | typeof XCircle;
     iconClassName: string;
+};
+
+type StatePanelProps = {
+    title: string;
+    description: string;
 };
 
 function formatTimeAgo(value: string): string {
@@ -72,6 +77,15 @@ function toActivityItem(attempt: AttemptHistoryItem): ActivityItem {
     };
 }
 
+function StatePanel({ title, description }: StatePanelProps) {
+    return (
+        <div className="flex min-h-44 flex-col items-center justify-center rounded-[24px] border border-dashed border-slate-200 bg-slate-50/80 px-6 text-center">
+            <p className="text-lg font-bold tracking-tight text-slate-950">{title}</p>
+            <p className="mt-2 max-w-xl text-sm text-slate-600">{description}</p>
+        </div>
+    );
+}
+
 export function RecentActivityView() {
     const { isLoaded: isAuthLoaded } = useAuth();
     const [attempts, setAttempts] = useState<AttemptHistoryItem[]>([]);
@@ -120,11 +134,22 @@ export function RecentActivityView() {
 
     return (
         <Card className="rounded-[30px] border border-white/70 bg-white/90 py-0 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
-            <CardContent className="p-6 sm:p-8">
-                <div className="mb-6 flex items-center justify-between gap-4">
-                    <h2 className="text-3xl font-extrabold tracking-tight text-slate-950">
+            <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-slate-200 px-6 py-6 sm:px-8">
+                <div className="space-y-1">
+                    <CardTitle className="text-3xl font-extrabold tracking-tight text-slate-950">
                         Recent Activity
-                    </h2>
+                    </CardTitle>
+                    <CardDescription className="text-base text-slate-600">
+                        {loading
+                            ? "Loading your latest attempts..."
+                            : error
+                              ? "We hit a snag while loading recent activity."
+                              : activityItems.length === 0
+                                ? "Your newest attempt activity will appear here."
+                                : "A quick look at your latest recorded attempts."}
+                    </CardDescription>
+                </div>
+                <div className="shrink-0">
                     <Button
                         asChild
                         variant="link"
@@ -133,7 +158,8 @@ export function RecentActivityView() {
                         <Link to={ROUTES.ATTEMPT_HISTORY}>View All</Link>
                     </Button>
                 </div>
-
+            </CardHeader>
+            <CardContent className="p-6 sm:p-8">
                 <div className="space-y-4">
                     {loading
                         ? Array.from({ length: 3 }).map((_, index) => (
@@ -154,15 +180,17 @@ export function RecentActivityView() {
                         : null}
 
                     {!loading && error ? (
-                        <div className="rounded-[24px] border border-rose-100 bg-rose-50/80 px-5 py-5 text-base text-rose-700 shadow-sm">
-                            {error}
-                        </div>
+                        <StatePanel
+                            title="Unable to load recent activity"
+                            description={error}
+                        />
                     ) : null}
 
                     {!loading && !error && activityItems.length === 0 ? (
-                        <div className="rounded-[24px] border border-slate-100 bg-slate-50/90 px-5 py-5 text-base text-slate-600 shadow-sm">
-                            No recent attempts yet. Your completed sessions will show up here.
-                        </div>
+                        <StatePanel
+                            title="No recent attempts yet"
+                            description="Your completed sessions will show up here once attempt records start coming in."
+                        />
                     ) : null}
 
                     {!loading && !error
