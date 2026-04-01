@@ -41,7 +41,7 @@ services:
       - gateway
     env_file:
       - ./.env
-    command: http --url=nonjuridical-unflaunting-hudson.ngrok-free.dev gateway:8080
+    command: http --url=nonjuridical-unflaunting-hudson.ngrok-free.dev --pooling-enabled=true gateway:8080
     ports:
       - "4040:4040"
     networks:
