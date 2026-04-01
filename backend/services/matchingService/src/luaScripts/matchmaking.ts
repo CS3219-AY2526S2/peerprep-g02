@@ -73,9 +73,8 @@ for i = 1, numQueues do
                         remove_from_all_queues(seekerKey)
                         
                         local matchedPartnerId = candidateKey:match("([^:]+)$")
-                        local matchedDiff, matchedLang = queueKey:match("([^:]+):([^:]+)$")
-                        
-                        return { 'matched', matchedPartnerId, matchedDiff, matchedLang, tostring(existingStartTime) }
+                        local matchedTopic, matchedDiff, matchedLang = queueKey:match("([^:]+):([^:]+):([^:]+)$")
+                        return { 'matched', matchedPartnerId, matchedTopic, matchedDiff, matchedLang, tostring(existingStartTime) }
                     end
                 end
             end
@@ -89,7 +88,7 @@ end
 
 redis.call('HSET', seekerKey, 'queues', queueKeysJson, 'status', 'READY', 'last_seen', now, 'start_time', existingStartTime, 'score', seekerScore)
 
-return { 'enqueued', '', '', '', tostring(existingStartTime) }
+return { 'enqueued', '', '', '', '', tostring(existingStartTime) }
 `;
 
 export const ATTEMPT_REJOIN_LUA_SCRIPT = `
