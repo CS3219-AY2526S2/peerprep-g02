@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 import { AttemptHistoryItem } from "@/models/attempt/attemptHistoryType";
+
 import { getAttemptHistory } from "@/services/attempt/attemptService";
 
 type ActivityItem = {
@@ -180,10 +181,7 @@ export function RecentActivityView() {
                         : null}
 
                     {!loading && error ? (
-                        <StatePanel
-                            title="Unable to load recent activity"
-                            description={error}
-                        />
+                        <StatePanel title="Unable to load recent activity" description={error} />
                     ) : null}
 
                     {!loading && !error && activityItems.length === 0 ? (
