@@ -51,6 +51,7 @@ export const SOCKET_EVENTS = {
     SESSION_JOIN: "session:join",
     SESSION_LEAVE: "session:leave",
     SESSION_ENDED: "session:ended",
+    SESSION_CHECK_ACTIVE: "session:check-active",
 
     // Presence events
     PRESENCE_UPDATED: "presence:updated",

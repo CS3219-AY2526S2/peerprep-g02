@@ -203,7 +203,7 @@ export async function executeCode(
         return {
             testCaseIndex: i,
             passed,
-            actualOutput: String(actualValue ?? ""),
+            actualOutput: actualValue == null ? "null" : typeof actualValue === "object" ? JSON.stringify(actualValue) : String(actualValue),
             expectedOutput: JSON.stringify(tc.output),
             executionTimeMs: wallTimeMs,
         };

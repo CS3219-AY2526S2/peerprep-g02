@@ -46,7 +46,6 @@ export function useMatchingQueue(
                 const response = await apiFetch(API_ENDPOINTS.USERS.ME);
 
                 if (!response.ok) {
-                    console.error(`Error ${response.status}: Failed to fetch profile`);
                     return;
                 }
 
@@ -56,7 +55,7 @@ export function useMatchingQueue(
                 if (score !== undefined) {
                     setUserScore(score);
                 }
-            } catch (error) {
+            } catch {
                 pushToast({
                     tone: "error",
                     message: "Unable to fetch user score.",
@@ -98,12 +97,10 @@ export function useMatchingQueue(
             });
 
             socketInstance.on(SocketEvents.DISCONNECT, () => {
-                console.log("Socket disconnected.");
                 setIsConnected(false);
             });
 
             socketInstance.on(SocketEvents.MATCH_WAITING, (data: MatchWaitingPayload) => {
-                console.log(data.message);
                 setIsSearching(true);
                 if (data.startTime) searchStartTime.current = data.startTime;
             });

@@ -8,6 +8,7 @@ import { AttemptRecordingService } from "@/services/attemptRecordingService.js";
 import { CodeExecutionService } from "@/services/codeExecutionService.js";
 import { collaborationSessionService } from "@/services/collaborationSessionService.js";
 import { logger } from "@/utils/logger.js";
+import { getRedisClient } from "@/utils/redis.js";
 
 const codeExecutionService = new CodeExecutionService();
 const attemptRecordingService = new AttemptRecordingService();
@@ -58,6 +59,34 @@ export function registerSocketHandlers(io: Server): void {
 
         socket.join(userRoom(userId));
         socket.emit(SOCKET_EVENTS.CONNECTION_READY, { userId });
+
+        /**
+         * Check if the authenticated user has an active collaboration session
+         */
+        socket.on(
+            SOCKET_EVENTS.SESSION_CHECK_ACTIVE,
+            async (
+                _payload: unknown,
+                ack?: (response: {
+                    ok: boolean;
+                    activeSession?: { collaborationId: string; topic: string; difficulty: string } | null;
+                }) => void,
+            ) => {
+                logger.info({ userId, socketId: socket.id }, "Received session:check-active request");
+                try {
+                    const activeSession =
+                        await collaborationSessionService.getActiveSessionForUser(userId);
+                    logger.info(
+                        { userId, hasActiveSession: !!activeSession, collaborationId: activeSession?.collaborationId },
+                        "Active session check result",
+                    );
+                    ack?.({ ok: true, activeSession: activeSession ?? null });
+                } catch (error) {
+                    logger.error({ err: error, userId }, "Failed to check active session");
+                    ack?.({ ok: false, activeSession: null });
+                }
+            },
+        );
 
         /**
          * F4.3.2 - Handle session join
@@ -538,9 +567,19 @@ export function registerSocketHandlers(io: Server): void {
 
     /**
      * F4.8.3 - Periodic check for inactive sessions
+     * Uses a distributed Redis lock (SET NX PX) to ensure only one instance
+     * runs the check per interval when scaling horizontally.
      */
+    const redis = getRedisClient();
+    const lockKey = "distributed-lock:inactivity-check";
+    const lockDurationMs = Math.max(env.inactivityCheckIntervalMs - 5000, 10000);
+
     setInterval(async () => {
         try {
+            // Acquire distributed lock — skip if another instance holds it
+            const acquired = await redis.set(lockKey, "1", "NX", "PX", lockDurationMs);
+            if (!acquired) return;
+
             const inactiveSessionIds = await collaborationSessionService.getInactiveSessions(
                 env.sessionInactivityTimeoutMs,
             );
