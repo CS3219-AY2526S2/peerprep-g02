@@ -58,11 +58,20 @@ export async function GetQuestion(quid: UUID) {
     }
 }
 
+function safeJsonParse(value: string): unknown {
+    try {
+        return JSON.parse(value);
+    } catch {
+        // If parsing fails, fall back to the original string to avoid throwing.
+        return value;
+    }
+}
+
 function parseTestCases(testCases: TestCase[]): string {
     return JSON.stringify(
         testCases.map((tc) => ({
-            input: typeof tc.input === "string" ? JSON.parse(tc.input) : tc.input,
-            output: typeof tc.output === "string" ? JSON.parse(tc.output) : tc.output,
+            input: typeof tc.input === "string" ? safeJsonParse(tc.input) : tc.input,
+            output: typeof tc.output === "string" ? safeJsonParse(tc.output) : tc.output,
         })),
     );
 }
