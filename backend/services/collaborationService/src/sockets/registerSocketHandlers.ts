@@ -8,6 +8,7 @@ import { AttemptRecordingService } from "@/services/attemptRecordingService.js";
 import { CodeExecutionService } from "@/services/codeExecutionService.js";
 import { collaborationSessionService } from "@/services/collaborationSessionService.js";
 import { logger } from "@/utils/logger.js";
+import { getRedisClient } from "@/utils/redis.js";
 
 const codeExecutionService = new CodeExecutionService();
 const attemptRecordingService = new AttemptRecordingService();
@@ -82,7 +83,7 @@ export function registerSocketHandlers(io: Server): void {
                     ack?.({ ok: true, activeSession: activeSession ?? null });
                 } catch (error) {
                     logger.error({ err: error, userId }, "Failed to check active session");
-                    ack?.({ ok: true, activeSession: null });
+                    ack?.({ ok: false, activeSession: null });
                 }
             },
         );
@@ -566,9 +567,19 @@ export function registerSocketHandlers(io: Server): void {
 
     /**
      * F4.8.3 - Periodic check for inactive sessions
+     * Uses a distributed Redis lock (SET NX PX) to ensure only one instance
+     * runs the check per interval when scaling horizontally.
      */
+    const redis = getRedisClient();
+    const lockKey = "distributed-lock:inactivity-check";
+    const lockDurationMs = Math.max(env.inactivityCheckIntervalMs - 5000, 10000);
+
     setInterval(async () => {
         try {
+            // Acquire distributed lock — skip if another instance holds it
+            const acquired = await redis.set(lockKey, "1", "NX", "PX", lockDurationMs);
+            if (!acquired) return;
+
             const inactiveSessionIds = await collaborationSessionService.getInactiveSessions(
                 env.sessionInactivityTimeoutMs,
             );

@@ -543,7 +543,7 @@ export default function CollaborationSessionView() {
                                                         </td>
                                                         <td className="max-w-[150px] px-5 py-4 font-mono text-xs">
                                                             <span className="block truncate">
-                                                                {testRow.actualOutput ||
+                                                                {testRow.actualOutput ??
                                                                     (testRow.error ? "" : "-")}
                                                             </span>
                                                             {testRow.error && (
@@ -672,13 +672,21 @@ export default function CollaborationSessionView() {
 
             {/* Leave session confirmation dialog */}
             {showLeaveConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="leave-dialog-title"
+                    onKeyDown={(e) => {
+                        if (e.key === "Escape") setShowLeaveConfirm(false);
+                    }}
+                >
                     <Card className="w-full max-w-md rounded-[24px] border border-white/10 bg-[#1e293b] p-0 shadow-2xl">
                         <CardContent className="p-8">
                             <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-red-500/15">
                                 <LogOut className="size-7 text-red-400" />
                             </div>
-                            <CardTitle className="mb-2 text-2xl font-bold text-white">
+                            <CardTitle id="leave-dialog-title" className="mb-2 text-2xl font-bold text-white">
                                 Leave Session?
                             </CardTitle>
                             <CardDescription className="text-base text-slate-400">

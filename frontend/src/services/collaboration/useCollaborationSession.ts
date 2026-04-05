@@ -391,20 +391,21 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             }
 
             // The server sends execution results as payload.output directly
-            const output = payload.output as unknown as ExecutionResults | { error?: string };
-            if (output && "results" in output) {
-                setExecutionOutput(JSON.stringify(output, null, 2));
-                setExecutionResults(output);
-            } else if (output && "error" in output && output.error) {
-                setExecutionOutput(output.error);
-                setExecutionResults(null);
-                pushToast({ tone: "error", message: output.error });
+            const raw = payload.output;
+            if (typeof raw === "object" && raw !== null) {
+                const output = raw as ExecutionResults | { error?: string };
+                if ("results" in output) {
+                    setExecutionOutput(JSON.stringify(output, null, 2));
+                    setExecutionResults(output);
+                } else if ("error" in output && output.error) {
+                    setExecutionOutput(output.error);
+                    setExecutionResults(null);
+                    pushToast({ tone: "error", message: output.error });
+                } else {
+                    setExecutionOutput(JSON.stringify(raw));
+                }
             } else {
-                setExecutionOutput(
-                    typeof payload.output === "string"
-                        ? payload.output
-                        : JSON.stringify(payload.output),
-                );
+                setExecutionOutput(typeof raw === "string" ? raw : JSON.stringify(raw));
             }
             setIsExecuting(false);
         };

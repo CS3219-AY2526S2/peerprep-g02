@@ -32,24 +32,33 @@ ${userCode}
 # --- End user code ---
 
 # Resolve function: try global, then Solution().method
-if '${functionName}' in dir():
-    _fn = ${functionName}
-elif 'Solution' in dir():
-    _fn = getattr(Solution(), '${functionName}')
-else:
-    _fn = ${functionName}
+_fn = None
+_resolve_error = None
+try:
+    if '${functionName}' in dir():
+        _fn = ${functionName}
+    elif 'Solution' in dir():
+        _fn = getattr(Solution(), '${functionName}')
+    else:
+        _fn = ${functionName}
+except Exception as _e:
+    _resolve_error = str(_e)
 
 _test_cases = json.loads(sys.stdin.read())
 _results = []
-for _tc in _test_cases:
-    _args = _tc["input"]
-    if not isinstance(_args, list):
-        _args = [_args]
-    try:
-        _r = _fn(*_args)
-        _results.append({"output": json.dumps(_r), "error": None})
-    except Exception as _e:
-        _results.append({"output": None, "error": str(_e)})
+if _resolve_error is not None:
+    for _tc in _test_cases:
+        _results.append({"output": None, "error": _resolve_error})
+else:
+    for _tc in _test_cases:
+        _args = _tc["input"]
+        if not isinstance(_args, list):
+            _args = [_args]
+        try:
+            _r = _fn(*_args)
+            _results.append({"output": json.dumps(_r), "error": None})
+        except Exception as _e:
+            _results.append({"output": None, "error": str(_e)})
 print(json.dumps(_results))
 `;
 }

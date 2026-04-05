@@ -188,7 +188,6 @@ services:
   # Collaboration Service
   collaboration-service:
     build: ./backend/services/collaborationService
-    container_name: collaboration-service
     env_file:
       - ./backend/services/collaborationService/.env
     environment:
@@ -196,7 +195,6 @@ services:
       - CS_API_GATEWAY_URL=http://gateway:8080
       - CS_REDIS_HOST=collaboration-redis
       - CS_REDIS_PORT=6379
-      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
       - CS_EXECUTION_SERVICE_URL=http://execution-service:3006
       - CS_ATTEMPT_SERVICE_URL=http://attempts-service:3004
     depends_on:

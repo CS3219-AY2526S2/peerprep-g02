@@ -72,7 +72,7 @@ The two technologies have complementary strengths that produce a clean separatio
 This separation means:
 
 - **Recovery after reconnect is simple.** When a user's socket reconnects, the server reads the current state from Redis and sends it back. There is no in-memory state to reconstruct.
-- **Horizontal scaling is possible.** If the service needs multiple Node.js instances behind a load balancer, they can all read and write to the same Redis instance. Socket.IO's Redis adapter (`@socket.io/redis-adapter`) can synchronize room broadcasts across instances. We have not needed this yet (single instance is sufficient for our load), but the architecture does not prevent it.
+- **Horizontal scaling is supported.** Multiple Node.js instances behind a load balancer all read and write to the same Redis instance. Socket.IO's Redis adapter (`@socket.io/redis-adapter`) is configured to synchronize room broadcasts across instances via Redis Pub/Sub. The adapter uses two dedicated Redis connections (one for `PUBLISH`, one for `SUBSCRIBE`) that are separate from the data client. All `io.to(room).emit(...)` calls automatically propagate to sockets on other instances with no application-level code changes.
 - **Testing and debugging are easier.** Redis state can be inspected with `redis-cli` at any time. Socket.IO events can be traced in logs. Neither system's state is hidden inside a process.
 
 ### Why not a message broker (RabbitMQ, Kafka, etc.)
@@ -91,7 +91,7 @@ In many microservice architectures, an event broker sits between services to dec
 
 **Inter-service calls are synchronous and infrequent.** The Collaboration Service communicates with other backend services (Question Service, Execution Service, Attempt Service) via direct HTTP calls. These calls happen at most a few times per session (question fetch on join, code run, code submit), not on every keystroke. The volume is low enough that a broker's buffering and retry capabilities provide no advantage over a simple HTTP request with error handling.
 
-**Redis Pub/Sub covers the scaling case.** If we needed to scale to multiple Collaboration Service instances behind a load balancer, Socket.IO's `@socket.io/redis-adapter` uses Redis Pub/Sub to synchronize room broadcasts across instances. This gives us the cross-instance fan-out that a broker would provide, without introducing a separate system. Redis is already deployed and already holds our session state, so using it for Pub/Sub is operationally free.
+**Redis Pub/Sub covers the scaling case.** The `@socket.io/redis-adapter` is installed and configured to use Redis Pub/Sub to synchronize room broadcasts across multiple Collaboration Service instances. This gives us the cross-instance fan-out that a broker would provide, without introducing a separate system. Redis is already deployed and already holds our session state, so using it for Pub/Sub is operationally free.
 
 **When a broker would make sense.** If the system evolved to include features like persistent activity feeds, analytics pipelines, or audit logs that need to consume collaboration events asynchronously and independently of the live session, a broker like Kafka would be the right tool. But for the current scope — two users editing code in real time — the combination of Socket.IO (for transport) and Redis (for state and potential Pub/Sub) covers every requirement without the operational overhead of an additional stateful service.
 
@@ -816,6 +816,16 @@ Matching Service        Collaboration Service        User Service        Questio
 - `GET session:idempotency:{matchId}:{difficulty}:{language}:{topic}` — if exists, returns the existing session (idempotent hit)
 - `GET session:pair:{sortedUserA}:{sortedUserB}` — if an active session exists for this pair, returns 409 conflict
 
+**How idempotency works:**
+
+1. Before creating a new session, the service checks `GET session:idempotency:{key}` in Redis.
+2. **If the key exists** → a session was already created for this exact match. The service returns the existing `collaborationId` instead of creating a duplicate. This is the **idempotent hit** (`"idempotentHit": true` in the response).
+3. **If the key doesn't exist** → it's a fresh request. The service creates the session and writes the idempotency key with a 1-hour TTL.
+
+This means calling `POST /sessions` twice with the same match parameters is safe — you get the same session back, not two sessions. It is a standard idempotency pattern to make retries harmless.
+
+There is also a separate **pair-uniqueness guard** (`session:pair:{sortedUserA}:{sortedUserB}`) that returns a **409 Conflict** if the same two users already have an active session from a different match.
+
 **Redis writes on new session (pipeline):**
 
 - `HSET session:{collaborationId}` — session metadata hash (all fields including `collaborationId`, `matchId`, `userAId`, `userBId`, `difficulty`, `language`, `topic`, `questionId`, `status`, `createdAt`)
@@ -1364,6 +1374,8 @@ User B Client           Collaboration Service
 ```
 
 **Detection:** A `setInterval` runs every `CS_INACTIVITY_CHECK_INTERVAL_MS` (60000ms = 1 minute).
+
+**Distributed lock:** Before scanning, the instance attempts to acquire a Redis lock via `SET distributed-lock:inactivity-check "1" NX PX {lockDurationMs}`. If the lock is already held by another instance, the check is skipped. The lock auto-expires before the next interval fires, ensuring exactly one instance runs the check per cycle. This prevents race conditions when multiple instances are running.
 
 **Scanning for inactive sessions:**
 
