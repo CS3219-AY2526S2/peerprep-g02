@@ -72,11 +72,15 @@ ${userCode}
 
 const _input = _fs.readFileSync(0, 'utf8');
 const _testCases = JSON.parse(_input);
-const _fn = typeof ${functionName} === 'function'
-    ? ${functionName}
-    : typeof Solution !== 'undefined'
-        ? new Solution().${functionName}.bind(new Solution())
-        : ${functionName};
+const _solutionInstance = (typeof Solution !== 'undefined') ? new Solution() : null;
+let _fn;
+if (typeof ${functionName} === 'function') {
+    _fn = ${functionName};
+} else if (_solutionInstance && typeof _solutionInstance.${functionName} === 'function') {
+    _fn = _solutionInstance.${functionName}.bind(_solutionInstance);
+} else {
+    _fn = ${functionName};
+}
 const _results = [];
 for (const _tc of _testCases) {
     const _args = Array.isArray(_tc.input) ? _tc.input : [_tc.input];
