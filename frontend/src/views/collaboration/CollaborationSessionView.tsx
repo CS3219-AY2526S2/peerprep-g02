@@ -686,7 +686,10 @@ export default function CollaborationSessionView() {
                             <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-red-500/15">
                                 <LogOut className="size-7 text-red-400" />
                             </div>
-                            <CardTitle id="leave-dialog-title" className="mb-2 text-2xl font-bold text-white">
+                            <CardTitle
+                                id="leave-dialog-title"
+                                className="mb-2 text-2xl font-bold text-white"
+                            >
                                 Leave Session?
                             </CardTitle>
                             <CardDescription className="text-base text-slate-400">
