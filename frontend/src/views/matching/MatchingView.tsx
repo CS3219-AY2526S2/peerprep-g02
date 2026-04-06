@@ -113,7 +113,7 @@ export function MatchingView() {
             )}
 
             <Card className="relative overflow-hidden rounded-[30px] border border-white/70 backdrop-blur transition-all duration-500 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-                {isSearching ? (
+                {isSearching || isPreparing ? (
                     <MatchSearchingView
                         isPreparing={isPreparing}
                         topics={topics}

@@ -125,8 +125,8 @@ export function useMatchingQueue(
             });
 
             socketInstance.on(SocketEvents.MATCH_PREPARING, (_data: MatchPreparingPayload) => {
-                setIsSearching(false);
                 setIsPreparing(true);
+                setIsSearching(false);
             });
 
             socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
@@ -165,7 +165,7 @@ export function useMatchingQueue(
     useEffect(() => {
         let relaxationTimer: NodeJS.Timeout;
 
-        if (isSearching && isConnected) {
+        if (isSearching && isConnected && !isPreparing) {
             relaxationTimer = setInterval(() => {
                 if (!searchStartTime.current) return;
 
@@ -209,7 +209,7 @@ export function useMatchingQueue(
         return () => {
             if (relaxationTimer) clearInterval(relaxationTimer);
         };
-    }, [isSearching, isConnected, topics, difficulty, languages, userScore]);
+    }, [isSearching, isPreparing, isConnected, topics, difficulty, languages, userScore]);
 
     const startSearch = async () => {
         if (userScore === null) {
