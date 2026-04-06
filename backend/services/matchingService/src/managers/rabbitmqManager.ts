@@ -103,19 +103,26 @@ export class RabbitMQManager {
                     "Received room ready confirmation from Collab",
                 );
 
-                const collaborationPayload: CollaborationSuccessPayload = {
+                const sharedSessionData = {
                     matchFound: true,
                     ...(response.session.matchId && { matchId: response.session.matchId }),
                     collaborationId: response.session.collaborationId,
                     matchedTopic: response.session.topic,
                     matchedDifficulty: response.session.difficulty,
                     matchedLanguage: response.session.language,
-                    userId: response.session.userAId,
-                    partnerId: response.session.userBId,
                 };
 
-                io.to(response.session.userAId).emit("match_success", collaborationPayload);
-                io.to(response.session.userBId).emit("match_success", collaborationPayload);
+                io.to(response.session.userAId).emit("match_success", {
+                    ...sharedSessionData,
+                    userId: response.session.userAId,
+                    partnerId: response.session.userBId,
+                });
+
+                io.to(response.session.userBId).emit("match_success", {
+                    ...sharedSessionData,
+                    userId: response.session.userBId,
+                    partnerId: response.session.userAId,
+                });
 
                 ch.ack(msg);
             } catch (error) {
