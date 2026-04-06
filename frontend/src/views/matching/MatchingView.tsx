@@ -26,18 +26,7 @@ export function MatchingView() {
 
     const [topicOptions, setTopicOptions] = useState<string[]>([]);
     const [topics, setTopics] = useState<string[]>([]);
-    const [languages, setLanguages] = useState<Language[]>(() => {
-        if (!isLoaded || !user) return [LANGUAGE_OPTIONS[0]];
-
-        const metadata = (user.unsafeMetadata || {}) as Record<string, unknown>;
-        const defaultLang = metadata.defaultLanguage as Language;
-
-        if (defaultLang && (LANGUAGE_OPTIONS as readonly string[]).includes(defaultLang)) {
-            return [defaultLang];
-        }
-
-        return [LANGUAGE_OPTIONS[0]];
-    });
+    const [languages, setLanguages] = useState<Language[]>([LANGUAGE_OPTIONS[0]]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
     const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
@@ -62,6 +51,20 @@ export function MatchingView() {
         return () => {
             isMounted = false;
         };
+    }, [isLoaded, user]);
+
+    useEffect(() => {
+        if (!isLoaded || !user) return;
+
+        const metadata = (user.unsafeMetadata || {}) as Record<string, unknown>;
+        const defaultLang = metadata.defaultLanguage as Language;
+
+        if (defaultLang && (LANGUAGE_OPTIONS as readonly string[]).includes(defaultLang)) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setLanguages((prev) =>
+                prev.length === 1 && prev[0] === defaultLang ? prev : [defaultLang],
+            );
+        }
     }, [isLoaded, user]);
 
     useEffect(() => {
