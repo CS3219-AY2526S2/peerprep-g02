@@ -2,7 +2,6 @@ import amqp, { type Channel, type ChannelModel } from "amqplib";
 import { Server } from "socket.io";
 
 import type {
-    CollaborationSuccessPayload,
     CreateSessionRequest,
     CreateSessionResponse,
 } from "@/types/collab.js";
