@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import RedisManager from "@/managers/redisManager.js";
 import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
+import RedisManager from "@/managers/redisManager.js";
 import { attemptRejoin, cancelMatch, findMatch, handleDisconnect } from "@/match/match.js";
 import { type Difficulty, type MatchRequest } from "@/types/match.js";
 

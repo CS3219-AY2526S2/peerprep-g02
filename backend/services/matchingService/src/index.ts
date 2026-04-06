@@ -4,12 +4,11 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 
 import app from "@/app.js";
+import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import RedisManager from "@/managers/redisManager.js";
 import { registerSocketHandlers } from "@/managers/socketManager.js";
 import { socketAuthMiddleware } from "@/middlewares/socketAuth.js";
 import { mainLogger } from "@/utils/logger.js";
-
-import { RabbitMQManager } from "./managers/rabbitmqManager.js";
 
 const server = createServer(app);
 const io = new Server(server, {
