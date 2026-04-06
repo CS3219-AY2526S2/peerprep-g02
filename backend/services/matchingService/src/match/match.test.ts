@@ -38,7 +38,7 @@ describe("Matchmaking Service", () => {
             isUpdate: false,
         };
 
-        it("should return MatchResultSuccess and publish to RabbitMQ when a partner is found", async () => {
+        it("should return MatchResultPreparing and publish to RabbitMQ when a partner is found", async () => {
             const matchedTopic = "strings";
             const matchedDifficulty: Difficulty = "Easy";
             const matchedLanguage = "python";
