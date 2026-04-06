@@ -72,8 +72,8 @@ export const registerSocketHandlers = (io: Server) => {
                     socketLogger.info(
                         `Match Found: ${userId} & ${matchResult.partnerId} on ${matchResult.matchedTopic} (${matchResult.matchedDifficulty}, ${matchResult.matchedLanguage})`,
                     );
-                    io.to(userId).emit("match_success", matchResult);
-                    io.to(matchResult.partnerId).emit("match_success", matchResult);
+                    io.to(userId).emit("match_preparing", matchResult);
+                    io.to(matchResult.partnerId).emit("match_preparing", matchResult);
                 } else {
                     socketLogger.info(
                         `User ${userId} added to queue for ${matchRequest.topics.join(", ")} for ${matchRequest.difficulties.join(", ")} in ${matchRequest.languages.join(", ")}.`,

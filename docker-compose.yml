@@ -129,6 +129,8 @@ services:
         condition: service_started
       matching-redis:
         condition: service_started
+      rabbitmq:
+        condition: service_started
     networks:
       - gateway-network
       - matching-redis-network
@@ -141,6 +143,7 @@ services:
       - US_INTERNAL_SERVICE_URL=http://user-service:3001
       - MS_COLLABORATION_SERVICE_URL=http://collaboration-service:3003
       - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     volumes:
       - ./secrets:/secrets:ro
     restart: unless-stopped
@@ -310,6 +313,20 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4.2-management
+    container_name: peerprep-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP protocol port (for your Node app)
+      - "15672:15672" # Management UI (username: guest / password: guest)
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - peerprep_network
 
 volumes:
   user_data:

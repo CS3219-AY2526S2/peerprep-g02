@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import RedisManager from "@/managers/redisManager.js";
+import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import { attemptRejoin, cancelMatch, findMatch, handleDisconnect } from "@/match/match.js";
-import { createCollaborationSession } from "@/services/collaborationService.js";
 import { type Difficulty, type MatchRequest } from "@/types/match.js";
 
 vi.mock("@/managers/redisManager.js");
-vi.mock("@/services/collaborationService.js");
+vi.mock("@/managers/rabbitmqManager.js");
 vi.mock("uuid", () => ({ v4: () => "test-uuid-123" }));
 
 describe("Matchmaking Service", () => {
     let mockRedis: any;
+    let mockRabbitMQ: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -18,7 +19,12 @@ describe("Matchmaking Service", () => {
         mockRedis = {
             eval: vi.fn(),
         };
+        mockRabbitMQ = {
+            publishCreateSession: vi.fn(),
+        };
+
         (RedisManager.getInstance as any).mockReturnValue(mockRedis);
+        (RabbitMQManager.getInstance as any).mockReturnValue(mockRabbitMQ);
     });
 
     describe("findMatch", () => {
@@ -32,7 +38,7 @@ describe("Matchmaking Service", () => {
             isUpdate: false,
         };
 
-        it("should return MatchResultSuccess when a partner is found", async () => {
+        it("should return MatchResultSuccess and publish to RabbitMQ when a partner is found", async () => {
             const matchedTopic = "strings";
             const matchedDifficulty: Difficulty = "Easy";
             const matchedLanguage = "python";
@@ -47,7 +53,7 @@ describe("Matchmaking Service", () => {
                 "12345678",
             ]);
 
-            (createCollaborationSession as any).mockResolvedValue("collab-id-999");
+            mockRabbitMQ.publishCreateSession.mockResolvedValue(true);
 
             const result = await findMatch(mockRequest);
 
@@ -64,7 +70,6 @@ describe("Matchmaking Service", () => {
 
             expect(result.matchFound).toBe(true);
             if (result.matchFound) {
-                expect(result.collaborationId).toBe("collab-id-999");
                 expect(result.matchId).toBe("test-uuid-123");
                 expect(result.partnerId).toBe(partnerId);
                 expect(result.matchedTopic).toBe(matchedTopic);
@@ -72,8 +77,9 @@ describe("Matchmaking Service", () => {
                 expect(result.matchedLanguage).toBe(matchedLanguage);
             }
 
-            expect(createCollaborationSession).toHaveBeenCalledWith(
+            expect(mockRabbitMQ.publishCreateSession).toHaveBeenCalledWith(
                 expect.objectContaining({
+                    matchId: "test-uuid-123",
                     userAId: "user-1",
                     userBId: partnerId,
                     difficulty: matchedDifficulty,
@@ -93,22 +99,7 @@ describe("Matchmaking Service", () => {
             if (!result.matchFound) {
                 expect(result.startTime).toBe(parseInt(startTimeStr, 10));
             }
-        });
-
-        it("should fallback to MatchResultWaiting if collaboration creation fails", async () => {
-            mockRedis.eval.mockResolvedValue([
-                "matched",
-                "user-2",
-                "strings",
-                "Easy",
-                "python",
-                "12345678",
-            ]);
-            (createCollaborationSession as any).mockResolvedValue(null);
-
-            const result = await findMatch(mockRequest);
-
-            expect(result.matchFound).toBe(false);
+            expect(mockRabbitMQ.publishCreateSession).not.toHaveBeenCalled();
         });
     });
 

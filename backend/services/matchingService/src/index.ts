@@ -9,6 +9,8 @@ import { registerSocketHandlers } from "@/managers/socketManager.js";
 import { socketAuthMiddleware } from "@/middlewares/socketAuth.js";
 import { mainLogger } from "@/utils/logger.js";
 
+import { RabbitMQManager } from "./managers/rabbitmqManager.js";
+
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
@@ -22,6 +24,10 @@ const startServer = async () => {
         await RedisManager.connect();
         io.use(socketAuthMiddleware);
         registerSocketHandlers(io);
+        mainLogger.info("Socket.IO handlers registered successfully");
+
+        await RabbitMQManager.getInstance().connect(io);
+        mainLogger.info("RabbitMQ Manager connected successfully");
 
         server.listen(process.env.MS_SERVER_PORT, () => {
             mainLogger.info(

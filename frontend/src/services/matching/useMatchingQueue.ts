@@ -10,6 +10,7 @@ import { SCORE_RANGE } from "@/models/matching/matchingDetailsType";
 import {
     MatchCancelledPayload,
     MatchErrorPayload,
+    MatchPreparingPayload,
     MatchSuccessPayload,
     MatchWaitingPayload,
     SocketEvents,
@@ -26,6 +27,8 @@ export function useMatchingQueue(
 ) {
     const [isConnected, setIsConnected] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
+    const [isPreparing, setIsPreparing] = useState(false);
+
     const [activeTier, setActiveTier] = useState(0);
 
     const [userScore, setUserScore] = useState<number | null>(null);
@@ -107,6 +110,7 @@ export function useMatchingQueue(
 
             const resetSearchState = () => {
                 setIsSearching(false);
+                setIsPreparing(false);
                 searchStartTime.current = null;
                 relaxationTier.current = 0;
                 setActiveTier(0);
@@ -118,6 +122,11 @@ export function useMatchingQueue(
 
             socketInstance.on(SocketEvents.MATCH_ERROR, (_data: MatchErrorPayload) => {
                 resetSearchState();
+            });
+
+            socketInstance.on(SocketEvents.MATCH_PREPARING, (_data: MatchPreparingPayload) => {
+                setIsSearching(false);
+                setIsPreparing(true);
             });
 
             socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
@@ -146,6 +155,7 @@ export function useMatchingQueue(
                 socketInstance.off(SocketEvents.MATCH_CANCELLED);
                 socketInstance.off(SocketEvents.MATCH_ERROR);
                 socketInstance.off(SocketEvents.MATCH_SUCCESS);
+                socketInstance.off(SocketEvents.MATCH_PREPARING);
                 socketInstance.off(SocketEvents.DISCONNECT);
             }
         };
@@ -220,5 +230,13 @@ export function useMatchingQueue(
         });
     };
 
-    return { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected };
+    return {
+        isSearching,
+        isPreparing,
+        activeTier,
+        startSearch,
+        cancelSearch,
+        userScore,
+        isConnected,
+    };
 }

@@ -24,17 +24,25 @@ export function MatchingView() {
     const navigate = useNavigate();
     const { isLoaded, user } = useUser();
 
-    // Form State
     const [topicOptions, setTopicOptions] = useState<string[]>([]);
     const [topics, setTopics] = useState<string[]>([]);
-    const [languages, setLanguages] = useState<Language[]>([LANGUAGE_OPTIONS[0]]);
+    const [languages, setLanguages] = useState<Language[]>(() => {
+        if (!isLoaded || !user) return [LANGUAGE_OPTIONS[0]];
+
+        const metadata = (user.unsafeMetadata || {}) as Record<string, unknown>;
+        const defaultLang = metadata.defaultLanguage as Language;
+
+        if (defaultLang && (LANGUAGE_OPTIONS as readonly string[]).includes(defaultLang)) {
+            return [defaultLang];
+        }
+
+        return [LANGUAGE_OPTIONS[0]];
+    });
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
-    // Session State
     const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
     const [checkingSession, setCheckingSession] = useState(true);
 
-    // 1. Initial Session Check
     useEffect(() => {
         if (!isLoaded || !user) return;
 
@@ -56,19 +64,6 @@ export function MatchingView() {
         };
     }, [isLoaded, user]);
 
-    // 2. Default Language Preference
-    useEffect(() => {
-        if (isLoaded && user) {
-            const metadata = (user.unsafeMetadata || {}) as Record<string, unknown>;
-            const defaultLang = metadata.defaultLanguage as Language;
-
-            if (defaultLang && (LANGUAGE_OPTIONS as readonly string[]).includes(defaultLang)) {
-                setLanguages([defaultLang]);
-            }
-        }
-    }, [isLoaded, user]);
-
-    // 3. Topic Initialization
     useEffect(() => {
         const fetchTopics = async () => {
             try {
@@ -81,7 +76,7 @@ export function MatchingView() {
                 );
 
                 setTopicOptions(topicStrings);
-                if (topicStrings.length > 0 && topics.length === 0) {
+                if (topicStrings.length > 0) {
                     setTopics([topicStrings[0]]);
                 }
             } catch (err) {
@@ -91,19 +86,25 @@ export function MatchingView() {
         fetchTopics();
     }, []);
 
-    // 4. Matching Logic
-    const { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected } =
-        useMatchingQueue(topics, languages, difficulty, (payload) => {
-            if (payload.collaborationId) {
-                handleNavigation(payload.collaborationId);
-            }
-        });
-
     const handleNavigation = (id: string) => {
         startTransition(() => {
             navigate(collaborationRoute(id));
         });
     };
+
+    const {
+        isSearching,
+        isPreparing,
+        activeTier,
+        startSearch,
+        cancelSearch,
+        userScore,
+        isConnected,
+    } = useMatchingQueue(topics, languages, difficulty, (payload) => {
+        if (payload.collaborationId) {
+            handleNavigation(payload.collaborationId);
+        }
+    });
 
     return (
         <div className="space-y-4">
@@ -114,6 +115,7 @@ export function MatchingView() {
             <Card className="relative overflow-hidden rounded-[30px] border border-white/70 backdrop-blur transition-all duration-500 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
                 {isSearching ? (
                     <MatchSearchingView
+                        isPreparing={isPreparing}
                         topics={topics}
                         languages={languages}
                         difficulties={getRelaxedDifficulties(difficulty, activeTier)}
