@@ -4,6 +4,7 @@ import cors from "cors";
 import express from "express";
 
 import { env } from "@/config/env.js";
+import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import executeRoutes from "@/routes/executeRoutes.js";
 import { ensurePistonRuntimes } from "@/services/pistonSetup.js";
 import { logger } from "@/utils/logger.js";
@@ -25,5 +26,10 @@ app.listen(env.port, "0.0.0.0", () => {
     // Install Piston runtimes in the background (non-blocking)
     ensurePistonRuntimes().catch((error) => {
         logger.error({ err: error }, "Piston runtime setup failed - code execution may not work");
+    });
+
+    // Connect to RabbitMQ to consume execution requests
+    RabbitMQManager.getInstance().connect().catch((error) => {
+        logger.error({ err: error }, "RabbitMQ connection failed - queue-based execution unavailable");
     });
 });

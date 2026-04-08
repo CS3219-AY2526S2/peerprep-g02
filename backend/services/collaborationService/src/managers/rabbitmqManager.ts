@@ -1,21 +1,41 @@
 import amqp, { type Channel, type ChannelModel } from "amqplib";
+import type { Server } from "socket.io";
 
-import { NON_RETRYABLE_ERROR_CODES, RABBITMQ_DEFAULTS } from "@/config/constants.js";
+import { NON_RETRYABLE_ERROR_CODES, RABBITMQ_DEFAULTS, SOCKET_EVENTS } from "@/config/constants.js";
 import { env } from "@/config/env.js";
+import { AttemptRecordingService } from "@/services/attemptRecordingService.js";
 import {
     collaborationSessionService,
     type CreateSessionResponse,
 } from "@/services/collaborationSessionService.js";
 import { validateCreateSessionPayload } from "@/services/validation.js";
+import {
+    EXEC_REQ_QUEUE,
+    EXEC_RES_QUEUE,
+    type ExecutionRequestMessage,
+    type ExecutionResponseMessage,
+} from "@/types/executionRabbitmq.js";
 import { REQ_QUEUE, RES_QUEUE } from "@/types/rabbitmq.js";
 import { AppError } from "@/utils/errors.js";
 import { logger } from "@/utils/logger.js";
+import { getRedisClient } from "@/utils/redis.js";
+
+const attemptRecordingService = new AttemptRecordingService();
+
+function collaborationRoom(collaborationId: string): string {
+    return `collaboration:${collaborationId}`;
+}
+
+function userRoom(userId: string): string {
+    return `user:${userId}`;
+}
 
 export class RabbitMQManager {
     private static instance: RabbitMQManager;
     private connection: ChannelModel | null = null;
     private channel: Channel | null = null;
     private isReconnecting = false;
+    private io: Server | null = null;
 
     private constructor() {}
 
@@ -43,13 +63,32 @@ export class RabbitMQManager {
             await ch.prefetch(RABBITMQ_DEFAULTS.PREFETCH_COUNT);
             await ch.assertQueue(REQ_QUEUE, { durable: true });
             await ch.assertQueue(RES_QUEUE, { durable: true });
+            await ch.assertQueue(EXEC_REQ_QUEUE, { durable: true });
+            await ch.assertQueue(EXEC_RES_QUEUE, { durable: true });
 
             logger.info("Connected to RabbitMQ successfully");
 
-            this.startConsuming();
+            this.startConsumingSessionRequests();
+
+            // Start execution response consumer if io is available (set via startConsumers)
+            if (this.io) {
+                this.startConsumingExecutionResponses(this.io);
+            }
         } catch (error) {
             logger.error({ err: error }, "Failed to connect to RabbitMQ");
             this.handleConnectionError(error as Error);
+        }
+    }
+
+    /**
+     * Start consumers that require the Socket.IO server instance.
+     * Call this after creating the io server.
+     */
+    public startConsumers(io: Server): void {
+        this.io = io;
+
+        if (this.channel) {
+            this.startConsumingExecutionResponses(io);
         }
     }
 
@@ -67,7 +106,7 @@ export class RabbitMQManager {
         }, RABBITMQ_DEFAULTS.RECONNECT_DELAY_MS);
     }
 
-    private startConsuming(): void {
+    private startConsumingSessionRequests(): void {
         const ch = this.channel;
         if (!ch) return;
 
@@ -103,18 +142,152 @@ export class RabbitMQManager {
                     "Session created, publishing response",
                 );
 
-                const published = this.publishResponse(response);
+                const published = this.publishSessionResponse(response);
                 if (!published) {
                     throw new Error("Failed to publish session creation response");
                 }
                 ch.ack(msg);
             } catch (error) {
-                this.handleConsumerError(ch, msg, error, retryCount, headers);
+                this.handleSessionConsumerError(ch, msg, error, retryCount, headers);
             }
         });
     }
 
-    private handleConsumerError(
+    private startConsumingExecutionResponses(io: Server): void {
+        const ch = this.channel;
+        if (!ch) return;
+
+        logger.info(`Listening for execution responses on ${EXEC_RES_QUEUE}`);
+
+        ch.consume(EXEC_RES_QUEUE, async (msg) => {
+            if (!msg) return;
+
+            let parsed: ExecutionResponseMessage;
+            try {
+                parsed = JSON.parse(msg.content.toString()) as ExecutionResponseMessage;
+            } catch {
+                logger.error("Discarding malformed execution response (invalid JSON)");
+                ch.ack(msg);
+                return;
+            }
+
+            const { correlationId, collaborationId, userId, type: execType } = parsed;
+
+            // Clear the pending timeout key in Redis
+            const redis = getRedisClient();
+            await redis.del(`exec:pending:${correlationId}`);
+
+            try {
+                if (parsed.success && parsed.result) {
+                    // Store result in Redis
+                    await collaborationSessionService.updateOutput(
+                        collaborationId,
+                        JSON.stringify(parsed.result),
+                    );
+
+                    // Broadcast results to all users in the room
+                    io.to(collaborationRoom(collaborationId)).emit(
+                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                        {
+                            collaborationId,
+                            output: parsed.result,
+                        },
+                    );
+
+                    logger.info(
+                        {
+                            correlationId,
+                            collaborationId,
+                            testCasesPassed: parsed.result.testCasesPassed,
+                            totalTestCases: parsed.result.totalTestCases,
+                        },
+                        "Execution result broadcast to room",
+                    );
+
+                    // For submissions, record the attempt and notify the submitter
+                    if (execType === "submit") {
+                        const allPassed =
+                            parsed.result.testCasesPassed === parsed.result.totalTestCases &&
+                            parsed.result.totalTestCases > 0;
+                        const duration = Math.round(
+                            (Date.now() - new Date(parsed.sessionCreatedAt).getTime()) / 1000,
+                        );
+
+                        try {
+                            await attemptRecordingService.recordAttempt({
+                                userId,
+                                collaborationId,
+                                questionId: parsed.questionId,
+                                questionTitle: parsed.questionTitle,
+                                language: parsed.language,
+                                difficulty: parsed.difficulty,
+                                success: allPassed,
+                                duration,
+                                totalTestCases: parsed.result.totalTestCases,
+                                testCasesPassed: parsed.result.testCasesPassed,
+                            });
+
+                            // Send submission confirmation to the submitter
+                            io.to(userRoom(userId)).emit(
+                                SOCKET_EVENTS.SUBMISSION_COMPLETE,
+                                {
+                                    collaborationId,
+                                    success: allPassed,
+                                    totalTestCases: parsed.result.totalTestCases,
+                                    testCasesPassed: parsed.result.testCasesPassed,
+                                },
+                            );
+                        } catch (attemptError) {
+                            logger.error(
+                                { err: attemptError, correlationId, collaborationId },
+                                "Failed to record attempt after execution",
+                            );
+                        }
+                    }
+                } else {
+                    // Execution failed — broadcast error to stop spinners
+                    io.to(collaborationRoom(collaborationId)).emit(
+                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                        {
+                            collaborationId,
+                            output: { error: parsed.error ?? "Code execution failed." },
+                        },
+                    );
+
+                    logger.error(
+                        { correlationId, collaborationId, error: parsed.error },
+                        "Execution error broadcast to room",
+                    );
+                }
+
+                ch.ack(msg);
+            } catch (error) {
+                logger.error(
+                    { err: error, correlationId, collaborationId },
+                    "Failed to process execution response",
+                );
+                // Ack anyway to avoid reprocessing — the result would be the same
+                ch.ack(msg);
+            }
+        });
+    }
+
+    public publishExecutionRequest(message: ExecutionRequestMessage): boolean {
+        if (!this.channel) return false;
+
+        try {
+            return this.channel.sendToQueue(
+                EXEC_REQ_QUEUE,
+                Buffer.from(JSON.stringify(message)),
+                { persistent: true },
+            );
+        } catch (error) {
+            logger.error({ err: error }, "Failed to publish execution request");
+            return false;
+        }
+    }
+
+    private handleSessionConsumerError(
         ch: Channel,
         msg: amqp.ConsumeMessage,
         error: unknown,
@@ -152,7 +325,7 @@ export class RabbitMQManager {
         }
     }
 
-    private publishResponse(response: CreateSessionResponse): boolean {
+    private publishSessionResponse(response: CreateSessionResponse): boolean {
         if (!this.channel) return false;
 
         try {

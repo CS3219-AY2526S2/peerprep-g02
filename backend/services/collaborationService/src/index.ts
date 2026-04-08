@@ -24,9 +24,10 @@ async function startServer(): Promise<void> {
     await Promise.all([pubClient.ping(), subClient.ping()]);
     logger.info("Redis adapter pub/sub clients verified");
 
-    // Initialize RabbitMQ consumer for session creation requests
-    await RabbitMQManager.getInstance().connect();
-    logger.info("RabbitMQ consumer connected");
+    // Initialize RabbitMQ connection and assert queues
+    const rabbitmq = RabbitMQManager.getInstance();
+    await rabbitmq.connect();
+    logger.info("RabbitMQ connected");
 
     const server = createServer(app);
 
@@ -48,6 +49,10 @@ async function startServer(): Promise<void> {
     // Attach Redis adapter for cross-instance Socket.IO event synchronization
     io.adapter(createAdapter(pubClient, subClient));
     logger.info("Socket.IO Redis adapter initialized");
+
+    // Start RabbitMQ consumers that need the Socket.IO server instance
+    rabbitmq.startConsumers(io);
+    logger.info("RabbitMQ execution response consumer started");
 
     io.use(socketAuthMiddleware);
     registerSocketHandlers(io);

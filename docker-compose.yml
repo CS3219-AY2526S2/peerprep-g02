@@ -267,10 +267,15 @@ services:
       - ./backend/services/executionService/.env
     environment:
       - PISTON_URL=http://piston:2000
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
-      - piston
+      piston:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - gateway-network
+      - rabbitmq-network
     ports:
       - "3006:3006"
     restart: unless-stopped
