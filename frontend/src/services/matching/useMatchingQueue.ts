@@ -49,6 +49,10 @@ export function useMatchingQueue(
                 const response = await apiFetch(API_ENDPOINTS.USERS.ME);
 
                 if (!response.ok) {
+                    pushToast({
+                        tone: "error",
+                        message: "Failed to fetch user score.",
+                    });
                     return;
                 }
 
@@ -61,7 +65,7 @@ export function useMatchingQueue(
             } catch {
                 pushToast({
                     tone: "error",
-                    message: "Unable to fetch user score.",
+                    message: "Failed to fetch user score.",
                 });
             }
         };
@@ -134,6 +138,10 @@ export function useMatchingQueue(
 
             socketInstance.on(SocketEvents.MATCH_ERROR, (_data: MatchErrorPayload) => {
                 resetSearchState();
+                pushToast({
+                    tone: "error",
+                    message: "An error occurred during matching. Please try again.",
+                });
             });
 
             socketInstance.on(SocketEvents.MATCH_PREPARING, (_data: MatchPreparingPayload) => {
@@ -247,21 +255,34 @@ export function useMatchingQueue(
 
     const startSearch = async () => {
         if (userScore === null) {
+            pushToast({
+                tone: "error",
+                message: "User score not found. Please refresh and try again.",
+            });
             return;
         }
-        setIsSearching(true);
-        relaxationTier.current = 0;
-        setActiveTier(0);
-        searchStartTime.current = Date.now();
 
-        await matchingService.connect();
-        matchingService.joinQueue({
-            topics: topics,
-            difficulties: [difficulty],
-            languages: languages,
-            userScore: userScore,
-            scoreRange: SCORE_RANGE.DEFAULT,
-        });
+        try {
+            setIsSearching(true);
+            relaxationTier.current = 0;
+            setActiveTier(0);
+            searchStartTime.current = Date.now();
+
+            await matchingService.connect();
+            matchingService.joinQueue({
+                topics: topics,
+                difficulties: [difficulty],
+                languages: languages,
+                userScore: userScore,
+                scoreRange: SCORE_RANGE.DEFAULT,
+            });
+        } catch {
+            setIsSearching(false);
+            pushToast({
+                tone: "error",
+                message: "Failed to connect to matching service. Please try again.",
+            });
+        }
     };
 
     return {
