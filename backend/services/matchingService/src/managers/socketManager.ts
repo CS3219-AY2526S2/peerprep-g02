@@ -23,7 +23,7 @@ const socketWrapper = (
 };
 
 export const registerSocketHandlers = (io: Server) => {
-    io.on("connection", (socket: Socket) => {
+    io.on("connection", async (socket: Socket) => {
         const userId = socket.data.userId;
 
         if (!userId) {
@@ -34,6 +34,19 @@ export const registerSocketHandlers = (io: Server) => {
 
         socket.join(userId);
         socketLogger.info(`User ${userId} connected with socket ID ${socket.id}`);
+
+        try {
+            const rejoinResult = await attemptRejoin(userId);
+            if (rejoinResult.success) {
+                socketLogger.info(`Syncing new tab for user ${userId} to active queue.`);
+                socket.emit("match_waiting", {
+                    message: "You are already in the queue. Resuming search...",
+                    startTime: rejoinResult.startTime,
+                });
+            }
+        } catch (error) {
+            socketLogger.error(error, `Error during connection sync for user ${userId}`);
+        }
 
         socket.on(
             "join_queue",
@@ -93,7 +106,7 @@ export const registerSocketHandlers = (io: Server) => {
                     socketLogger.info(
                         `User ${userId} added to queue for ${matchRequest.topics.join(", ")} for ${matchRequest.difficulties.join(", ")} in ${matchRequest.languages.join(", ")}.`,
                     );
-                    socket.emit("match_waiting", {
+                    io.to(userId).emit("match_waiting", {
                         message: "Added to queue, waiting for a match...",
                         startTime: matchResult.startTime,
                     });
@@ -107,10 +120,10 @@ export const registerSocketHandlers = (io: Server) => {
                 const isCancelled = await cancelMatch(userId);
                 if (isCancelled) {
                     socketLogger.info(`User ${userId} cancelled matchmaking.`);
-                    socket.emit("match_cancelled", { message: "You have left the queue." });
+                    io.to(userId).emit("match_cancelled", { message: "You have left the queue." });
                 } else {
                     socketLogger.warn(`Failed to cancel matchmaking for user ${userId}.`);
-                    socket.emit("match_error", {
+                    io.to(userId).emit("match_error", {
                         message: "Failed to leave the queue. Please try again.",
                     });
                 }
