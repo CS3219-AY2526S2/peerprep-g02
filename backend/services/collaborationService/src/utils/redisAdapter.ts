@@ -11,7 +11,7 @@ import { logger } from "@/utils/logger.js";
  * Importantly, these clients do NOT use keyPrefix — the adapter manages its own
  * "socket.io#" channel naming internally.
  */
-export function createAdapterClients(): { pubClient: IORedis; subClient: IORedis } {
+export function createAdapterClients(): { pubClient: InstanceType<typeof IORedis.Redis>; subClient: InstanceType<typeof IORedis.Redis> } {
     const connectionOptions = {
         host: env.redisHost,
         port: env.redisPort,
@@ -26,8 +26,8 @@ export function createAdapterClients(): { pubClient: IORedis; subClient: IORedis
         },
     };
 
-    const pubClient = new IORedis(connectionOptions);
-    const subClient = new IORedis(connectionOptions);
+    const pubClient = new IORedis.Redis(connectionOptions);
+    const subClient = new IORedis.Redis(connectionOptions);
 
     pubClient.on("error", (error: unknown) => {
         logger.error({ err: error }, "Redis adapter pub client error");

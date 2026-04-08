@@ -13,6 +13,7 @@
     },
     "dependencies": {
         "@socket.io/redis-adapter": "^8.3.0",
+        "amqplib": "^1.0.3",
         "cors": "^2.8.5",
         "dotenv": "^16.6.1",
         "express": "^4.21.2",
@@ -24,6 +25,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
+        "@types/amqplib": "^0.10.8",
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
         "@types/cors": "^2.8.17",
         "@types/express": "^4.17.21",

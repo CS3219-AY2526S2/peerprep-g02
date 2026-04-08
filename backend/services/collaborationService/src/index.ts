@@ -6,6 +6,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 
 import app from "@/app.js";
 import { env } from "@/config/env.js";
+import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import { socketAuthMiddleware } from "@/middleware/socketAuth.js";
 import { registerSocketHandlers } from "@/sockets/registerSocketHandlers.js";
 import { logger } from "@/utils/logger.js";
@@ -22,6 +23,10 @@ async function startServer(): Promise<void> {
     const { pubClient, subClient } = createAdapterClients();
     await Promise.all([pubClient.ping(), subClient.ping()]);
     logger.info("Redis adapter pub/sub clients verified");
+
+    // Initialize RabbitMQ consumer for session creation requests
+    await RabbitMQManager.getInstance().connect();
+    logger.info("RabbitMQ consumer connected");
 
     const server = createServer(app);
 

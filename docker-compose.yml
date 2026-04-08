@@ -215,6 +215,7 @@ services:
       - CS_REDIS_PORT=6379
       - CS_EXECUTION_SERVICE_URL=http://execution-service:3006
       - CS_ATTEMPT_SERVICE_URL=http://attempts-service:3004
+      - CS_RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
       collaboration-redis:
         condition: service_started
@@ -222,9 +223,12 @@ services:
         condition: service_started
       questions-service:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - gateway-network
       - collaboration-redis-network
+      - rabbitmq-network
     ports:
       - "3003:3003"
     restart: unless-stopped
