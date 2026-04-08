@@ -32,6 +32,10 @@ export const COLLABORATION_SOCKET_EVENTS = {
     CODE_SUBMIT: "code:submit",
     CODE_RUNNING: "code:running",
     SUBMISSION_COMPLETE: "submission:complete",
+
+    // AI hint events
+    HINT_REQUEST: "hint:request",
+    HINT_UPDATED: "hint:updated",
 } as const;
 
 export type CollaborationJoinAck =

@@ -31,6 +31,9 @@ type CodeRunPayload = {
 type SocketAck = (response: {
     ok: boolean;
     state?: Awaited<ReturnType<typeof collaborationSessionService.joinSession>>;
+    hints?: Awaited<ReturnType<typeof collaborationSessionService.getHints>>;
+    hintsRemaining?: number;
+    userNames?: Record<string, string>;
     error?: string;
     message?: string;
 }) => void;
@@ -110,8 +113,15 @@ export function registerSocketHandlers(io: Server): void {
 
                     socket.join(collaborationRoom(payload.collaborationId));
 
+                    // Include existing hints and user names in join response
+                    const [hints, hintsRemaining, userNames] = await Promise.all([
+                        collaborationSessionService.getHints(payload.collaborationId),
+                        collaborationSessionService.getHintsRemaining(payload.collaborationId, userId as string),
+                        collaborationSessionService.getUserNames([state.session.userAId, state.session.userBId]),
+                    ]);
+
                     // Send full state to joining user
-                    ack?.({ ok: true, state });
+                    ack?.({ ok: true, state, hints, hintsRemaining, userNames });
 
                     // F4.3.2 - Notify other users in the room that this user joined
                     socket
@@ -257,27 +267,16 @@ export function registerSocketHandlers(io: Server): void {
                 // Leave the socket room
                 socket.leave(collaborationRoom(payload.collaborationId));
 
-                // Force-disconnect other tabs of the same user
-                const otherSocketIds = result.removedSocketIds.filter(
-                    (id) => id !== socket.id,
-                );
-                for (const otherSocketId of otherSocketIds) {
-                    const otherSocket = io.sockets.sockets.get(otherSocketId);
-                    if (otherSocket) {
-                        otherSocket.emit(SOCKET_EVENTS.SESSION_ENDED, {
+                if (result.isLastSocket) {
+                    // F4.8.1 - Notify other users that this user left intentionally
+                    io.to(collaborationRoom(result.collaborationId)).emit(
+                        SOCKET_EVENTS.USER_LEFT,
+                        {
                             collaborationId: result.collaborationId,
-                            reason: "both_users_left",
-                        });
-                        otherSocket.leave(collaborationRoom(result.collaborationId));
-                        otherSocket.disconnect(true);
-                    }
+                            userId: result.userId,
+                        },
+                    );
                 }
-
-                // F4.8.1 - Notify other users that this user left intentionally
-                io.to(collaborationRoom(result.collaborationId)).emit(SOCKET_EVENTS.USER_LEFT, {
-                    collaborationId: result.collaborationId,
-                    userId: result.userId,
-                });
 
                 // Broadcast updated presence
                 io.to(collaborationRoom(result.collaborationId)).emit(
@@ -315,6 +314,72 @@ export function registerSocketHandlers(io: Server): void {
                 );
 
                 ack?.({ ok: true });
+            },
+        );
+
+        /**
+         * AI Hints - Request an AI-generated hint (max 2 per user per session).
+         * Calls Gemini API with the question context and current code.
+         * Broadcasts the hint to all users in the room.
+         */
+        socket.on(
+            SOCKET_EVENTS.HINT_REQUEST,
+            async (
+                payload: { collaborationId?: string },
+                ack?: (response: {
+                    ok: boolean;
+                    hints?: Awaited<ReturnType<typeof collaborationSessionService.getHints>>;
+                    hintsRemaining?: number;
+                    error?: string;
+                }) => void,
+            ) => {
+                if (!payload?.collaborationId) {
+                    ack?.({ ok: false, error: "collaborationId is required." });
+                    return;
+                }
+
+                try {
+                    const result = await collaborationSessionService.requestHint(
+                        payload.collaborationId,
+                        userId as string,
+                    );
+
+                    ack?.({
+                        ok: true,
+                        hints: result.hints,
+                        hintsRemaining: result.hintsRemaining,
+                    });
+
+                    // Broadcast updated hints to all users in the room
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.HINT_UPDATED,
+                        {
+                            collaborationId: payload.collaborationId,
+                            hints: result.hints,
+                            requestedBy: userId,
+                        },
+                    );
+
+                    logger.info(
+                        {
+                            socketId: socket.id,
+                            userId,
+                            collaborationId: payload.collaborationId,
+                            hintsRemaining: result.hintsRemaining,
+                            totalHints: result.hints.length,
+                        },
+                        "AI hint generated",
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof Error ? error.message : "Failed to generate hint.";
+                    ack?.({ ok: false, error: message });
+
+                    logger.error(
+                        { err: error, collaborationId: payload.collaborationId, userId },
+                        "AI hint request failed",
+                    );
+                }
             },
         );
 

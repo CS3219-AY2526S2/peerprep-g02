@@ -1,17 +1,20 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
+import { useAuth } from "@clerk/clerk-react";
 import {
     ArrowLeftRight,
     CheckCircle2,
     Clock3,
     Code2,
+    Lightbulb,
     LoaderCircle,
     LogOut,
     MessageSquareText,
     Play,
     Radio,
     Send,
+    Sparkles,
     TerminalSquare,
     UsersRound,
     Wifi,
@@ -66,6 +69,7 @@ function getEditorPlaceholder(language: string): string {
 export default function CollaborationSessionView() {
     const { collaborationId } = useParams<{ collaborationId: string }>();
     const navigate = useNavigate();
+    const { userId: currentUserId } = useAuth();
     const [now, setNow] = useState(() => Date.now());
     const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
     const {
@@ -89,7 +93,15 @@ export default function CollaborationSessionView() {
         isExecuting,
         executionResults,
         submissionResult,
+        hints,
+        isHintLoading,
+        hintsRemaining,
+        requestHint,
+        userNames,
     } = useCollaborationSession(collaborationId);
+
+    const getDisplayName = (userId: string) =>
+        userNames[userId] ?? (userId === currentUserId ? "You" : "Partner");
 
     useEffect(() => {
         const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -173,7 +185,7 @@ export default function CollaborationSessionView() {
                             </div>
                             <p className="mt-1 text-sm text-slate-400">
                                 {session
-                                    ? `Session ${session.collaborationId}`
+                                    ? `${session.difficulty} · ${session.topic}`
                                     : "Connecting to collaboration session"}
                             </p>
                         </div>
@@ -310,24 +322,95 @@ export default function CollaborationSessionView() {
                                 </Card>
                             )}
                         </div>
+
+                        {/* Chat / Participants Panel */}
+                        <Card className="border border-white/10 bg-white/[0.03] py-0 shadow-none ring-0">
+                            <CardHeader className="px-6 pt-5 pb-0">
+                                <div className="flex items-center gap-3">
+                                    <MessageSquareText className="size-5 text-blue-300" />
+                                    <CardTitle className="text-xl font-semibold text-white">
+                                        Chat
+                                    </CardTitle>
+                                </div>
+                                <CardDescription className="text-slate-500">
+                                    Live collaboration shell
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4 px-6 pt-4 pb-5">
+                                {participants.map((participant) => (
+                                    <div
+                                        key={participant.userId}
+                                        className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3"
+                                    >
+                                        <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-sm font-bold text-slate-950">
+                                            {getInitials(participant.userId)}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="truncate font-semibold text-white">
+                                                    {getDisplayName(participant.userId)}
+                                                </p>
+                                                <Badge
+                                                    variant={
+                                                        participant.status === "connected"
+                                                            ? "success"
+                                                            : participant.status === "disconnected"
+                                                              ? "warning"
+                                                              : "destructive"
+                                                    }
+                                                    className="rounded-full"
+                                                >
+                                                    {participant.status}
+                                                </Badge>
+                                            </div>
+                                            <p className="mt-1 text-sm text-slate-400">
+                                                {participant.connectionCount} active connection
+                                                {participant.connectionCount === 1 ? "" : "s"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="border-t border-white/10 pt-4">
+                                    <div className="flex items-end gap-3">
+                                        <Textarea
+                                            disabled
+                                            placeholder="Chat messaging will plug into the collaboration socket next."
+                                            className="min-h-20 border-white/10 bg-white/[0.03] text-slate-100 placeholder:text-slate-500"
+                                        />
+                                        <Button
+                                            size="icon-lg"
+                                            className="rounded-2xl bg-blue-500 text-white hover:bg-blue-400"
+                                            disabled
+                                        >
+                                            <ArrowLeftRight className="size-4 rotate-45" />
+                                        </Button>
+                                    </div>
+                                    <CardDescription className="mt-3 text-slate-500">
+                                        Messaging UI is ready; live chat transport will be wired in
+                                        the next realtime step.
+                                    </CardDescription>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </section>
 
                 <section className="flex min-h-[calc(100vh-92px)] flex-col bg-[#111827]">
                     <div className="border-b border-white/10 px-5 py-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-lg font-medium text-slate-100">
-                                    {language || session?.language || "Language"}
-                                </div>
-                                {connectionBadge}
+                            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-lg font-medium text-slate-100">
+                                {language || session?.language || "Language"}
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <Button
                                     size="lg"
                                     className="rounded-2xl bg-emerald-500 px-5 text-white hover:bg-emerald-400"
-                                    disabled={isExecuting || !!sessionEnded}
+                                    disabled={
+                                        isExecuting ||
+                                        !!sessionEnded ||
+                                        connectionState !== "connected"
+                                    }
                                     onClick={() => void runCode()}
                                 >
                                     {isExecuting ? (
@@ -340,7 +423,11 @@ export default function CollaborationSessionView() {
                                 <Button
                                     size="lg"
                                     className="rounded-2xl bg-blue-500 px-5 text-white hover:bg-blue-400"
-                                    disabled={isExecuting || !!sessionEnded}
+                                    disabled={
+                                        isExecuting ||
+                                        !!sessionEnded ||
+                                        connectionState !== "connected"
+                                    }
                                     onClick={() => void submitCode()}
                                 >
                                     {isExecuting ? (
@@ -596,73 +683,79 @@ export default function CollaborationSessionView() {
                                 </div>
                             </div>
 
+                            {/* AI Hints Panel */}
                             <div className="flex min-h-[320px] flex-col">
                                 <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                                     <div className="flex items-center gap-3">
-                                        <MessageSquareText className="size-5 text-blue-300" />
-                                        <h2 className="text-2xl font-semibold text-white">Chat</h2>
+                                        <Sparkles className="size-5 text-violet-300" />
+                                        <h2 className="text-2xl font-semibold text-white">
+                                            AI Hints
+                                        </h2>
                                     </div>
-                                    <p className="text-sm text-slate-400">
-                                        Live collaboration shell
-                                    </p>
+                                    <Badge
+                                        variant={hintsRemaining > 0 ? "outline" : "destructive"}
+                                        className="rounded-full border-violet-500/30 bg-violet-500/10 px-3 py-1 text-sm text-violet-300"
+                                    >
+                                        {hintsRemaining}/2 remaining
+                                    </Badge>
                                 </div>
 
-                                <div className="flex-1 space-y-4 overflow-auto px-5 py-5">
-                                    {participants.map((participant) => (
+                                <div className="flex-1 space-y-3 overflow-auto px-5 py-5">
+                                    {hints.length === 0 && !isHintLoading && (
+                                        <div className="flex items-center gap-3 py-3 text-center">
+                                            <Lightbulb className="size-8 shrink-0 text-slate-600" />
+                                            <p className="text-sm text-slate-500">
+                                                Stuck? Use AI hints to get guidance. Each user gets
+                                                2 hints per session.
+                                            </p>
+                                        </div>
+                                    )}
+                                    {hints.map((hint, index) => (
                                         <div
-                                            key={participant.userId}
-                                            className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3"
+                                            key={`${hint.timestamp}-${index}`}
+                                            className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4"
                                         >
-                                            <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-sm font-bold text-slate-950">
-                                                {getInitials(participant.userId)}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <p className="truncate font-semibold text-white">
-                                                        {participant.userId}
-                                                    </p>
-                                                    <Badge
-                                                        variant={
-                                                            participant.status === "connected"
-                                                                ? "success"
-                                                                : participant.status ===
-                                                                    "disconnected"
-                                                                  ? "warning"
-                                                                  : "destructive"
-                                                        }
-                                                        className="rounded-full"
-                                                    >
-                                                        {participant.status}
-                                                    </Badge>
+                                            <div className="mb-2 flex items-center gap-2">
+                                                <div className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-purple-500 text-xs font-bold text-white">
+                                                    {getInitials(hint.userId)}
                                                 </div>
-                                                <p className="mt-1 text-sm text-slate-400">
-                                                    {participant.connectionCount} active connection
-                                                    {participant.connectionCount === 1 ? "" : "s"}
-                                                </p>
+                                                <span className="text-xs font-medium text-violet-300">
+                                                    Hint {index + 1}
+                                                </span>
+                                                <span className="text-xs text-slate-500">
+                                                    by {getDisplayName(hint.userId)}
+                                                </span>
                                             </div>
+                                            <p className="text-sm leading-relaxed text-slate-200">
+                                                {hint.hint}
+                                            </p>
                                         </div>
                                     ))}
+                                    {isHintLoading && (
+                                        <div className="flex items-center gap-3 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                                            <LoaderCircle className="size-5 animate-spin text-violet-400" />
+                                            <span className="text-sm text-violet-300">
+                                                Generating hint...
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="border-t border-white/10 px-5 py-4">
-                                    <div className="flex items-end gap-3">
-                                        <Textarea
-                                            disabled
-                                            placeholder="Chat messaging will plug into the collaboration socket next."
-                                            className="min-h-20 border-white/10 bg-white/[0.03] text-slate-100 placeholder:text-slate-500"
-                                        />
-                                        <Button
-                                            size="icon-lg"
-                                            className="rounded-2xl bg-blue-500 text-white hover:bg-blue-400"
-                                            disabled
-                                        >
-                                            <ArrowLeftRight className="size-4 rotate-45" />
-                                        </Button>
-                                    </div>
-                                    <CardDescription className="mt-3 text-slate-500">
-                                        Messaging UI is ready; live chat transport will be wired in
-                                        the next realtime step.
-                                    </CardDescription>
+                                    <Button
+                                        className="w-full rounded-2xl bg-violet-500 text-white hover:bg-violet-400"
+                                        disabled={
+                                            hintsRemaining <= 0 || isHintLoading || !!sessionEnded
+                                        }
+                                        onClick={() => void requestHint()}
+                                    >
+                                        {isHintLoading ? (
+                                            <LoaderCircle className="size-4 animate-spin" />
+                                        ) : (
+                                            <Sparkles className="size-4" />
+                                        )}
+                                        {hintsRemaining <= 0 ? "No hints remaining" : "Get AI Hint"}
+                                    </Button>
                                 </div>
                             </div>
                         </div>

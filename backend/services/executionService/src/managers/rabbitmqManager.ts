@@ -103,6 +103,9 @@ export class RabbitMQManager {
                 return;
             }
 
+            // Normalize language to lowercase
+            parsed.language = parsed.language.toLowerCase();
+
             // Validate language
             if (!SUPPORTED_LANGUAGES.includes(parsed.language as SupportedLanguage)) {
                 logger.error({ language: parsed.language }, "Unsupported language");

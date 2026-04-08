@@ -2,6 +2,7 @@ import type { Socket } from "socket.io-client";
 
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { createAuthenticatedSocket } from "@/utils/socketClient";
+import type { HintRequestAck } from "@/models/collaboration/aiHintType";
 import type { CollaborationJoinAck } from "@/models/collaboration/collaborationSocketType";
 import { COLLABORATION_SOCKET_EVENTS } from "@/models/collaboration/collaborationSocketType";
 import type { OTOperation } from "@/models/collaboration/collaborationType";
@@ -81,6 +82,24 @@ class CollaborationService {
                 COLLABORATION_SOCKET_EVENTS.CODE_SUBMIT,
                 { collaborationId },
                 (response: { ok: boolean; error?: string }) => {
+                    resolve(response);
+                },
+            );
+        });
+    }
+
+    async requestHint(collaborationId: string): Promise<HintRequestAck> {
+        const socket = await this.connect();
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                resolve({ ok: false, error: "Hint request timed out. Please try again." });
+            }, 20_000);
+
+            socket.emit(
+                COLLABORATION_SOCKET_EVENTS.HINT_REQUEST,
+                { collaborationId },
+                (response: HintRequestAck) => {
+                    clearTimeout(timeout);
                     resolve(response);
                 },
             );

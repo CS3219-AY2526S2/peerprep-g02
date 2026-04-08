@@ -50,7 +50,13 @@ export async function GetPopularQuestions() {
 
 export async function GetQuestion(quid: UUID) {
     try {
-        const result = await pool.query("SELECT * FROM questions WHERE quid = $1", [quid]);
+        const result = await pool.query(
+            `SELECT q.*,
+                    ARRAY(SELECT t.topic FROM topics t WHERE t.tid = ANY(q.topics)) AS topic_names
+             FROM questions q
+             WHERE q.quid = $1`,
+            [quid],
+        );
         return result.rows;
     } catch (e) {
         console.log(e);
