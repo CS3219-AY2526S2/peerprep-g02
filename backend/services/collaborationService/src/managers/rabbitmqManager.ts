@@ -173,9 +173,16 @@ export class RabbitMQManager {
 
             const { correlationId, collaborationId, userId, type: execType } = parsed;
 
-            // Clear the pending timeout key in Redis
+            // Clear the pending timeout key in Redis (non-fatal if it fails)
             const redis = getRedisClient();
-            await redis.del(`exec:pending:${correlationId}`);
+            try {
+                await redis.del(`exec:pending:${correlationId}`);
+            } catch (redisErr) {
+                logger.warn(
+                    { err: redisErr, correlationId, collaborationId },
+                    "Failed to clear exec:pending key (timeout may fire spuriously)",
+                );
+            }
 
             try {
                 if (parsed.success && parsed.result) {
@@ -209,9 +216,18 @@ export class RabbitMQManager {
                         const allPassed =
                             parsed.result.testCasesPassed === parsed.result.totalTestCases &&
                             parsed.result.totalTestCases > 0;
-                        const duration = Math.round(
-                            (Date.now() - new Date(parsed.sessionCreatedAt).getTime()) / 1000,
-                        );
+                        const sessionStart = parsed.sessionCreatedAt
+                            ? new Date(parsed.sessionCreatedAt).getTime()
+                            : NaN;
+                        const duration = Number.isNaN(sessionStart)
+                            ? 0
+                            : Math.max(0, Math.round((Date.now() - sessionStart) / 1000));
+                        if (Number.isNaN(sessionStart)) {
+                            logger.warn(
+                                { correlationId, collaborationId, sessionCreatedAt: parsed.sessionCreatedAt },
+                                "Invalid or missing sessionCreatedAt, using duration=0",
+                            );
+                        }
 
                         try {
                             await attemptRecordingService.recordAttempt({
@@ -313,12 +329,18 @@ export class RabbitMQManager {
                 `Retrying message (${retryCount + 1}/${RABBITMQ_DEFAULTS.MAX_RETRIES})...`,
             );
 
-            ch.sendToQueue(REQ_QUEUE, msg.content, {
+            const requeued = ch.sendToQueue(REQ_QUEUE, msg.content, {
                 headers: { ...headers, "x-retry-count": retryCount + 1 },
                 persistent: true,
             });
 
-            ch.ack(msg);
+            if (requeued) {
+                ch.ack(msg);
+            } else {
+                // Backpressure: nack so the broker retains the message
+                logger.warn("sendToQueue returned false (backpressure), nacking for redelivery");
+                ch.nack(msg, false, true);
+            }
         } else {
             logger.error("Max retries reached. Discarding message.");
             ch.nack(msg, false, false);

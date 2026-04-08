@@ -365,8 +365,26 @@ export function registerSocketHandlers(io: Server): void {
                         sessionCreatedAt: execData.session.createdAt,
                     };
 
+                    // Set the pending key before publishing so a Redis failure
+                    // doesn't cause a false error after the message is already enqueued.
+                    const redis = getRedisClient();
+                    let hasTimeoutSafety = false;
+                    try {
+                        await redis.set(`exec:pending:${correlationId}`, payload.collaborationId, "EX", 65);
+                        hasTimeoutSafety = true;
+                    } catch (redisErr) {
+                        logger.warn(
+                            { err: redisErr, correlationId, collaborationId: payload.collaborationId },
+                            "Failed to set exec:pending key (timeout safety net unavailable)",
+                        );
+                    }
+
                     const published = RabbitMQManager.getInstance().publishExecutionRequest(message);
                     if (!published) {
+                        // Clean up the pending key if we managed to set it
+                        if (hasTimeoutSafety) {
+                            redis.del(`exec:pending:${correlationId}`).catch(() => {});
+                        }
                         io.to(collaborationRoom(payload.collaborationId)).emit(
                             SOCKET_EVENTS.OUTPUT_UPDATED,
                             { collaborationId: payload.collaborationId, output: { error: "Execution service unavailable." } },
@@ -375,24 +393,29 @@ export function registerSocketHandlers(io: Server): void {
                         return;
                     }
 
-                    // Set a timeout key in Redis so the response consumer can detect stale requests
-                    const redis = getRedisClient();
-                    await redis.set(`exec:pending:${correlationId}`, payload.collaborationId, "EX", 65);
-
                     // Schedule a timeout to stop spinners if no response arrives
-                    setTimeout(async () => {
-                        const pending = await redis.get(`exec:pending:${correlationId}`);
-                        if (pending) {
-                            await redis.del(`exec:pending:${correlationId}`);
-                            io.to(collaborationRoom(payload.collaborationId)).emit(
-                                SOCKET_EVENTS.OUTPUT_UPDATED,
-                                {
-                                    collaborationId: payload.collaborationId,
-                                    output: { error: "Code execution timed out." },
-                                },
-                            );
-                        }
-                    }, 65_000);
+                    if (hasTimeoutSafety) {
+                        setTimeout(async () => {
+                            try {
+                                const pending = await redis.get(`exec:pending:${correlationId}`);
+                                if (pending) {
+                                    await redis.del(`exec:pending:${correlationId}`);
+                                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                                        {
+                                            collaborationId: payload.collaborationId,
+                                            output: { error: "Code execution timed out." },
+                                        },
+                                    );
+                                }
+                            } catch (timeoutErr) {
+                                logger.error(
+                                    { err: timeoutErr, correlationId, collaborationId: payload.collaborationId },
+                                    "Error in execution timeout handler",
+                                );
+                            }
+                        }, 65_000);
+                    }
 
                     ack?.({ ok: true });
 
@@ -473,8 +496,26 @@ export function registerSocketHandlers(io: Server): void {
                         sessionCreatedAt: execData.session.createdAt,
                     };
 
+                    // Set the pending key before publishing so a Redis failure
+                    // doesn't cause a false error after the message is already enqueued.
+                    const redis = getRedisClient();
+                    let hasTimeoutSafety = false;
+                    try {
+                        await redis.set(`exec:pending:${correlationId}`, payload.collaborationId, "EX", 65);
+                        hasTimeoutSafety = true;
+                    } catch (redisErr) {
+                        logger.warn(
+                            { err: redisErr, correlationId, collaborationId: payload.collaborationId },
+                            "Failed to set exec:pending key (timeout safety net unavailable)",
+                        );
+                    }
+
                     const published = RabbitMQManager.getInstance().publishExecutionRequest(message);
                     if (!published) {
+                        // Clean up the pending key if we managed to set it
+                        if (hasTimeoutSafety) {
+                            redis.del(`exec:pending:${correlationId}`).catch(() => {});
+                        }
                         io.to(collaborationRoom(payload.collaborationId)).emit(
                             SOCKET_EVENTS.OUTPUT_UPDATED,
                             { collaborationId: payload.collaborationId, output: { error: "Execution service unavailable." } },
@@ -483,24 +524,29 @@ export function registerSocketHandlers(io: Server): void {
                         return;
                     }
 
-                    // Set a timeout key in Redis so the response consumer can detect stale requests
-                    const redis = getRedisClient();
-                    await redis.set(`exec:pending:${correlationId}`, payload.collaborationId, "EX", 65);
-
                     // Schedule a timeout to stop spinners if no response arrives
-                    setTimeout(async () => {
-                        const pending = await redis.get(`exec:pending:${correlationId}`);
-                        if (pending) {
-                            await redis.del(`exec:pending:${correlationId}`);
-                            io.to(collaborationRoom(payload.collaborationId)).emit(
-                                SOCKET_EVENTS.OUTPUT_UPDATED,
-                                {
-                                    collaborationId: payload.collaborationId,
-                                    output: { error: "Code execution timed out." },
-                                },
-                            );
-                        }
-                    }, 65_000);
+                    if (hasTimeoutSafety) {
+                        setTimeout(async () => {
+                            try {
+                                const pending = await redis.get(`exec:pending:${correlationId}`);
+                                if (pending) {
+                                    await redis.del(`exec:pending:${correlationId}`);
+                                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                                        {
+                                            collaborationId: payload.collaborationId,
+                                            output: { error: "Code execution timed out." },
+                                        },
+                                    );
+                                }
+                            } catch (timeoutErr) {
+                                logger.error(
+                                    { err: timeoutErr, correlationId, collaborationId: payload.collaborationId },
+                                    "Error in submission timeout handler",
+                                );
+                            }
+                        }, 65_000);
+                    }
 
                     ack?.({ ok: true });
 

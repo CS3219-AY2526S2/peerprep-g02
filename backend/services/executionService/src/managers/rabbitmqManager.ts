@@ -88,10 +88,17 @@ export class RabbitMQManager {
                 return;
             }
 
-            // Validate required fields
-            if (!parsed.correlationId || !parsed.collaborationId || !parsed.code || !parsed.language || !parsed.functionName) {
-                logger.error({ correlationId: parsed.correlationId }, "Discarding invalid execution request (missing fields)");
-                this.publishErrorResponse(parsed, "Invalid execution request: missing required fields");
+            // Validate required fields (including metadata the response consumer depends on)
+            if (!parsed.correlationId || !parsed.collaborationId || !parsed.code || !parsed.language || !parsed.functionName || !parsed.userId || !parsed.type) {
+                logger.error(
+                    { correlationId: parsed.correlationId, collaborationId: parsed.collaborationId },
+                    "Discarding invalid execution request (missing fields)",
+                );
+                // Only publish an error response if we have valid routing IDs;
+                // otherwise the response consumer can't correlate or route it.
+                if (parsed.correlationId && parsed.collaborationId) {
+                    this.publishErrorResponse(parsed, "Invalid execution request: missing required fields");
+                }
                 ch.ack(msg);
                 return;
             }
@@ -182,12 +189,21 @@ export class RabbitMQManager {
                 `Retrying message (${retryCount + 1}/${RABBITMQ_DEFAULTS.MAX_RETRIES})...`,
             );
 
-            ch.sendToQueue(EXEC_REQ_QUEUE, msg.content, {
+            const requeued = ch.sendToQueue(EXEC_REQ_QUEUE, msg.content, {
                 headers: { ...headers, "x-retry-count": retryCount + 1 },
                 persistent: true,
             });
 
-            ch.ack(msg);
+            if (requeued) {
+                ch.ack(msg);
+            } else {
+                // Backpressure: nack so the broker retains the message
+                logger.warn(
+                    { correlationId: request.correlationId },
+                    "sendToQueue returned false (backpressure), nacking for redelivery",
+                );
+                ch.nack(msg, false, true);
+            }
         } else {
             logger.error("Max retries reached. Publishing error response.");
             this.publishErrorResponse(
