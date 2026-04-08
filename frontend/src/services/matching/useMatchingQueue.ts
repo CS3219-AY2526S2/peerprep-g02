@@ -77,16 +77,27 @@ export function useMatchingQueue(
     }, [isSearching]);
 
     useEffect(() => {
+        let active = true;
         let socketInstance: Socket | null = null;
+        let preparingTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const clearPreparingTimer = () => {
+            if (preparingTimer) {
+                clearTimeout(preparingTimer);
+                preparingTimer = null;
+            }
+        };
 
         const setupListeners = async () => {
-            socketInstance = await matchingService.connect();
+            const connectedSocket = await matchingService.connect();
+
+            if (!active) return;
+
+            socketInstance = connectedSocket;
             setIsConnected(socketInstance.connected);
 
             socketInstance.on(SocketEvents.CONNECT, () => {
-                if (userScore === null) {
-                    return;
-                }
+                if (userScore === null) return;
                 setIsConnected(true);
                 if (isSearchingRef.current) {
                     matchingService.joinQueue({
@@ -114,6 +125,7 @@ export function useMatchingQueue(
                 searchStartTime.current = null;
                 relaxationTier.current = 0;
                 setActiveTier(0);
+                clearPreparingTimer();
             };
 
             socketInstance.on(SocketEvents.MATCH_CANCELLED, (_data: MatchCancelledPayload) => {
@@ -127,6 +139,16 @@ export function useMatchingQueue(
             socketInstance.on(SocketEvents.MATCH_PREPARING, (_data: MatchPreparingPayload) => {
                 setIsPreparing(true);
                 setIsSearching(false);
+
+                preparingTimer = setTimeout(() => {
+                    resetSearchState();
+                    matchingService.cancelQueue();
+                    pushToast({
+                        tone: "error",
+                        message:
+                            "Collaboration session failed to start in time. Please try matching again.",
+                    });
+                }, 20000);
             });
 
             socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
@@ -149,6 +171,9 @@ export function useMatchingQueue(
         setupListeners();
 
         return () => {
+            active = false;
+            clearPreparingTimer();
+
             if (socketInstance) {
                 socketInstance.off(SocketEvents.CONNECT);
                 socketInstance.off(SocketEvents.MATCH_WAITING);
@@ -161,9 +186,8 @@ export function useMatchingQueue(
         };
     }, [topics, languages, difficulty, userScore]);
 
-    // 2. Relaxation Timer Logic
     useEffect(() => {
-        let relaxationTimer: NodeJS.Timeout;
+        let relaxationTimer: ReturnType<typeof setInterval>;
 
         if (isSearching && isConnected && !isPreparing) {
             relaxationTimer = setInterval(() => {
@@ -211,7 +235,6 @@ export function useMatchingQueue(
         };
     }, [isSearching, isPreparing, isConnected, topics, difficulty, languages, userScore]);
 
-    // cleanup on unmount
     useEffect(() => {
         return () => {
             if (isSearchingRef.current) {

@@ -6,11 +6,31 @@ import { MATCH_EVENTS, MatchDetails } from "@/models/matching/matchingDetailsTyp
 
 class MatchingService {
     private socket: Socket | null = null;
+    private connectingPromise: Promise<Socket> | null = null;
 
     async connect() {
         if (this.socket?.connected) return this.socket;
-        this.socket = await createAuthenticatedSocket(API_ENDPOINTS.MATCHING.BASE);
-        return this.socket;
+        if (this.connectingPromise) return this.connectingPromise;
+
+        this.connectingPromise = createAuthenticatedSocket(API_ENDPOINTS.MATCHING.BASE)
+            .then((socket) => {
+                this.socket = socket;
+                this.connectingPromise = null;
+                return socket;
+            })
+            .catch((err) => {
+                this.connectingPromise = null;
+                throw err;
+            });
+
+        return this.connectingPromise;
+    }
+
+    disconnect() {
+        if (this.socket) {
+            this.socket.disconnect();
+            this.socket = null;
+        }
     }
 
     joinQueue(data: MatchDetails) {
