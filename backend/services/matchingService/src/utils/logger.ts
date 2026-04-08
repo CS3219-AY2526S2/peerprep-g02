@@ -25,4 +25,5 @@ const baseLogger = pino(pinoOptions);
 export const mainLogger = baseLogger.child({ service: "main" });
 export const redisLogger = baseLogger.child({ service: "redis" });
 export const socketLogger = baseLogger.child({ service: "socket" });
+export const rabbitMQLogger = baseLogger.child({ service: "rabbitmq" });
 export const matchLogger = baseLogger.child({ service: "match" });

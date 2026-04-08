@@ -1,4 +1,5 @@
-import { Difficulty, Language } from "@/models/question/questionType";
+import { Language } from "@/models/matching/matchingDetailsType";
+import { Difficulty } from "@/models/question/questionType";
 
 export interface MatchFormViewProps {
     topicOptions: string[];
@@ -15,6 +16,7 @@ export interface MatchFormViewProps {
 }
 
 export interface MatchSearchingViewProps {
+    isPreparing: boolean;
     topics: string[];
     languages: Language[];
     difficulties: Difficulty[];
