@@ -72,7 +72,13 @@ export const registerSocketHandlers = (io: Server) => {
                     socketLogger.info(
                         `Match Found: ${userId} & ${matchResult.partnerId} on ${matchResult.matchedTopic} (${matchResult.matchedDifficulty}, ${matchResult.matchedLanguage})`,
                     );
-                    const { userId: _uid, partnerId: _pid, ...sharedData } = matchResult;
+                    const sharedData = {
+                        matchFound: matchResult.matchFound,
+                        matchId: matchResult.matchId,
+                        matchedTopic: matchResult.matchedTopic,
+                        matchedDifficulty: matchResult.matchedDifficulty,
+                        matchedLanguage: matchResult.matchedLanguage,
+                    };
                     io.to(userId).emit("match_preparing", {
                         ...sharedData,
                         userId,
