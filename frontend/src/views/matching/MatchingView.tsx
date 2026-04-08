@@ -80,7 +80,7 @@ export function MatchingView() {
 
                 setTopicOptions(topicStrings);
                 if (topicStrings.length > 0) {
-                    setTopics([topicStrings[0]]);
+                    setTopics((prev) => (prev.length > 0 ? prev : [topicStrings[0]]));
                 }
             } catch (err) {
                 console.error("Failed to fetch topics", err);
