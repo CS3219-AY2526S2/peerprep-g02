@@ -9,10 +9,10 @@ import {
 import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import RedisManager from "@/managers/redisManager.js";
 import {
-    type Difficulty,
     type MatchRequest,
     type MatchResult,
     type RejoinResult,
+    zDifficultySchema,
 } from "@/types/match.js";
 import { buildQueueKey, buildUserStatusKey } from "@/utils/match.js";
 
@@ -41,12 +41,13 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
 
     if (status === "matched") {
         const matchId = uuidv4();
+        const difficulty = zDifficultySchema.parse(matchedDifficulty);
 
         await rabbitMQ.publishCreateSession({
             matchId,
             userAId: req.userId,
             userBId: partnerId,
-            difficulty: matchedDifficulty,
+            difficulty,
             language: matchedLanguage,
             topic: matchedTopic,
         });
@@ -55,7 +56,7 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
             matchFound: true,
             matchId,
             matchedTopic,
-            matchedDifficulty: matchedDifficulty as Difficulty,
+            matchedDifficulty: difficulty,
             matchedLanguage,
             userId: req.userId,
             partnerId,
