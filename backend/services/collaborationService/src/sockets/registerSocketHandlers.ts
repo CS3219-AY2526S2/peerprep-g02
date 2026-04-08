@@ -257,63 +257,71 @@ export function registerSocketHandlers(io: Server): void {
                     return;
                 }
 
-                const result = await collaborationSessionService.leaveSession(socket.id, userId);
+                try {
+                    const result = await collaborationSessionService.leaveSession(socket.id, userId);
 
-                if (!result) {
-                    ack?.({ ok: false });
-                    return;
-                }
+                    if (!result) {
+                        ack?.({ ok: false });
+                        return;
+                    }
 
-                // Leave the socket room
-                socket.leave(collaborationRoom(payload.collaborationId));
+                    // Leave the socket room
+                    socket.leave(collaborationRoom(payload.collaborationId));
 
-                if (result.isLastSocket) {
-                    // F4.8.1 - Notify other users that this user left intentionally
+                    if (result.isLastSocket) {
+                        // F4.8.1 - Notify other users that this user left intentionally
+                        io.to(collaborationRoom(result.collaborationId)).emit(
+                            SOCKET_EVENTS.USER_LEFT,
+                            {
+                                collaborationId: result.collaborationId,
+                                userId: result.userId,
+                            },
+                        );
+                    }
+
+                    // Broadcast updated presence
                     io.to(collaborationRoom(result.collaborationId)).emit(
-                        SOCKET_EVENTS.USER_LEFT,
+                        SOCKET_EVENTS.PRESENCE_UPDATED,
                         {
                             collaborationId: result.collaborationId,
-                            userId: result.userId,
+                            participants: result.participants,
                         },
                     );
-                }
 
-                // Broadcast updated presence
-                io.to(collaborationRoom(result.collaborationId)).emit(
-                    SOCKET_EVENTS.PRESENCE_UPDATED,
-                    {
-                        collaborationId: result.collaborationId,
-                        participants: result.participants,
-                    },
-                );
+                    // F4.8.2 - If session ended (both left), notify all
+                    if (result.sessionEnded) {
+                        io.to(collaborationRoom(result.collaborationId)).emit(
+                            SOCKET_EVENTS.SESSION_ENDED,
+                            {
+                                collaborationId: result.collaborationId,
+                                reason: "both_users_left",
+                            },
+                        );
 
-                // F4.8.2 - If session ended (both left), notify all
-                if (result.sessionEnded) {
-                    io.to(collaborationRoom(result.collaborationId)).emit(
-                        SOCKET_EVENTS.SESSION_ENDED,
-                        {
-                            collaborationId: result.collaborationId,
-                            reason: "both_users_left",
-                        },
-                    );
+                        logger.info(
+                            { collaborationId: result.collaborationId },
+                            "Session ended - both users left",
+                        );
+                    }
 
                     logger.info(
-                        { collaborationId: result.collaborationId },
-                        "Session ended - both users left",
+                        {
+                            socketId: socket.id,
+                            userId,
+                            collaborationId: result.collaborationId,
+                            sessionEnded: result.sessionEnded,
+                        },
+                        "User intentionally left collaboration session",
                     );
+
+                    ack?.({ ok: true });
+                } catch (error) {
+                    logger.error(
+                        { err: error, socketId: socket.id, userId, collaborationId: payload.collaborationId },
+                        "Error processing session leave",
+                    );
+                    ack?.({ ok: false });
                 }
-
-                logger.info(
-                    {
-                        socketId: socket.id,
-                        userId,
-                        collaborationId: result.collaborationId,
-                        sessionEnded: result.sessionEnded,
-                    },
-                    "User intentionally left collaboration session",
-                );
-
-                ack?.({ ok: true });
             },
         );
 

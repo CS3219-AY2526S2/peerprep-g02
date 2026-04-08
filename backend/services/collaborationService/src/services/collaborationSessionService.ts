@@ -118,12 +118,27 @@ export class CollaborationSessionService {
             return null;
         }
 
+        // Session was already ended / marked inactive — clean up stale index
+        if (session.status !== "active") {
+            logger.info(
+                { userId, collaborationId: session.collaborationId, status: session.status },
+                "Clearing stale active-session index (session no longer active)",
+            );
+            await this.redisSessionRepository.clearUserActiveSession(userId);
+            return null;
+        }
+
         // Check if user has intentionally left
         const hasLeft = await this.redisPresenceRepository.hasUserLeft(
             session.collaborationId,
             userId,
         );
         if (hasLeft) {
+            logger.info(
+                { userId, collaborationId: session.collaborationId },
+                "User has left session — clearing active-session index",
+            );
+            await this.redisSessionRepository.clearUserActiveSession(userId);
             return null;
         }
 
