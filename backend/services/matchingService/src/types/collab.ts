@@ -4,7 +4,7 @@ export type CreateSessionRequest = {
     matchId: string;
     userAId: string;
     userBId: string;
-    difficulty: string;
+    difficulty: Difficulty;
     language: string;
     topic: string;
 };

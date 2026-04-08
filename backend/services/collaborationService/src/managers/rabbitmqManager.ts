@@ -103,7 +103,10 @@ export class RabbitMQManager {
                     "Session created, publishing response",
                 );
 
-                this.publishResponse(response);
+                const published = this.publishResponse(response);
+                if (!published) {
+                    throw new Error("Failed to publish session creation response");
+                }
                 ch.ack(msg);
             } catch (error) {
                 this.handleConsumerError(ch, msg, error, retryCount, headers);
