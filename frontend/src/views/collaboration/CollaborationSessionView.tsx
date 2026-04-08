@@ -80,7 +80,6 @@ export default function CollaborationSessionView() {
         setEditorValue,
         participants,
         joinError,
-        partnerNotification,
         leaveSession,
         executionOutput,
         language,
@@ -242,11 +241,6 @@ export default function CollaborationSessionView() {
                                     }
                                     /2 present
                                 </div>
-                                {partnerNotification && (
-                                    <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-sm text-blue-300">
-                                        {partnerNotification}
-                                    </div>
-                                )}
                             </div>
                         </div>
 

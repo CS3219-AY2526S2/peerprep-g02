@@ -35,7 +35,6 @@ export function useCollaborationSession(collaborationId: string | undefined) {
     const [editorValue, setEditorValue] = useState("");
     const [participants, setParticipants] = useState<CollaborationParticipant[]>([]);
     const [joinError, setJoinError] = useState<string | null>(null);
-    const [partnerNotification, setPartnerNotification] = useState<string | null>(null);
     const [executionOutput, setExecutionOutput] = useState<string>("");
     const [language, setLanguage] = useState<string>("");
     const [isExecuting, setIsExecuting] = useState(false);
@@ -357,14 +356,7 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 ? `${name} has reconnected`
                 : `${name} has joined the session`;
 
-            setPartnerNotification(message);
-
-            // Clear notification after 3 seconds
-            setTimeout(() => {
-                if (isMounted) {
-                    setPartnerNotification(null);
-                }
-            }, 3000);
+            pushToast({ tone: "success", message });
         };
 
         // F4.6.1 - Handle user disconnected notification
@@ -382,14 +374,7 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                       : "";
 
             const name = displayName(payload.userId);
-            const message = `${name} has disconnected${reasonText}`;
-            setPartnerNotification(message);
-
-            setTimeout(() => {
-                if (isMounted) {
-                    setPartnerNotification(null);
-                }
-            }, 5000); // Longer timeout for disconnect notices
+            pushToast({ tone: "error", message: `${name} has disconnected${reasonText}` });
         };
 
         // F4.3.4 - Handle user left notification
@@ -399,8 +384,7 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             }
 
             const name = displayName(payload.userId);
-            const message = `${name} has left the session`;
-            setPartnerNotification(message);
+            pushToast({ tone: "error", message: `${name} has left the session` });
         };
 
         // F4.4.3 - Handle remote code changes
@@ -561,7 +545,6 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         setEditorValue: handleEditorChange,
         participants,
         joinError,
-        partnerNotification,
         leaveSession,
         executionOutput,
         language,
