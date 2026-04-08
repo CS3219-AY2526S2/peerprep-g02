@@ -257,6 +257,22 @@ export function registerSocketHandlers(io: Server): void {
                 // Leave the socket room
                 socket.leave(collaborationRoom(payload.collaborationId));
 
+                // Force-disconnect other tabs of the same user
+                const otherSocketIds = result.removedSocketIds.filter(
+                    (id) => id !== socket.id,
+                );
+                for (const otherSocketId of otherSocketIds) {
+                    const otherSocket = io.sockets.sockets.get(otherSocketId);
+                    if (otherSocket) {
+                        otherSocket.emit(SOCKET_EVENTS.SESSION_ENDED, {
+                            collaborationId: result.collaborationId,
+                            reason: "both_users_left",
+                        });
+                        otherSocket.leave(collaborationRoom(result.collaborationId));
+                        otherSocket.disconnect(true);
+                    }
+                }
+
                 // F4.8.1 - Notify other users that this user left intentionally
                 io.to(collaborationRoom(result.collaborationId)).emit(SOCKET_EVENTS.USER_LEFT, {
                     collaborationId: result.collaborationId,
