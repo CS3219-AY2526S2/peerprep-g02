@@ -211,6 +211,17 @@ export function useMatchingQueue(
         };
     }, [isSearching, isPreparing, isConnected, topics, difficulty, languages, userScore]);
 
+    // cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (isSearchingRef.current) {
+                matchingService.cancelQueue();
+                setIsSearching(false);
+                setIsPreparing(false);
+            }
+        };
+    }, []);
+
     const startSearch = async () => {
         if (userScore === null) {
             return;
