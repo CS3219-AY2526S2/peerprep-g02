@@ -9,7 +9,6 @@ import {
 import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import RedisManager from "@/managers/redisManager.js";
 import {
-    type Difficulty,
     type MatchRequest,
     type MatchResult,
     type RejoinResult,

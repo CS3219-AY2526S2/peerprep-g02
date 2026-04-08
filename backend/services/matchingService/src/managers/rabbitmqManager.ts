@@ -1,10 +1,7 @@
 import amqp, { type Channel, type ChannelModel } from "amqplib";
 import { Server } from "socket.io";
 
-import type {
-    CreateSessionRequest,
-    CreateSessionResponse,
-} from "@/types/collab.js";
+import type { CreateSessionRequest, CreateSessionResponse } from "@/types/collab.js";
 import { REQ_QUEUE, RES_QUEUE } from "@/types/rabbitmq.js";
 import { rabbitMQLogger } from "@/utils/logger.js";
 
