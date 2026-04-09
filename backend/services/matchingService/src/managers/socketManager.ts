@@ -5,6 +5,7 @@ import { MatchDetailsSchema, type MatchRequest } from "@/types/match.js";
 import { socketLogger } from "@/utils/logger.js";
 
 const socketWrapper = (
+    io: Server,
     socket: Socket,
     handlerName: string,
     handler: (...args: any[]) => Promise<void>,
@@ -15,7 +16,7 @@ const socketWrapper = (
         } catch (error) {
             const userId = socket.data.userId || "unknown";
             socketLogger.error(error, `Error in ${handlerName} for user ${userId}`);
-            socket.emit("match_error", {
+            io.to(userId).emit("match_error", {
                 message: "An unexpected error occurred. Please try again.",
             });
         }
@@ -50,14 +51,14 @@ export const registerSocketHandlers = (io: Server) => {
 
         socket.on(
             "join_queue",
-            socketWrapper(socket, "join_queue", async (req: any) => {
+            socketWrapper(io, socket, "join_queue", async (req: any) => {
                 const matchDetails = MatchDetailsSchema.safeParse(req);
 
                 if (!matchDetails.success) {
                     socketLogger.warn(
                         `Invalid join_queue request from user ${userId}: ${matchDetails.error}`,
                     );
-                    socket.emit("match_error", { message: "Invalid request format" });
+                    io.to(userId).emit("match_error", { message: "Invalid request format" });
                     return;
                 }
 
@@ -116,7 +117,7 @@ export const registerSocketHandlers = (io: Server) => {
 
         socket.on(
             "cancel_queue",
-            socketWrapper(socket, "cancel_queue", async () => {
+            socketWrapper(io, socket, "cancel_queue", async () => {
                 const isCancelled = await cancelMatch(userId);
                 if (isCancelled) {
                     socketLogger.info(`User ${userId} cancelled matchmaking.`);
@@ -132,7 +133,7 @@ export const registerSocketHandlers = (io: Server) => {
 
         socket.on(
             "disconnect",
-            socketWrapper(socket, "disconnect", async () => {
+            socketWrapper(io, socket, "disconnect", async () => {
                 const sockets = await io.in(userId).fetchSockets();
                 if (sockets.length === 0) {
                     socketLogger.info(`User ${userId} disconnected.`);
