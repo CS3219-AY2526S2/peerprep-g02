@@ -22,7 +22,7 @@ export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
             difficulty: item.difficulty,
         }));
         return questions;
-    } catch (e: any) {
+    } catch (e) {
         console.error(e);
         return null;
     }
@@ -176,11 +176,13 @@ export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => 
             },
         });
         const data = await res.json();
+        // console.log(data);
+        // console.log(data.body[0].quid);
         const questions: LeetcodeInfo[] = data.body.map((item: any) => ({
             quid: item.quid,
             title: item.title,
             title_slug: item.titleSlug,
-            topics: item.topicTags.map((topic: any) => topic.name),
+            topics: item.topicTags.map((topic: {name: string}) => topic.name),
             difficulty: item.difficulty,
         }));
         return questions;

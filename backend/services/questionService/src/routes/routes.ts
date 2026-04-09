@@ -151,6 +151,7 @@ router.delete("/:id", async (req, res) => {
 
 //Search for matching question in question database
 router.post("/search-database", async (req, res) => {
+    console.log("search the database");
     const result = await SearchQuestionDatabase(req.body.title);
 
     if (!result) {
@@ -169,6 +170,21 @@ router.post("/search-database", async (req, res) => {
 //Get leetcode question
 router.post("/leetcode", async (req, res) => {
     const result = await getLeetCode(req.body.topic);
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to retrieve leetcode questions.",
+        });
+    }
+    return res.status(200).json({
+        message: "Get leetcode questions success.",
+        body: result,
+    });
+});
+
+
+router.get("/leetcode", async (req, res) => {
+    const result = await getLeetCodeAuto();
 
     if (!result) {
         return res.status(400).json({
