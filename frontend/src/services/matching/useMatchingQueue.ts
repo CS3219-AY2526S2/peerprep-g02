@@ -148,6 +148,7 @@ export function useMatchingQueue(
                 socketInstance.on(SocketEvents.MATCH_PREPARING, (_data: MatchPreparingPayload) => {
                     setIsPreparing(true);
                     setIsSearching(false);
+                    clearPreparingTimer();
 
                     preparingTimer = setTimeout(() => {
                         resetSearchState();
