@@ -1,9 +1,12 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
-import type { SessionEndedPayload, SubmissionCompletePayload } from "@/models/collaboration/collaborationType";
+import { cn } from "@/lib/utils";
+import type {
+    SessionEndedPayload,
+    SubmissionCompletePayload,
+} from "@/models/collaboration/collaborationType";
 
 interface StatusBannersProps {
     sessionEnded: SessionEndedPayload | null;

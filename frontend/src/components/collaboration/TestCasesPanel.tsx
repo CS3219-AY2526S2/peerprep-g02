@@ -1,8 +1,15 @@
 import { CheckCircle2, Radio, TerminalSquare, XCircle } from "lucide-react";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
+import { cn } from "@/lib/utils";
 import type { ExecutionResults } from "@/models/collaboration/collaborationType";
 
 export interface TestRow {
@@ -45,13 +52,15 @@ export default function TestCasesPanel({
                         <span
                             className={cn(
                                 "text-sm font-semibold",
-                                executionResults.testCasesPassed === executionResults.totalTestCases &&
+                                executionResults.testCasesPassed ===
+                                    executionResults.totalTestCases &&
                                     executionResults.totalTestCases > 0
                                     ? "text-emerald-400"
                                     : "text-amber-400",
                             )}
                         >
-                            {executionResults.testCasesPassed}/{executionResults.totalTestCases} passed
+                            {executionResults.testCasesPassed}/{executionResults.totalTestCases}{" "}
+                            passed
                         </span>
                     </div>
                 </div>
@@ -128,7 +137,10 @@ export default function TestCasesPanel({
                             ))
                         ) : (
                             <TableRow className="hover:bg-transparent">
-                                <TableCell colSpan={5} className="px-5 py-10 text-center text-slate-500">
+                                <TableCell
+                                    colSpan={5}
+                                    className="px-5 py-10 text-center text-slate-500"
+                                >
                                     No test cases loaded yet.
                                 </TableCell>
                             </TableRow>

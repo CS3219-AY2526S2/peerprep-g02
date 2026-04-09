@@ -101,7 +101,7 @@ ${
         } catch (error) {
             if (error instanceof Error && error.name === "AbortError") {
                 logger.error("Gemini API request timed out after 15s");
-                throw new Error("Gemini API request timed out");
+                throw new Error("Gemini API request timed out", { cause: error });
             }
             logger.error({ err: error }, "Gemini API hint generation failed");
             throw error;

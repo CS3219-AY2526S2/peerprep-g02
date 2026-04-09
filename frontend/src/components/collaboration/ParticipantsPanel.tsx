@@ -1,10 +1,10 @@
 import { UsersRound } from "lucide-react";
 
+import { getInitials } from "@/components/collaboration/utils";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import type { CollaborationParticipant } from "@/models/collaboration/collaborationType";
-import { getInitials } from "@/components/collaboration/utils";
 
 interface ParticipantsPanelProps {
     participants: CollaborationParticipant[];

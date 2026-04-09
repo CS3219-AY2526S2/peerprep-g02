@@ -1,10 +1,10 @@
 import { Lightbulb, LoaderCircle, Sparkles } from "lucide-react";
 
+import { getInitials } from "@/components/collaboration/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import type { AiHint } from "@/models/collaboration/aiHintType";
-import { getInitials } from "@/components/collaboration/utils";
 
 interface AiHintsPanelProps {
     hints: AiHint[];

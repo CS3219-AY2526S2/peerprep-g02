@@ -4,12 +4,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { LoaderCircle, UsersRound, Wifi, WifiOff } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-
-import { ROUTES } from "@/constants/routes";
-
 import AiHintsPanel from "@/components/collaboration/AiHintsPanel";
 import CodeEditor from "@/components/collaboration/CodeEditor";
 import EditorToolbar from "@/components/collaboration/EditorToolbar";
@@ -20,6 +14,11 @@ import ProblemDescription from "@/components/collaboration/ProblemDescription";
 import SessionHeader from "@/components/collaboration/SessionHeader";
 import StatusBanners from "@/components/collaboration/StatusBanners";
 import TestCasesPanel, { type TestRow } from "@/components/collaboration/TestCasesPanel";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+import { ROUTES } from "@/constants/routes";
 
 import { useCollaborationSession } from "@/services/collaboration/useCollaborationSession";
 
@@ -181,9 +180,7 @@ export default function CollaborationSessionView() {
                                 {connectionBadge}
                                 <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-300">
                                     <UsersRound className="size-4 text-cyan-300" />
-                                    {
-                                        participants.filter((p) => p.status === "connected").length
-                                    }
+                                    {participants.filter((p) => p.status === "connected").length}
                                     /2 present
                                 </div>
                             </div>
