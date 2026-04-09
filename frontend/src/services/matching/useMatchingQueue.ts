@@ -93,90 +93,100 @@ export function useMatchingQueue(
         };
 
         const setupListeners = async () => {
-            const connectedSocket = await matchingService.connect();
+            try {
+                const connectedSocket = await matchingService.connect();
 
-            if (!active) return;
+                if (!active) return;
 
-            socketInstance = connectedSocket;
-            setIsConnected(socketInstance.connected);
+                socketInstance = connectedSocket;
+                setIsConnected(socketInstance.connected);
 
-            socketInstance.on(SocketEvents.CONNECT, () => {
-                if (userScore === null) return;
-                setIsConnected(true);
-                if (isSearchingRef.current) {
-                    matchingService.joinQueue({
-                        topics: topics,
-                        difficulties: [difficulty],
-                        languages: languages,
-                        userScore: userScore,
-                        scoreRange: SCORE_RANGE.DEFAULT,
-                    });
-                }
-            });
-
-            socketInstance.on(SocketEvents.DISCONNECT, () => {
-                setIsConnected(false);
-            });
-
-            socketInstance.on(SocketEvents.MATCH_WAITING, (data: MatchWaitingPayload) => {
-                setIsSearching(true);
-                if (data.startTime) searchStartTime.current = data.startTime;
-            });
-
-            const resetSearchState = () => {
-                setIsSearching(false);
-                setIsPreparing(false);
-                searchStartTime.current = null;
-                relaxationTier.current = 0;
-                setActiveTier(0);
-                clearPreparingTimer();
-            };
-
-            socketInstance.on(SocketEvents.MATCH_CANCELLED, (_data: MatchCancelledPayload) => {
-                resetSearchState();
-            });
-
-            socketInstance.on(SocketEvents.MATCH_ERROR, (_data: MatchErrorPayload) => {
-                resetSearchState();
-                pushToast({
-                    tone: "error",
-                    message: "An error occurred during matching. Please try again.",
+                socketInstance.on(SocketEvents.CONNECT, () => {
+                    if (userScore === null) return;
+                    setIsConnected(true);
+                    if (isSearchingRef.current) {
+                        matchingService.joinQueue({
+                            topics: topics,
+                            difficulties: [difficulty],
+                            languages: languages,
+                            userScore: userScore,
+                            scoreRange: SCORE_RANGE.DEFAULT,
+                        });
+                    }
                 });
-            });
 
-            socketInstance.on(SocketEvents.MATCH_PREPARING, (_data: MatchPreparingPayload) => {
-                setIsPreparing(true);
-                setIsSearching(false);
+                socketInstance.on(SocketEvents.DISCONNECT, () => {
+                    setIsConnected(false);
+                });
 
-                preparingTimer = setTimeout(() => {
+                socketInstance.on(SocketEvents.MATCH_WAITING, (data: MatchWaitingPayload) => {
+                    setIsSearching(true);
+                    if (data.startTime) searchStartTime.current = data.startTime;
+                });
+
+                const resetSearchState = () => {
+                    setIsSearching(false);
+                    setIsPreparing(false);
+                    searchStartTime.current = null;
+                    relaxationTier.current = 0;
+                    setActiveTier(0);
+                    clearPreparingTimer();
+                };
+
+                socketInstance.on(SocketEvents.MATCH_CANCELLED, (_data: MatchCancelledPayload) => {
                     resetSearchState();
-                    matchingService.cancelQueue();
+                });
+
+                socketInstance.on(SocketEvents.MATCH_ERROR, (_data: MatchErrorPayload) => {
+                    resetSearchState();
                     pushToast({
                         tone: "error",
-                        message:
-                            "Collaboration session failed to start in time. Please try matching again.",
+                        message: "An error occurred during matching. Please try again.",
                     });
-                }, 20000);
-            });
-
-            socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
-                resetSearchState();
-
-                if (data.collaborationId && onMatchFoundRef.current) {
-                    onMatchFoundRef.current(data);
-                    return;
-                }
-
-                pushToast({
-                    tone: "info",
-                    message:
-                        "Match found. Waiting for collaboration session routing to become available.",
-                    durationMs: 4500,
                 });
-            });
+
+                socketInstance.on(SocketEvents.MATCH_PREPARING, (_data: MatchPreparingPayload) => {
+                    setIsPreparing(true);
+                    setIsSearching(false);
+
+                    preparingTimer = setTimeout(() => {
+                        resetSearchState();
+                        matchingService.cancelQueue();
+                        pushToast({
+                            tone: "error",
+                            message:
+                                "Collaboration session failed to start in time. Please try matching again.",
+                        });
+                    }, 20000);
+                });
+
+                socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
+                    resetSearchState();
+
+                    if (data.collaborationId && onMatchFoundRef.current) {
+                        onMatchFoundRef.current(data);
+                        return;
+                    }
+
+                    pushToast({
+                        tone: "info",
+                        message:
+                            "Match found. Waiting for collaboration session routing to become available.",
+                        durationMs: 4500,
+                    });
+                });
+            } catch {
+                if (!active) return;
+                setIsConnected(false);
+                setIsSearching(false);
+                pushToast({
+                    tone: "error",
+                    message: "Failed to connect to matching service. Please try again.",
+                });
+            }
         };
 
-        setupListeners();
+        void setupListeners();
 
         return () => {
             active = false;
