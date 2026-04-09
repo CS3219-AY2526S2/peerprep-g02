@@ -2,6 +2,7 @@ import type { ExecutionResponse } from "@/services/executionService.js";
 
 export const EXEC_REQ_QUEUE = "exec_req_queue";
 export const EXEC_RES_QUEUE = "exec_res_queue";
+export const EXEC_REQ_DELAY_QUEUE = "exec_req_delay_queue";
 
 export type ExecutionRequestMessage = {
     correlationId: string;

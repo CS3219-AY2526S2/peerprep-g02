@@ -4,6 +4,7 @@ import { RABBITMQ_DEFAULTS, SUPPORTED_LANGUAGES, type SupportedLanguage } from "
 import { env } from "@/config/env.js";
 import { executeCode } from "@/services/executionService.js";
 import {
+    EXEC_REQ_DELAY_QUEUE,
     EXEC_REQ_QUEUE,
     EXEC_RES_QUEUE,
     type ExecutionRequestMessage,
@@ -43,6 +44,14 @@ export class RabbitMQManager {
             await ch.prefetch(RABBITMQ_DEFAULTS.PREFETCH_COUNT);
             await ch.assertQueue(EXEC_REQ_QUEUE, { durable: true });
             await ch.assertQueue(EXEC_RES_QUEUE, { durable: true });
+
+            // Delay queue: messages sit here until their per-message TTL expires,
+            // then dead-letter back into the main request queue for retry.
+            await ch.assertQueue(EXEC_REQ_DELAY_QUEUE, {
+                durable: true,
+                deadLetterExchange: "",
+                deadLetterRoutingKey: EXEC_REQ_QUEUE,
+            });
 
             logger.info("Connected to RabbitMQ successfully");
 
@@ -89,7 +98,7 @@ export class RabbitMQManager {
             }
 
             // Validate required fields (including metadata the response consumer depends on)
-            if (!parsed.correlationId || !parsed.collaborationId || !parsed.code || !parsed.language || !parsed.functionName || !parsed.userId || !parsed.type) {
+            if (!parsed.correlationId || !parsed.collaborationId || !parsed.code || !parsed.language || !parsed.functionName || !parsed.userId || !parsed.type || !parsed.questionId || !parsed.questionTitle || !parsed.difficulty || !parsed.sessionCreatedAt) {
                 logger.error(
                     { correlationId: parsed.correlationId, collaborationId: parsed.collaborationId },
                     "Discarding invalid execution request (missing fields)",
@@ -185,13 +194,21 @@ export class RabbitMQManager {
         );
 
         if (retryCount < RABBITMQ_DEFAULTS.MAX_RETRIES) {
+            // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+            const delayMs = RABBITMQ_DEFAULTS.RETRY_BASE_DELAY_MS * Math.pow(2, retryCount);
+
             logger.warn(
-                `Retrying message (${retryCount + 1}/${RABBITMQ_DEFAULTS.MAX_RETRIES})...`,
+                { retryCount: retryCount + 1, maxRetries: RABBITMQ_DEFAULTS.MAX_RETRIES, delayMs },
+                "Scheduling retry with backoff",
             );
 
-            const requeued = ch.sendToQueue(EXEC_REQ_QUEUE, msg.content, {
+            // Publish to the delay queue with a per-message TTL.
+            // When the TTL expires the broker dead-letters the message
+            // back into EXEC_REQ_QUEUE for reprocessing.
+            const requeued = ch.sendToQueue(EXEC_REQ_DELAY_QUEUE, msg.content, {
                 headers: { ...headers, "x-retry-count": retryCount + 1 },
                 persistent: true,
+                expiration: String(delayMs),
             });
 
             if (requeued) {
