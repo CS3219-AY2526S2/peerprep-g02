@@ -15,8 +15,22 @@ class MatchingService {
         this.connectingPromise = createAuthenticatedSocket(API_ENDPOINTS.MATCHING.BASE)
             .then((socket) => {
                 this.socket = socket;
-                this.connectingPromise = null;
-                return socket;
+
+                return new Promise<Socket>((resolve, reject) => {
+                    if (socket.connected) {
+                        this.connectingPromise = null;
+                        resolve(socket);
+                    } else {
+                        socket.once("connect", () => {
+                            this.connectingPromise = null;
+                            resolve(socket);
+                        });
+                        socket.once("connect_error", (err) => {
+                            this.connectingPromise = null;
+                            reject(err);
+                        });
+                    }
+                });
             })
             .catch((err) => {
                 this.connectingPromise = null;
