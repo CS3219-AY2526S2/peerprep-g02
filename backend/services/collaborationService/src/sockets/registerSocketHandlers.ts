@@ -265,8 +265,8 @@ export function registerSocketHandlers(io: Server): void {
                         return;
                     }
 
-                    // Leave the socket room
-                    socket.leave(collaborationRoom(payload.collaborationId));
+                    // Leave the socket room using the authoritative collaborationId from the binding
+                    socket.leave(collaborationRoom(result.collaborationId));
 
                     if (result.isLastSocket) {
                         // F4.8.1 - Notify other users that this user left intentionally
