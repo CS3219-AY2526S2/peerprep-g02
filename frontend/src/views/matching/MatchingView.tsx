@@ -9,6 +9,7 @@ import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { collaborationRoute } from "@/constants/routes";
 import { apiFetch } from "@/utils/apiClient";
 import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
+import { pushToast } from "@/utils/toast";
 import { Language, LANGUAGE_OPTIONS } from "@/models/matching/matchingDetailsType";
 import { ActiveSession } from "@/models/matching/rejoinSessionType";
 import { Difficulty } from "@/models/question/questionType";
@@ -71,7 +72,13 @@ export function MatchingView() {
         const fetchTopics = async () => {
             try {
                 const response = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS);
-                if (!response.ok) return;
+                if (!response.ok) {
+                    pushToast({
+                        tone: "error",
+                        message: "Failed to fetch topics.",
+                    });
+                    return;
+                }
 
                 const data = await response.json();
                 const topicStrings: string[] = data.body.map(
@@ -82,8 +89,11 @@ export function MatchingView() {
                 if (topicStrings.length > 0) {
                     setTopics((prev) => (prev.length > 0 ? prev : [topicStrings[0]]));
                 }
-            } catch (err) {
-                console.error("Failed to fetch topics", err);
+            } catch {
+                pushToast({
+                    tone: "error",
+                    message: "An error occurred while fetching topics.",
+                });
             }
         };
         fetchTopics();

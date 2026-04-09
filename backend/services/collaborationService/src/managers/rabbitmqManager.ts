@@ -15,7 +15,7 @@ import {
     type ExecutionRequestMessage,
     type ExecutionResponseMessage,
 } from "@/types/executionRabbitmq.js";
-import { REQ_QUEUE, RES_QUEUE } from "@/types/rabbitmq.js";
+import { REQ_DELAY_QUEUE, REQ_QUEUE, RES_QUEUE } from "@/types/rabbitmq.js";
 import { AppError } from "@/utils/errors.js";
 import { logger } from "@/utils/logger.js";
 import { getRedisClient } from "@/utils/redis.js";
@@ -65,6 +65,15 @@ export class RabbitMQManager {
             await ch.assertQueue(RES_QUEUE, { durable: true });
             await ch.assertQueue(EXEC_REQ_QUEUE, { durable: true });
             await ch.assertQueue(EXEC_RES_QUEUE, { durable: true });
+
+            // Delay queue for session-creation retries with exponential backoff.
+            // Messages sit here until their per-message TTL expires, then
+            // dead-letter back into REQ_QUEUE for reprocessing.
+            await ch.assertQueue(REQ_DELAY_QUEUE, {
+                durable: true,
+                deadLetterExchange: "",
+                deadLetterRoutingKey: REQ_QUEUE,
+            });
 
             logger.info("Connected to RabbitMQ successfully");
 
@@ -325,13 +334,21 @@ export class RabbitMQManager {
         logger.error({ err: error, retryCount }, "Failed to process session creation request");
 
         if (retryCount < RABBITMQ_DEFAULTS.MAX_RETRIES) {
+            // Exponential backoff: 2s, 4s, 8s, 16s, 32s
+            const delayMs = RABBITMQ_DEFAULTS.RETRY_BASE_DELAY_MS * Math.pow(2, retryCount);
+
             logger.warn(
-                `Retrying message (${retryCount + 1}/${RABBITMQ_DEFAULTS.MAX_RETRIES})...`,
+                { retryCount: retryCount + 1, maxRetries: RABBITMQ_DEFAULTS.MAX_RETRIES, delayMs },
+                "Scheduling retry with backoff",
             );
 
-            const requeued = ch.sendToQueue(REQ_QUEUE, msg.content, {
+            // Publish to the delay queue with a per-message TTL.
+            // When the TTL expires the broker dead-letters the message
+            // back into REQ_QUEUE for reprocessing.
+            const requeued = ch.sendToQueue(REQ_DELAY_QUEUE, msg.content, {
                 headers: { ...headers, "x-retry-count": retryCount + 1 },
                 persistent: true,
+                expiration: String(delayMs),
             });
 
             if (requeued) {
