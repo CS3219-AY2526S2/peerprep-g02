@@ -122,6 +122,16 @@ export class CollaborationSessionService {
             return null;
         }
 
+        // Check if rejoin grace period has expired for disconnected users
+        const rejoinCheck = await this.redisPresenceRepository.canRejoinWithinGracePeriod(
+            session.collaborationId,
+            userId,
+            env.disconnectGraceMs,
+        );
+        if (!rejoinCheck.canRejoin) {
+            return null;
+        }
+
         return {
             collaborationId: session.collaborationId,
             topic: session.topic,

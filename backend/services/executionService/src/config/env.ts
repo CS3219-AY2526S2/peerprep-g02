@@ -11,4 +11,5 @@ export const env = {
     runTimeout: readNumber(process.env.PISTON_RUN_TIMEOUT, 10_000),
     runMemoryLimit: readNumber(process.env.PISTON_RUN_MEMORY_LIMIT, 128 * 1024 * 1024),
     logLevel: process.env.LOG_LEVEL ?? "info",
+    rabbitmqUrl: process.env.RABBITMQ_URL ?? "amqp://localhost:5672",
 };
