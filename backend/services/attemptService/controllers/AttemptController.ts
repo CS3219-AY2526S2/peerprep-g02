@@ -4,13 +4,16 @@ import { AttemptService } from "@/services/attemptService.js";
 import { badRequest, handleError } from "@/utils/ResponseHelpers.js";
 
 type RecordAttemptRequest = {
-    userAId?: string;
-    userBId?: string;
+    userId?: string;
+    collaborationId?: string;
     questionId?: string;
+    questionTitle?: string;
     language?: string;
     difficulty?: string;
     success?: boolean;
     duration?: number;
+    totalTestCases?: number;
+    testCasesPassed?: number;
     attemptedAt?: string;
     timestamp?: string;
 };
@@ -21,8 +24,12 @@ export class AttemptController {
     async create(req: Request, res: Response): Promise<Response | void> {
         const body = req.body as RecordAttemptRequest | undefined;
 
-        if (typeof body?.userAId !== "string" || typeof body?.userBId !== "string") {
-            return badRequest(res, "userAId and userBId are required.");
+        if (typeof body?.userId !== "string" || body.userId.trim().length === 0) {
+            return badRequest(res, "userId is required.");
+        }
+
+        if (typeof body?.collaborationId !== "string" || body.collaborationId.trim().length === 0) {
+            return badRequest(res, "collaborationId is required.");
         }
 
         if (typeof body?.questionId !== "string" || body.questionId.trim().length === 0) {
@@ -45,15 +52,30 @@ export class AttemptController {
             return badRequest(res, "duration is required.");
         }
 
+        if (typeof body?.questionTitle !== "string") {
+            return badRequest(res, "questionTitle is required.");
+        }
+
+        if (typeof body?.totalTestCases !== "number" || body.totalTestCases < 0) {
+            return badRequest(res, "totalTestCases must be a non-negative number.");
+        }
+
+        if (typeof body?.testCasesPassed !== "number" || body.testCasesPassed < 0) {
+            return badRequest(res, "testCasesPassed must be a non-negative number.");
+        }
+
         try {
             const response = await this.attemptService.recordAttempt({
-                userAId: body.userAId,
-                userBId: body.userBId,
+                userId: body.userId,
+                collaborationId: body.collaborationId,
                 questionId: body.questionId,
+                questionTitle: body.questionTitle,
                 language: body.language,
                 difficulty: body.difficulty,
                 success: body.success,
                 duration: body.duration,
+                totalTestCases: body.totalTestCases,
+                testCasesPassed: body.testCasesPassed,
                 attemptedAt:
                     typeof body.attemptedAt === "string" ? body.attemptedAt : body.timestamp,
             });
@@ -76,6 +98,21 @@ export class AttemptController {
             return res.status(200).json(response);
         } catch (error) {
             handleError(res, error, "fetch attempted questions");
+        }
+    }
+
+    async listAttemptsForCurrentUser(_req: Request, res: Response): Promise<Response | void> {
+        const clerkUserId = res.locals.clerkUserId as string | undefined;
+
+        if (!clerkUserId) {
+            return res.status(500).json({ error: "Authenticated user context is missing." });
+        }
+
+        try {
+            const response = await this.attemptService.listAttemptHistory(clerkUserId);
+            return res.status(200).json(response);
+        } catch (error) {
+            handleError(res, error, "fetch attempt history");
         }
     }
 }

@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 
 import { useUser } from "@clerk/clerk-react";
 
-const LANGUAGE_OPTIONS = ["Python", "Java", "C++", "JavaScript", "TypeScript", "Go", "Rust"];
+import { Language, LANGUAGE_OPTIONS } from "@/models/matching/matchingDetailsType";
+
 const CLERK_FONT_FAMILY = "var(--clerk-font-family, inherit)";
 
-function languageIcon(language: string): string {
+function languageIcon(language: Language): string {
     switch (language) {
         case "Python":
             return "\u{1F40D}";
@@ -31,10 +32,14 @@ export default function DefaultLanguage() {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    const currentLanguage = useMemo(() => {
+    const currentLanguage = useMemo((): Language => {
         const metadata = (user?.unsafeMetadata || {}) as Record<string, unknown>;
         const value = metadata.defaultLanguage;
-        return typeof value === "string" ? value : "";
+
+        const isValidLanguage =
+            typeof value === "string" && (LANGUAGE_OPTIONS as readonly string[]).includes(value);
+
+        return isValidLanguage ? (value as Language) : "Python";
     }, [user]);
 
     const saveDefaultLanguage = async (language: string) => {

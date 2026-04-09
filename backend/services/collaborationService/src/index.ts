@@ -2,30 +2,32 @@ import "dotenv/config";
 
 import { createServer } from "node:http";
 import { Server } from "socket.io";
+import { createAdapter } from "@socket.io/redis-adapter";
 
 import app from "@/app.js";
 import { env } from "@/config/env.js";
+import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import { socketAuthMiddleware } from "@/middleware/socketAuth.js";
 import { registerSocketHandlers } from "@/sockets/registerSocketHandlers.js";
 import { logger } from "@/utils/logger.js";
-import { initializePostgres } from "@/utils/postgres.js";
 import { getRedisClient } from "@/utils/redis.js";
+import { createAdapterClients } from "@/utils/redisAdapter.js";
 
 async function startServer(): Promise<void> {
-    // Initialize Redis connection
+    // Initialize Redis data connection
     const redis = getRedisClient();
     await redis.ping();
     logger.info("Redis connection verified");
 
-    // Initialize PostgreSQL connection
-    try {
-        await initializePostgres();
-    } catch (error) {
-        logger.warn(
-            { err: error },
-            "PostgreSQL initialization failed - session history will not be persisted",
-        );
-    }
+    // Initialize Redis Pub/Sub clients for Socket.IO adapter
+    const { pubClient, subClient } = createAdapterClients();
+    await Promise.all([pubClient.ping(), subClient.ping()]);
+    logger.info("Redis adapter pub/sub clients verified");
+
+    // Initialize RabbitMQ connection and assert queues
+    const rabbitmq = RabbitMQManager.getInstance();
+    await rabbitmq.connect();
+    logger.info("RabbitMQ connected");
 
     const server = createServer(app);
 
@@ -43,6 +45,14 @@ async function startServer(): Promise<void> {
         pingInterval: env.heartbeatIntervalMs, // How often to send ping
         pingTimeout: env.heartbeatTimeoutMs, // How long to wait for pong before disconnect
     });
+
+    // Attach Redis adapter for cross-instance Socket.IO event synchronization
+    io.adapter(createAdapter(pubClient, subClient));
+    logger.info("Socket.IO Redis adapter initialized");
+
+    // Start RabbitMQ consumers that need the Socket.IO server instance
+    rabbitmq.startConsumers(io);
+    logger.info("RabbitMQ execution response consumer started");
 
     io.use(socketAuthMiddleware);
     registerSocketHandlers(io);

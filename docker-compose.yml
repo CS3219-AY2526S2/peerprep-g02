@@ -34,6 +34,20 @@ services:
       - gateway-network
     restart: unless-stopped
 
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: peerprep-ngrok
+    depends_on:
+      - gateway
+    env_file:
+      - ./.env
+    command: http --url=nonjuridical-unflaunting-hudson.ngrok-free.dev --pooling-enabled=true gateway:8080
+    ports:
+      - "4040:4040"
+    networks:
+      - gateway-network
+    restart: unless-stopped
+
   dozzle:
     container_name: dozzle
     image: amir20/dozzle:latest
@@ -109,11 +123,18 @@ services:
     env_file:
       - ./backend/services/matchingService/.env
     depends_on:
+      user-service:
+        condition: service_started
+      questions-service:
+        condition: service_started
       matching-redis:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - gateway-network
       - matching-redis-network
+      - rabbitmq-network
     ports:
       - "3002:3002"
     environment:
@@ -123,6 +144,7 @@ services:
       - US_INTERNAL_SERVICE_URL=http://user-service:3001
       - MS_COLLABORATION_SERVICE_URL=http://collaboration-service:3003
       - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
+      - RABBITMQ_URL=amqp://rabbitmq:5672
     volumes:
       - ./secrets:/secrets:ro
     restart: unless-stopped
@@ -184,7 +206,6 @@ services:
   # Collaboration Service
   collaboration-service:
     build: ./backend/services/collaborationService
-    container_name: collaboration-service
     env_file:
       - ./backend/services/collaborationService/.env
     environment:
@@ -192,43 +213,24 @@ services:
       - CS_API_GATEWAY_URL=http://gateway:8080
       - CS_REDIS_HOST=collaboration-redis
       - CS_REDIS_PORT=6379
-      - CS_DATABASE_URI=postgresql://postgres:postgres@collaboration-db:5432/collaboration
-      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
+      - CS_EXECUTION_SERVICE_URL=http://execution-service:3006
+      - CS_ATTEMPT_SERVICE_URL=http://attempts-service:3004
+      - CS_RABBITMQ_URL=amqp://rabbitmq:5672
     depends_on:
       collaboration-redis:
         condition: service_started
-      collaboration-db:
-        condition: service_healthy
       user-service:
         condition: service_started
       questions-service:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - gateway-network
       - collaboration-redis-network
-      - collaboration-db-network
+      - rabbitmq-network
     ports:
       - "3003:3003"
-    restart: unless-stopped
-
-  collaboration-db:
-    image: postgres:16-alpine
-    container_name: collaboration-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: collaboration
-    ports:
-      - "5434:5432"
-    volumes:
-      - collaboration_data:/var/lib/postgresql/data
-    networks:
-      - collaboration-db-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d collaboration"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
     restart: unless-stopped
 
   collaboration-redis:
@@ -237,6 +239,46 @@ services:
     restart: unless-stopped
     networks:
       - collaboration-redis-network
+
+  # Piston Code Execution Engine
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: piston
+    privileged: true
+    volumes:
+      - piston_data:/piston
+    environment:
+      - PISTON_RUN_TIMEOUT=10000
+      - PISTON_RUN_MEMORY_LIMIT=134217728
+      - PISTON_COMPILE_TIMEOUT=15000
+      - PISTON_DISABLE_NETWORKING=true
+      - PISTON_OUTPUT_MAX_SIZE=65536
+    networks:
+      - gateway-network
+    ports:
+      - "2000:2000"
+    restart: unless-stopped
+
+  # Execution Service (Piston adapter)
+  execution-service:
+    build: ./backend/services/executionService
+    container_name: execution-service
+    env_file:
+      - ./backend/services/executionService/.env
+    environment:
+      - PISTON_URL=http://piston:2000
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      piston:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - gateway-network
+      - rabbitmq-network
+    ports:
+      - "3006:3006"
+    restart: unless-stopped
 
   # Attempts Service
   attempts-service:
@@ -282,12 +324,26 @@ services:
       retries: 10
     restart: unless-stopped
 
+  rabbitmq:
+    image: rabbitmq:4.2-management
+    container_name: peerprep-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP protocol port (for your Node app)
+      - "15672:15672" # Management UI (username: guest / password: guest)
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - rabbitmq-network
+
 volumes:
   user_data:
   matching_data:
   questions_data:
-  collaboration_data:
   attempts_data:
+  piston_data:
 
 networks:
   gateway-network:
@@ -300,7 +356,7 @@ networks:
     driver: bridge
   collaboration-redis-network:
     driver: bridge
-  collaboration-db-network:
-    driver: bridge
   attempts-db-network:
+    driver: bridge
+  rabbitmq-network:
     driver: bridge

@@ -8,9 +8,11 @@ import type {
     CollaborationJoinState,
     CollaborationParticipant,
     CollaborationQuestion,
+    ExecutionResults,
     OTOperation,
     OutputUpdatedPayload,
     SessionEndedPayload,
+    SubmissionCompletePayload,
     UserDisconnectedPayload,
     UserJoinedPayload,
     UserLeftPayload,
@@ -35,6 +37,11 @@ export function useCollaborationSession(collaborationId: string | undefined) {
     const [partnerNotification, setPartnerNotification] = useState<string | null>(null);
     const [executionOutput, setExecutionOutput] = useState<string>("");
     const [language, setLanguage] = useState<string>("");
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [executionResults, setExecutionResults] = useState<ExecutionResults | null>(null);
+    const [submissionResult, setSubmissionResult] = useState<SubmissionCompletePayload | null>(
+        null,
+    );
     // F4.7.4 & F4.7.5 - Track offline changes
     const [offlineChanges, setOfflineChanges] = useState<OfflineChanges | null>(null);
     // F4.8 & F4.9 - Track session ended state
@@ -116,6 +123,39 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         setOfflineChanges(null);
         pushToast({ tone: "info", message: "Offline changes discarded" });
     }, []);
+
+    const runCode = useCallback(async () => {
+        if (!collaborationId) return;
+        setIsExecuting(true);
+        setExecutionResults(null);
+        try {
+            const ack = await collaborationService.runCode(collaborationId);
+            if (!ack.ok) {
+                pushToast({ tone: "error", message: ack.error ?? "Failed to run code" });
+                setIsExecuting(false);
+            }
+        } catch {
+            pushToast({ tone: "error", message: "Failed to run code" });
+            setIsExecuting(false);
+        }
+    }, [collaborationId]);
+
+    const submitCode = useCallback(async () => {
+        if (!collaborationId) return;
+        setIsExecuting(true);
+        setExecutionResults(null);
+        setSubmissionResult(null);
+        try {
+            const ack = await collaborationService.submitCode(collaborationId);
+            if (!ack.ok) {
+                pushToast({ tone: "error", message: ack.error ?? "Failed to submit code" });
+                setIsExecuting(false);
+            }
+        } catch {
+            pushToast({ tone: "error", message: "Failed to submit code" });
+            setIsExecuting(false);
+        }
+    }, [collaborationId]);
 
     useEffect(() => {
         if (!collaborationId) {
@@ -226,10 +266,13 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             }
         };
 
-        void joinSession();
+        let hasJoined = false;
 
         const handleConnect = () => {
-            void joinSession();
+            if (hasJoined) {
+                // Only re-join on reconnection, not on initial connect
+                void joinSession();
+            }
         };
 
         const handleDisconnect = () => {
@@ -347,7 +390,43 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 return;
             }
 
-            setExecutionOutput(payload.output);
+            // The server sends execution results as payload.output directly
+            const raw = payload.output;
+            if (typeof raw === "object" && raw !== null) {
+                const output = raw as ExecutionResults | { error?: string };
+                if ("results" in output) {
+                    setExecutionOutput(JSON.stringify(output, null, 2));
+                    setExecutionResults(output);
+                } else if ("error" in output && output.error) {
+                    setExecutionOutput(output.error);
+                    setExecutionResults(null);
+                    pushToast({ tone: "error", message: output.error });
+                } else {
+                    setExecutionOutput(JSON.stringify(raw));
+                }
+            } else {
+                setExecutionOutput(typeof raw === "string" ? raw : JSON.stringify(raw));
+            }
+            setIsExecuting(false);
+        };
+
+        const handleCodeRunning = (payload: { collaborationId: string }) => {
+            if (!isMounted || payload.collaborationId !== collaborationId) {
+                return;
+            }
+            setIsExecuting(true);
+            setExecutionResults(null);
+        };
+
+        const handleSubmissionComplete = (payload: SubmissionCompletePayload) => {
+            if (!isMounted || payload.collaborationId !== collaborationId) {
+                return;
+            }
+            setSubmissionResult(payload);
+            const message = payload.success
+                ? `Solution submitted! All ${payload.totalTestCases} test cases passed!`
+                : `Solution submitted. ${payload.testCasesPassed}/${payload.totalTestCases} test cases passed.`;
+            pushToast({ tone: payload.success ? "success" : "warning", message });
         };
 
         // F4.8.2 & F4.8.3 - Handle session ended
@@ -384,7 +463,13 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             socket.on(COLLABORATION_SOCKET_EVENTS.CODE_CHANGE, handleCodeChange);
             socket.on(COLLABORATION_SOCKET_EVENTS.CODE_SYNC, handleCodeSync);
             socket.on(COLLABORATION_SOCKET_EVENTS.OUTPUT_UPDATED, handleOutputUpdated);
+            socket.on(COLLABORATION_SOCKET_EVENTS.CODE_RUNNING, handleCodeRunning);
+            socket.on(COLLABORATION_SOCKET_EVENTS.SUBMISSION_COMPLETE, handleSubmissionComplete);
             socket.on(COLLABORATION_SOCKET_EVENTS.SESSION_ENDED, handleSessionEnded);
+
+            // Join once after all handlers are registered
+            hasJoined = true;
+            void joinSession();
         });
 
         return () => {
@@ -405,6 +490,11 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.CODE_CHANGE, handleCodeChange);
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.CODE_SYNC, handleCodeSync);
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.OUTPUT_UPDATED, handleOutputUpdated);
+                socketRef.off(COLLABORATION_SOCKET_EVENTS.CODE_RUNNING, handleCodeRunning);
+                socketRef.off(
+                    COLLABORATION_SOCKET_EVENTS.SUBMISSION_COMPLETE,
+                    handleSubmissionComplete,
+                );
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.SESSION_ENDED, handleSessionEnded);
             }
         };
@@ -428,5 +518,11 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         discardOfflineChanges,
         // F4.8 & F4.9 - Session termination
         sessionEnded,
+        // Code execution
+        runCode,
+        submitCode,
+        isExecuting,
+        executionResults,
+        submissionResult,
     };
 }

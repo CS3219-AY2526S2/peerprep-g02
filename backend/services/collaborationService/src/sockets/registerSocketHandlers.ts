@@ -1,11 +1,14 @@
-import type { UUID } from "node:crypto";
+import { randomUUID, type UUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
 
 import { ERROR_CODES, SOCKET_EVENTS } from "@/config/constants.js";
 import { env } from "@/config/env.js";
+import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import type { OTOperation } from "@/models/session.js";
 import { collaborationSessionService } from "@/services/collaborationSessionService.js";
+import type { ExecutionRequestMessage } from "@/types/executionRabbitmq.js";
 import { logger } from "@/utils/logger.js";
+import { getRedisClient } from "@/utils/redis.js";
 
 type JoinSessionPayload = {
     collaborationId?: string;
@@ -18,6 +21,10 @@ type CodeChangePayload = {
 };
 
 type LeaveSessionPayload = {
+    collaborationId: string;
+};
+
+type CodeRunPayload = {
     collaborationId: string;
 };
 
@@ -49,6 +56,34 @@ export function registerSocketHandlers(io: Server): void {
 
         socket.join(userRoom(userId));
         socket.emit(SOCKET_EVENTS.CONNECTION_READY, { userId });
+
+        /**
+         * Check if the authenticated user has an active collaboration session
+         */
+        socket.on(
+            SOCKET_EVENTS.SESSION_CHECK_ACTIVE,
+            async (
+                _payload: unknown,
+                ack?: (response: {
+                    ok: boolean;
+                    activeSession?: { collaborationId: string; topic: string; difficulty: string } | null;
+                }) => void,
+            ) => {
+                logger.info({ userId, socketId: socket.id }, "Received session:check-active request");
+                try {
+                    const activeSession =
+                        await collaborationSessionService.getActiveSessionForUser(userId);
+                    logger.info(
+                        { userId, hasActiveSession: !!activeSession, collaborationId: activeSession?.collaborationId },
+                        "Active session check result",
+                    );
+                    ack?.({ ok: true, activeSession: activeSession ?? null });
+                } catch (error) {
+                    logger.error({ err: error, userId }, "Failed to check active session");
+                    ack?.({ ok: false, activeSession: null });
+                }
+            },
+        );
 
         /**
          * F4.3.2 - Handle session join
@@ -222,6 +257,22 @@ export function registerSocketHandlers(io: Server): void {
                 // Leave the socket room
                 socket.leave(collaborationRoom(payload.collaborationId));
 
+                // Force-disconnect other tabs of the same user
+                const otherSocketIds = result.removedSocketIds.filter(
+                    (id) => id !== socket.id,
+                );
+                for (const otherSocketId of otherSocketIds) {
+                    const otherSocket = io.sockets.sockets.get(otherSocketId);
+                    if (otherSocket) {
+                        otherSocket.emit(SOCKET_EVENTS.SESSION_ENDED, {
+                            collaborationId: result.collaborationId,
+                            reason: "both_users_left",
+                        });
+                        otherSocket.leave(collaborationRoom(result.collaborationId));
+                        otherSocket.disconnect(true);
+                    }
+                }
+
                 // F4.8.1 - Notify other users that this user left intentionally
                 io.to(collaborationRoom(result.collaborationId)).emit(SOCKET_EVENTS.USER_LEFT, {
                     collaborationId: result.collaborationId,
@@ -264,6 +315,267 @@ export function registerSocketHandlers(io: Server): void {
                 );
 
                 ack?.({ ok: true });
+            },
+        );
+
+        /**
+         * Code execution - Run code against test cases (no attempt recorded)
+         * Publishes to RabbitMQ exec_req_queue; results arrive via the response consumer.
+         */
+        socket.on(
+            SOCKET_EVENTS.CODE_RUN,
+            async (payload: CodeRunPayload, ack?: (response: { ok: boolean; error?: string }) => void) => {
+                if (!payload?.collaborationId) {
+                    ack?.({ ok: false, error: "collaborationId is required." });
+                    return;
+                }
+
+                try {
+                    // Notify room that execution is starting
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.CODE_RUNNING,
+                        { collaborationId: payload.collaborationId },
+                    );
+
+                    const execData = await collaborationSessionService.getSessionForExecution(
+                        payload.collaborationId,
+                    );
+                    if (!execData) {
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.OUTPUT_UPDATED,
+                            { collaborationId: payload.collaborationId, output: { error: "Session not found or inactive." } },
+                        );
+                        ack?.({ ok: false, error: "Session not found or inactive." });
+                        return;
+                    }
+
+                    const correlationId = randomUUID();
+                    const message: ExecutionRequestMessage = {
+                        correlationId,
+                        collaborationId: payload.collaborationId,
+                        userId: userId!,
+                        type: "run",
+                        code: execData.code,
+                        language: execData.session.language,
+                        functionName: execData.functionName,
+                        testCases: execData.testCases,
+                        questionId: execData.session.questionId,
+                        questionTitle: execData.questionTitle,
+                        difficulty: execData.session.difficulty,
+                        sessionCreatedAt: execData.session.createdAt,
+                    };
+
+                    // Set the pending key before publishing so a Redis failure
+                    // doesn't cause a false error after the message is already enqueued.
+                    const redis = getRedisClient();
+                    let hasTimeoutSafety = false;
+                    try {
+                        await redis.set(`exec:pending:${correlationId}`, payload.collaborationId, "EX", 65);
+                        hasTimeoutSafety = true;
+                    } catch (redisErr) {
+                        logger.warn(
+                            { err: redisErr, correlationId, collaborationId: payload.collaborationId },
+                            "Failed to set exec:pending key (timeout safety net unavailable)",
+                        );
+                    }
+
+                    const published = RabbitMQManager.getInstance().publishExecutionRequest(message);
+                    if (!published) {
+                        // Clean up the pending key if we managed to set it
+                        if (hasTimeoutSafety) {
+                            redis.del(`exec:pending:${correlationId}`).catch(() => {});
+                        }
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.OUTPUT_UPDATED,
+                            { collaborationId: payload.collaborationId, output: { error: "Execution service unavailable." } },
+                        );
+                        ack?.({ ok: false, error: "Execution service unavailable." });
+                        return;
+                    }
+
+                    // Schedule a timeout to stop spinners if no response arrives
+                    if (hasTimeoutSafety) {
+                        setTimeout(async () => {
+                            try {
+                                const pending = await redis.get(`exec:pending:${correlationId}`);
+                                if (pending) {
+                                    await redis.del(`exec:pending:${correlationId}`);
+                                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                                        {
+                                            collaborationId: payload.collaborationId,
+                                            output: { error: "Code execution timed out." },
+                                        },
+                                    );
+                                }
+                            } catch (timeoutErr) {
+                                logger.error(
+                                    { err: timeoutErr, correlationId, collaborationId: payload.collaborationId },
+                                    "Error in execution timeout handler",
+                                );
+                            }
+                        }, 65_000);
+                    }
+
+                    ack?.({ ok: true });
+
+                    logger.info(
+                        {
+                            correlationId,
+                            collaborationId: payload.collaborationId,
+                            userId,
+                        },
+                        "Code execution request published to queue",
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof Error ? error.message : "Code execution failed.";
+                    logger.error(
+                        { err: error, collaborationId: payload.collaborationId },
+                        "Failed to publish code execution request",
+                    );
+
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                        {
+                            collaborationId: payload.collaborationId,
+                            output: { error: message },
+                        },
+                    );
+
+                    ack?.({ ok: false, error: message });
+                }
+            },
+        );
+
+        /**
+         * Code submission - Run code + record attempt for the submitting user.
+         * Publishes to RabbitMQ exec_req_queue; results and attempt recording
+         * are handled by the response consumer.
+         */
+        socket.on(
+            SOCKET_EVENTS.CODE_SUBMIT,
+            async (payload: CodeRunPayload, ack?: (response: { ok: boolean; error?: string }) => void) => {
+                if (!payload?.collaborationId) {
+                    ack?.({ ok: false, error: "collaborationId is required." });
+                    return;
+                }
+
+                try {
+                    // Notify room that execution is starting
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.CODE_RUNNING,
+                        { collaborationId: payload.collaborationId },
+                    );
+
+                    const execData = await collaborationSessionService.getSessionForExecution(
+                        payload.collaborationId,
+                    );
+                    if (!execData) {
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.OUTPUT_UPDATED,
+                            { collaborationId: payload.collaborationId, output: { error: "Session not found or inactive." } },
+                        );
+                        ack?.({ ok: false, error: "Session not found or inactive." });
+                        return;
+                    }
+
+                    const correlationId = randomUUID();
+                    const message: ExecutionRequestMessage = {
+                        correlationId,
+                        collaborationId: payload.collaborationId,
+                        userId: userId!,
+                        type: "submit",
+                        code: execData.code,
+                        language: execData.session.language,
+                        functionName: execData.functionName,
+                        testCases: execData.testCases,
+                        questionId: execData.session.questionId,
+                        questionTitle: execData.questionTitle,
+                        difficulty: execData.session.difficulty,
+                        sessionCreatedAt: execData.session.createdAt,
+                    };
+
+                    // Set the pending key before publishing so a Redis failure
+                    // doesn't cause a false error after the message is already enqueued.
+                    const redis = getRedisClient();
+                    let hasTimeoutSafety = false;
+                    try {
+                        await redis.set(`exec:pending:${correlationId}`, payload.collaborationId, "EX", 65);
+                        hasTimeoutSafety = true;
+                    } catch (redisErr) {
+                        logger.warn(
+                            { err: redisErr, correlationId, collaborationId: payload.collaborationId },
+                            "Failed to set exec:pending key (timeout safety net unavailable)",
+                        );
+                    }
+
+                    const published = RabbitMQManager.getInstance().publishExecutionRequest(message);
+                    if (!published) {
+                        // Clean up the pending key if we managed to set it
+                        if (hasTimeoutSafety) {
+                            redis.del(`exec:pending:${correlationId}`).catch(() => {});
+                        }
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.OUTPUT_UPDATED,
+                            { collaborationId: payload.collaborationId, output: { error: "Execution service unavailable." } },
+                        );
+                        ack?.({ ok: false, error: "Execution service unavailable." });
+                        return;
+                    }
+
+                    // Schedule a timeout to stop spinners if no response arrives
+                    if (hasTimeoutSafety) {
+                        setTimeout(async () => {
+                            try {
+                                const pending = await redis.get(`exec:pending:${correlationId}`);
+                                if (pending) {
+                                    await redis.del(`exec:pending:${correlationId}`);
+                                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                                        {
+                                            collaborationId: payload.collaborationId,
+                                            output: { error: "Code execution timed out." },
+                                        },
+                                    );
+                                }
+                            } catch (timeoutErr) {
+                                logger.error(
+                                    { err: timeoutErr, correlationId, collaborationId: payload.collaborationId },
+                                    "Error in submission timeout handler",
+                                );
+                            }
+                        }, 65_000);
+                    }
+
+                    ack?.({ ok: true });
+
+                    logger.info(
+                        {
+                            correlationId,
+                            collaborationId: payload.collaborationId,
+                            userId,
+                        },
+                        "Code submission request published to queue",
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof Error ? error.message : "Code submission failed.";
+                    logger.error(
+                        { err: error, collaborationId: payload.collaborationId },
+                        "Failed to publish code submission request",
+                    );
+
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                        {
+                            collaborationId: payload.collaborationId,
+                            output: { error: message },
+                        },
+                    );
+
+                    ack?.({ ok: false, error: message });
+                }
             },
         );
 
@@ -316,9 +628,19 @@ export function registerSocketHandlers(io: Server): void {
 
     /**
      * F4.8.3 - Periodic check for inactive sessions
+     * Uses a distributed Redis lock (SET NX PX) to ensure only one instance
+     * runs the check per interval when scaling horizontally.
      */
+    const redis = getRedisClient();
+    const lockKey = "distributed-lock:inactivity-check";
+    const lockDurationMs = Math.max(env.inactivityCheckIntervalMs - 5000, 10000);
+
     setInterval(async () => {
         try {
+            // Acquire distributed lock — skip if another instance holds it
+            const acquired = await redis.set(lockKey, "1", "NX", "PX", lockDurationMs);
+            if (!acquired) return;
+
             const inactiveSessionIds = await collaborationSessionService.getInactiveSessions(
                 env.sessionInactivityTimeoutMs,
             );

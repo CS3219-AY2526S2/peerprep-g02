@@ -10,6 +10,7 @@ const US_PREFIX = `${gatewayBase}/us`;
 const MS_PREFIX = `${gatewayBase}/ms`;
 const QS_PREFIX = `${gatewayBase}/qs`;
 const CS_PREFIX = `${gatewayBase}/cs`;
+const AS_PREFIX = `${gatewayBase}/as`;
 
 export const API_ENDPOINTS = {
     USERS: {
@@ -17,6 +18,7 @@ export const API_ENDPOINTS = {
         ADMIN_LIST: `${US_PREFIX}/users/admin/users`,
         UPDATE_ROLE: (clerkId: string) => `${US_PREFIX}/users/admin/users/${clerkId}/role`,
         UPDATE_STATUS: (clerkId: string) => `${US_PREFIX}/users/admin/users/${clerkId}/status`,
+        SCORE: (clerkId: string) => `${US_PREFIX}/users/internal/${clerkId}/score`,
     },
 
     MATCHING: {
@@ -25,6 +27,7 @@ export const API_ENDPOINTS = {
 
     QUESTIONS: {
         BASE: `${QS_PREFIX}/`,
+        TOPICS: `${QS_PREFIX}/topics`,
         POPULAR: `${QS_PREFIX}/popular`,
         GET_ONE: `${QS_PREFIX}/get`,
         LEETCODE: `${QS_PREFIX}/leetcode`,
@@ -34,5 +37,9 @@ export const API_ENDPOINTS = {
 
     COLLABORATION: {
         SOCKET_PATH: `${CS_PREFIX}/sessions`,
+    },
+
+    ATTEMPTS: {
+        HISTORY: `${AS_PREFIX}/attempts/me`,
     },
 } as const;

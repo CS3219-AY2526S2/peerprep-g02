@@ -35,7 +35,8 @@ export type QuestionDetails = {
     description: string;
     difficulty: string;
     topics: string[];
-    testCase: Array<{ input: string; output: string }>;
+    testCase: Array<{ input: unknown; output: unknown }>;
+    functionName: string;
 };
 
 export type CollaborationSession = {

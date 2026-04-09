@@ -43,6 +43,21 @@ export const DEFAULTS = {
     INACTIVITY_CHECK_INTERVAL_MS: 60 * 1000, // Check every minute
 } as const;
 
+export const NON_RETRYABLE_ERROR_CODES: Set<string> = new Set([
+    ERROR_CODES.ACTIVE_SESSION_CONFLICT,
+    ERROR_CODES.USER_VALIDATION_FAILED,
+    ERROR_CODES.QUESTION_NOT_FOUND,
+    ERROR_CODES.INVALID_SESSION_REQUEST,
+]);
+
+export const RABBITMQ_DEFAULTS = {
+    MAX_RETRIES: 5,
+    RECONNECT_DELAY_MS: 5000,
+    PREFETCH_COUNT: 1,
+    /** Base delay for exponential backoff on retries (delay = base * 2^retryCount). */
+    RETRY_BASE_DELAY_MS: 2000,
+} as const;
+
 export const SOCKET_EVENTS = {
     // Connection events
     CONNECTION_READY: "connection:ready",
@@ -51,6 +66,7 @@ export const SOCKET_EVENTS = {
     SESSION_JOIN: "session:join",
     SESSION_LEAVE: "session:leave",
     SESSION_ENDED: "session:ended",
+    SESSION_CHECK_ACTIVE: "session:check-active",
 
     // Presence events
     PRESENCE_UPDATED: "presence:updated",
@@ -63,6 +79,14 @@ export const SOCKET_EVENTS = {
     CODE_ACK: "code:ack",
     CODE_SYNC: "code:sync",
 
+    // Code execution events
+    CODE_RUN: "code:run",
+    CODE_SUBMIT: "code:submit",
+    CODE_RUNNING: "code:running",
+
     // Output events
     OUTPUT_UPDATED: "output:updated",
+
+    // Submission events
+    SUBMISSION_COMPLETE: "submission:complete",
 } as const;

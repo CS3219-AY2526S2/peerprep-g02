@@ -12,6 +12,7 @@ type RedisClient = {
     del: (...keys: string[]) => Promise<number>;
     hset: (key: string, ...fieldValues: (string | Record<string, string>)[]) => Promise<number>;
     hget: (key: string, field: string) => Promise<string | null>;
+    hmget: (key: string, ...fields: string[]) => Promise<(string | null)[]>;
     hgetall: (key: string) => Promise<Record<string, string>>;
     hdel: (key: string, ...fields: string[]) => Promise<number>;
     pexpire: (key: string, ms: number) => Promise<number>;

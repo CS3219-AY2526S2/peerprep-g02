@@ -39,9 +39,8 @@ export const getPopularQuestions = async (): Promise<string[] | null> => {
         const data = await res.json();
         if (!data || !data.body) return null;
 
-        return data.body.map((item: any) => item.title);
-    } catch (e: any) {
-        console.error(e);
+        return data.body.map((item: QuestionInfo) => item.title);
+    } catch {
         return null;
     }
 };
@@ -61,11 +60,13 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
 
         if (!data) return null;
 
-        const cases: TestCase[] = data.test_case.map((item: any) => ({
-            // Matching your .slice(1, -1) logic to strip quotes from stringified JSON
-            input: JSON.stringify(item.input).slice(1, -1),
-            output: JSON.stringify(item.output).slice(1, -1),
-        }));
+
+        const cases: TestCase[] = data.test_case.map(
+            (item: { input: unknown; output: unknown }) => ({
+                input: JSON.stringify(item.input).slice(1, -1),
+                output: JSON.stringify(item.output).slice(1, -1),
+            }),
+        );
 
         return {
             quid: data.quid,
@@ -75,8 +76,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
             testCase: cases,
             description: data.description,
         };
-    } catch (e) {
-        console.error(e);
+    } catch {
         return null;
     }
 };

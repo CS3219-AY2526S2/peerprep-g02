@@ -11,6 +11,7 @@ import {
     MessageSquareText,
     Play,
     Radio,
+    Send,
     TerminalSquare,
     UsersRound,
     Wifi,
@@ -66,6 +67,7 @@ export default function CollaborationSessionView() {
     const { collaborationId } = useParams<{ collaborationId: string }>();
     const navigate = useNavigate();
     const [now, setNow] = useState(() => Date.now());
+    const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
     const {
         connectionState,
         joinState,
@@ -82,6 +84,11 @@ export default function CollaborationSessionView() {
         submitOfflineChanges,
         discardOfflineChanges,
         sessionEnded,
+        runCode,
+        submitCode,
+        isExecuting,
+        executionResults,
+        submissionResult,
     } = useCollaborationSession(collaborationId);
 
     useEffect(() => {
@@ -89,18 +96,43 @@ export default function CollaborationSessionView() {
         return () => window.clearInterval(timer);
     }, []);
 
+    // Auto-redirect home after successful submission
+    useEffect(() => {
+        if (!submissionResult?.success) return;
+        const timeout = setTimeout(() => {
+            void leaveSession().then(() => {
+                startTransition(() => navigate(ROUTES.DASHBOARD));
+            });
+        }, 3000);
+        return () => clearTimeout(timeout);
+    }, [submissionResult, leaveSession, navigate]);
+
     const session = joinState?.session;
     const elapsed = formatElapsed(session?.createdAt, now);
     const testRows = useMemo(
         () =>
-            (question?.testCase ?? []).map((testCase, index) => ({
-                id: index + 1,
-                input: testCase.input,
-                output: testCase.output,
-                expectedOutput: testCase.output,
-                status: index === 1 ? "pending" : "ready",
-            })),
-        [question?.testCase],
+            (question?.testCase ?? []).map((testCase, index) => {
+                const result = executionResults?.results.find((r) => r.testCaseIndex === index);
+                return {
+                    id: index + 1,
+                    input:
+                        Array.isArray(testCase.input) && testCase.input.length === 1
+                            ? typeof testCase.input[0] === "string"
+                                ? testCase.input[0]
+                                : JSON.stringify(testCase.input[0])
+                            : typeof testCase.input === "string"
+                              ? testCase.input
+                              : JSON.stringify(testCase.input),
+                    expectedOutput:
+                        typeof testCase.output === "string"
+                            ? testCase.output
+                            : JSON.stringify(testCase.output),
+                    actualOutput: result?.actualOutput ?? "-",
+                    status: result ? (result.passed ? "passed" : "failed") : "pending",
+                    error: result?.error,
+                };
+            }),
+        [question?.testCase, executionResults],
     );
 
     const connectionBadge =
@@ -156,11 +188,7 @@ export default function CollaborationSessionView() {
                             variant="destructive"
                             size="lg"
                             className="rounded-2xl bg-red-500 px-5 text-white hover:bg-red-400"
-                            onClick={() => {
-                                void leaveSession().then(() => {
-                                    startTransition(() => navigate(ROUTES.DASHBOARD));
-                                });
-                            }}
+                            onClick={() => setShowLeaveConfirm(true)}
                         >
                             <LogOut className="size-4" />
                             Exit Session
@@ -268,7 +296,7 @@ export default function CollaborationSessionView() {
                                                 <span className="font-semibold text-slate-200">
                                                     Output:
                                                 </span>{" "}
-                                                {testRow.output}
+                                                {testRow.expectedOutput}
                                             </p>
                                         </CardContent>
                                     </Card>
@@ -295,13 +323,34 @@ export default function CollaborationSessionView() {
                                 {connectionBadge}
                             </div>
 
-                            <Button
-                                size="lg"
-                                className="rounded-2xl bg-emerald-500 px-5 text-white hover:bg-emerald-400"
-                            >
-                                <Play className="size-4" />
-                                Run Code
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    size="lg"
+                                    className="rounded-2xl bg-emerald-500 px-5 text-white hover:bg-emerald-400"
+                                    disabled={isExecuting || !!sessionEnded}
+                                    onClick={() => void runCode()}
+                                >
+                                    {isExecuting ? (
+                                        <LoaderCircle className="size-4 animate-spin" />
+                                    ) : (
+                                        <Play className="size-4" />
+                                    )}
+                                    Run Code
+                                </Button>
+                                <Button
+                                    size="lg"
+                                    className="rounded-2xl bg-blue-500 px-5 text-white hover:bg-blue-400"
+                                    disabled={isExecuting || !!sessionEnded}
+                                    onClick={() => void submitCode()}
+                                >
+                                    {isExecuting ? (
+                                        <LoaderCircle className="size-4 animate-spin" />
+                                    ) : (
+                                        <Send className="size-4" />
+                                    )}
+                                    Submit Solution
+                                </Button>
+                            </div>
                         </div>
                     </div>
 
@@ -328,6 +377,54 @@ export default function CollaborationSessionView() {
                                     }}
                                 >
                                     Return to Dashboard
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Submission result banner */}
+                        {submissionResult && (
+                            <div
+                                className={cn(
+                                    "flex items-center justify-between border-b px-5 py-4",
+                                    submissionResult.success
+                                        ? "border-emerald-500/30 bg-emerald-500/10"
+                                        : "border-amber-500/30 bg-amber-500/10",
+                                )}
+                            >
+                                <div className="flex items-center gap-3">
+                                    {submissionResult.success ? (
+                                        <CheckCircle2 className="size-5 text-emerald-400" />
+                                    ) : (
+                                        <XCircle className="size-5 text-amber-400" />
+                                    )}
+                                    <span
+                                        className={cn(
+                                            "font-medium",
+                                            submissionResult.success
+                                                ? "text-emerald-300"
+                                                : "text-amber-300",
+                                        )}
+                                    >
+                                        Solution submitted! {submissionResult.testCasesPassed}/
+                                        {submissionResult.totalTestCases} test cases passed.
+                                    </span>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className={cn(
+                                        "bg-transparent",
+                                        submissionResult.success
+                                            ? "border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20"
+                                            : "border-amber-500/50 text-amber-300 hover:bg-amber-500/20",
+                                    )}
+                                    onClick={() => {
+                                        void leaveSession().then(() => {
+                                            startTransition(() => navigate(ROUTES.DASHBOARD));
+                                        });
+                                    }}
+                                >
+                                    Return Home
                                 </Button>
                             </div>
                         )}
@@ -388,14 +485,36 @@ export default function CollaborationSessionView() {
                                     </div>
                                 </div>
 
-                                {/* F4.4.4 - Shared execution output visible to all users */}
-                                {executionOutput && (
-                                    <div className="border-b border-white/10 bg-black/50 p-4">
-                                        <p className="mb-2 text-sm font-medium text-slate-400">
-                                            Execution Output:
+                                {executionResults && (
+                                    <div className="border-b border-white/10 bg-black/50 px-5 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-slate-400">
+                                                Results
+                                            </span>
+                                            <span
+                                                className={cn(
+                                                    "text-sm font-semibold",
+                                                    executionResults.testCasesPassed ===
+                                                        executionResults.totalTestCases &&
+                                                        executionResults.totalTestCases > 0
+                                                        ? "text-emerald-400"
+                                                        : "text-amber-400",
+                                                )}
+                                            >
+                                                {executionResults.testCasesPassed}/
+                                                {executionResults.totalTestCases} passed
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {executionResults?.stderr && (
+                                    <div className="border-b border-white/10 bg-red-500/5 p-4">
+                                        <p className="mb-2 text-sm font-medium text-red-400">
+                                            Stderr:
                                         </p>
-                                        <pre className="whitespace-pre-wrap font-mono text-sm text-slate-200">
-                                            {executionOutput}
+                                        <pre className="whitespace-pre-wrap font-mono text-sm text-red-300">
+                                            {executionResults.stderr}
                                         </pre>
                                     </div>
                                 )}
@@ -419,32 +538,45 @@ export default function CollaborationSessionView() {
                                                         className="border-t border-white/5 text-slate-200"
                                                     >
                                                         <td className="px-5 py-4">{testRow.id}</td>
-                                                        <td className="px-5 py-4">
+                                                        <td className="max-w-[150px] truncate px-5 py-4 font-mono text-xs">
                                                             {testRow.input}
                                                         </td>
-                                                        <td className="px-5 py-4">
-                                                            {testRow.output}
+                                                        <td className="max-w-[150px] px-5 py-4 font-mono text-xs">
+                                                            <span className="block truncate">
+                                                                {testRow.actualOutput ??
+                                                                    (testRow.error ? "" : "-")}
+                                                            </span>
+                                                            {testRow.error && (
+                                                                <span className="block truncate text-red-400">
+                                                                    {testRow.error}
+                                                                </span>
+                                                            )}
                                                         </td>
-                                                        <td className="px-5 py-4">
+                                                        <td className="max-w-[150px] truncate px-5 py-4 font-mono text-xs">
                                                             {testRow.expectedOutput}
                                                         </td>
                                                         <td className="px-5 py-4">
                                                             <span
                                                                 className={cn(
                                                                     "inline-flex items-center gap-2 rounded-full px-3 py-1 font-semibold",
-                                                                    testRow.status === "ready"
+                                                                    testRow.status === "passed"
                                                                         ? "bg-emerald-500/15 text-emerald-300"
-                                                                        : "bg-amber-500/15 text-amber-300",
+                                                                        : testRow.status ===
+                                                                            "failed"
+                                                                          ? "bg-red-500/15 text-red-300"
+                                                                          : "bg-slate-500/15 text-slate-400",
                                                                 )}
                                                             >
-                                                                {testRow.status === "ready" ? (
+                                                                {testRow.status === "passed" ? (
                                                                     <CheckCircle2 className="size-4" />
-                                                                ) : (
+                                                                ) : testRow.status === "failed" ? (
                                                                     <XCircle className="size-4" />
-                                                                )}
-                                                                {testRow.status === "ready"
-                                                                    ? "Ready"
-                                                                    : "Pending"}
+                                                                ) : null}
+                                                                {testRow.status === "passed"
+                                                                    ? "Passed"
+                                                                    : testRow.status === "failed"
+                                                                      ? "Failed"
+                                                                      : "Pending"}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -537,6 +669,60 @@ export default function CollaborationSessionView() {
                     </div>
                 </section>
             </main>
+
+            {/* Leave session confirmation dialog */}
+            {showLeaveConfirm && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="leave-dialog-title"
+                    onKeyDown={(e) => {
+                        if (e.key === "Escape") setShowLeaveConfirm(false);
+                    }}
+                >
+                    <Card className="w-full max-w-md rounded-[24px] border border-white/10 bg-[#1e293b] p-0 shadow-2xl">
+                        <CardContent className="p-8">
+                            <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-red-500/15">
+                                <LogOut className="size-7 text-red-400" />
+                            </div>
+                            <CardTitle
+                                id="leave-dialog-title"
+                                className="mb-2 text-2xl font-bold text-white"
+                            >
+                                Leave Session?
+                            </CardTitle>
+                            <CardDescription className="text-base text-slate-400">
+                                Are you sure you want to leave this collaboration session? You will
+                                not be able to rejoin once you leave.
+                            </CardDescription>
+                            <div className="mt-8 flex items-center justify-end gap-3">
+                                <Button
+                                    variant="ghost"
+                                    size="lg"
+                                    className="rounded-2xl px-6 text-slate-300 hover:bg-white/10 hover:text-white"
+                                    onClick={() => setShowLeaveConfirm(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    size="lg"
+                                    className="rounded-2xl bg-red-500 px-6 text-white hover:bg-red-400"
+                                    onClick={() => {
+                                        setShowLeaveConfirm(false);
+                                        void leaveSession().then(() => {
+                                            startTransition(() => navigate(ROUTES.DASHBOARD));
+                                        });
+                                    }}
+                                >
+                                    Leave Session
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }

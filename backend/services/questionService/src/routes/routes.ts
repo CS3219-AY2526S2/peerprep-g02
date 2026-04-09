@@ -17,7 +17,7 @@ import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDa
 
 const router = Router();
 
-router.use(requireAdminAuth);
+// --- PUBLIC / USER ROUTES (No Admin Required) ---
 
 //Get all question
 router.get("/", async (req, res) => {
@@ -66,6 +66,43 @@ router.post("/get", async (req, res) => {
     });
 });
 
+//Search for matching question
+router.post("/search", async (req, res) => {
+    const { topic, difficulty, userA, userB } = req.body;
+    const result = await SearchQuestion(topic, difficulty, userA, userB);
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to find matching question in the database.",
+        });
+    }
+
+    return res.status(200).json({
+        message: "Get matching question success.",
+        body: result,
+    });
+});
+
+//Get topics
+router.get("/topics", async (req, res) => {
+    const result = await GetTopics();
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to find topics in the database.",
+        });
+    }
+    return res.status(200).json({
+        message: "Get topics success",
+        body: result,
+    });
+});
+
+
+// --- ADMIN ONLY ROUTES (Middleware applied here) ---
+
+router.use(requireAdminAuth);
+
 //Save question
 router.post("", async (req, res) => {
     const result = await CreateQuestion(req.body);
@@ -111,22 +148,6 @@ router.delete("/:id", async (req, res) => {
     });
 });
 
-//Search for matching question
-router.post("/search", async (req, res) => {
-    const { topic, difficulty, userA, userB } = req.body;
-    const result = await SearchQuestion(topic, difficulty, userA, userB);
-
-    if (!result) {
-        return res.status(400).json({
-            message: "Unable to find matching question in the database.",
-        });
-    }
-
-    return res.status(200).json({
-        message: "Get matching question success.",
-        body: result,
-    });
-});
 
 //Search for matching question in question database
 router.post("/search-database", async (req, res) => {
@@ -144,6 +165,7 @@ router.post("/search-database", async (req, res) => {
     });
 });
 
+
 //Get leetcode question
 router.post("/leetcode", async (req, res) => {
     const result = await getLeetCode(req.body.topic);
@@ -159,19 +181,7 @@ router.post("/leetcode", async (req, res) => {
     });
 });
 
-router.get("/leetcode", async (req, res) => {
-    const result = await getLeetCodeAuto();
 
-    if (!result) {
-        return res.status(400).json({
-            message: "Unable to retrieve leetcode questions.",
-        });
-    }
-    return res.status(200).json({
-        message: "Get leetcode questions success.",
-        body: result,
-    });
-});
 
 //Get topics
 router.get("/topics", async (req, res) => {

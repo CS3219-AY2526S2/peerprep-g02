@@ -58,11 +58,31 @@ export async function GetQuestion(quid: UUID) {
     }
 }
 
+function safeJsonParse(value: string): unknown {
+    try {
+        return JSON.parse(value);
+    } catch {
+        // If parsing fails, fall back to the original string to avoid throwing.
+        return value;
+    }
+}
+
+function parseTestCases(testCases: TestCase[]): string {
+    return JSON.stringify(
+        testCases.map((tc) => ({
+            input: typeof tc.input === "string" ? safeJsonParse(tc.input) : tc.input,
+            output: typeof tc.output === "string" ? safeJsonParse(tc.output) : tc.output,
+        })),
+    );
+}
+
 export async function CreateQuestion(data: QuestionData) {
     const insert =
         "INSERT INTO questions(title, description,test_case,difficulty, topics) VALUES($1, $2, $3, $4, $5) RETURNING quid";
+
     const topics = data.qnTopics.map((topic) => topic as UUID);
-    const cases = JSON.stringify(data.testCase);
+    // const cases = JSON.stringify(data.testCase);
+    const cases = parseTestCases(data.testCase);
     const values = [data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
     try {
         const result = await pool.query(insert, values);
@@ -72,6 +92,7 @@ export async function CreateQuestion(data: QuestionData) {
     }
 
     return 0;
+
 }
 
 export async function EditQuestion(data: QuestionEdit) {
@@ -121,7 +142,7 @@ export async function SearchQuestion(
             [topic, difficulty],
         );
         if (result == undefined || result.rows.length == 0) return null;
-        const allQuestions: UUID[] = result.rows.map((r: any) => r.quid);
+        const allQuestions: UUID[] = result.rows.map((r: { quid: UUID }) => r.quid);
         const defaultQuestion = await randomQuestion(allQuestions);
 
         if (defaultQuestion == null) return null;
