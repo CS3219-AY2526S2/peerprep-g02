@@ -5,7 +5,6 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import { Bell } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
 import AccountUserButton from "@/components/user/AccountUserButton";
 
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
