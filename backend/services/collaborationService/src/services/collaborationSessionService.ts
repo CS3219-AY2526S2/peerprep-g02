@@ -570,7 +570,23 @@ export class CollaborationSessionService {
         collaborationId: string,
         userId: string,
     ): Promise<{ hints: StoredHint[]; hintsRemaining: number }> {
-        // Check rate limit
+        // Validate session and access first (cheap checks before AI call)
+        const session =
+            await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
+        if (!session || session.status !== "active") {
+            throw new AppError("Session not found or inactive.", HTTP_STATUS.NOT_FOUND, ERROR_CODES.SESSION_NOT_FOUND);
+        }
+
+        if (session.userAId !== userId && session.userBId !== userId) {
+            throw new AppError("Access denied.", HTTP_STATUS.FORBIDDEN, ERROR_CODES.SESSION_ACCESS_DENIED);
+        }
+
+        const hasLeft = await this.redisPresenceRepository.hasUserLeft(collaborationId, userId);
+        if (hasLeft) {
+            throw new AppError("You have left this session.", HTTP_STATUS.FORBIDDEN, ERROR_CODES.SESSION_ACCESS_DENIED);
+        }
+
+        // Pre-check remaining hints (non-atomic, but avoids expensive AI call when clearly at limit)
         const remaining = await this.redisHintRepository.getHintsRemaining(collaborationId, userId);
         if (remaining <= 0) {
             throw new AppError(
@@ -578,18 +594,6 @@ export class CollaborationSessionService {
                 HTTP_STATUS.BAD_REQUEST,
                 ERROR_CODES.HINT_LIMIT_REACHED,
             );
-        }
-
-        // Get session context for the prompt
-        const session =
-            await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
-        if (!session || session.status !== "active") {
-            throw new AppError("Session not found or inactive.", HTTP_STATUS.NOT_FOUND, ERROR_CODES.SESSION_NOT_FOUND);
-        }
-
-        // Verify the user is part of this session
-        if (session.userAId !== userId && session.userBId !== userId) {
-            throw new AppError("Access denied.", HTTP_STATUS.FORBIDDEN, ERROR_CODES.SESSION_ACCESS_DENIED);
         }
 
         const code = await this.otManager.getContent(collaborationId);
@@ -608,16 +612,22 @@ export class CollaborationSessionService {
             previousHints: previousHints.map((h) => h.hint),
         });
 
-        // Store the hint
-        const allHints = await this.redisHintRepository.addHint(collaborationId, userId, hintText);
-        const hintsRemaining = remaining - 1;
+        // Atomically reserve a slot and store the hint
+        const result = await this.redisHintRepository.tryAddHint(collaborationId, userId, hintText);
+        if (!result) {
+            throw new AppError(
+                `You have used all ${DEFAULTS.MAX_HINTS_PER_USER} AI hints for this session.`,
+                HTTP_STATUS.BAD_REQUEST,
+                ERROR_CODES.HINT_LIMIT_REACHED,
+            );
+        }
 
         logger.info(
-            { collaborationId, userId, hintsRemaining },
+            { collaborationId, userId, hintsRemaining: result.hintsRemaining },
             "AI hint generated and stored",
         );
 
-        return { hints: allHints, hintsRemaining };
+        return result;
     }
 
     async endSession(

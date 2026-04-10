@@ -8,7 +8,7 @@ export function getInitials(displayName: string | undefined, fallbackId: string)
         if (parts.length >= 2) {
             return (parts[0][0] + parts[1][0]).toUpperCase();
         }
-        return displayName.slice(0, 2).toUpperCase();
+        return parts[0].slice(0, 2).toUpperCase();
     }
     return fallbackId.slice(0, 2).toUpperCase();
 }

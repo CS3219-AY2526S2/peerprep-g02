@@ -33,24 +33,38 @@ export class RedisHintRepository {
         return Math.max(0, this.maxHintsPerUser - used);
     }
 
-    async addHint(collaborationId: string, userId: string, hint: string): Promise<StoredHint[]> {
-        const entry: StoredHint = { userId, hint, timestamp: Date.now() };
-        const pipeline = this.redis.pipeline();
-
-        const hintsKey = KEYS.hints(collaborationId);
+    /**
+     * Atomically reserve a hint slot via INCR, then store the hint.
+     * If the incremented count exceeds the limit, rolls back with SET and returns null.
+     */
+    async tryAddHint(
+        collaborationId: string,
+        userId: string,
+        hint: string,
+    ): Promise<{ hints: StoredHint[]; hintsRemaining: number } | null> {
         const countKey = KEYS.hintCount(collaborationId, userId);
 
-        // Append hint to the list
+        // INCR is atomic — two concurrent calls get distinct values (e.g. 1 and 2)
+        const newCount = await this.redis.incr(countKey);
+        await this.redis.pexpire(countKey, this.ttlMs);
+
+        if (newCount > this.maxHintsPerUser) {
+            // Over the limit — cap the counter back to max and reject
+            await this.redis.set(countKey, String(this.maxHintsPerUser), "PX", this.ttlMs);
+            return null;
+        }
+
+        // Slot reserved — store the hint
+        const entry: StoredHint = { userId, hint, timestamp: Date.now() };
+        const hintsKey = KEYS.hints(collaborationId);
+        const pipeline = this.redis.pipeline();
         pipeline.rpush(hintsKey, JSON.stringify(entry));
         pipeline.pexpire(hintsKey, this.ttlMs);
-
-        // Increment per-user count
-        pipeline.incr(countKey);
-        pipeline.pexpire(countKey, this.ttlMs);
-
         await pipeline.exec();
 
-        return this.getHints(collaborationId);
+        const hints = await this.getHints(collaborationId);
+        const hintsRemaining = Math.max(0, this.maxHintsPerUser - newCount);
+        return { hints, hintsRemaining };
     }
 
     async deleteHints(collaborationId: string, userIds: string[]): Promise<void> {

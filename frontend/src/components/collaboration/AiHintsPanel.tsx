@@ -32,7 +32,11 @@ export default function AiHintsPanel({
                 </div>
                 <Badge
                     variant={hintsRemaining > 0 ? "outline" : "destructive"}
-                    className="rounded-full border-violet-500/30 bg-violet-500/10 px-3 py-1 text-sm text-violet-300"
+                    className={`rounded-full px-3 py-1 text-sm ${
+                        hintsRemaining > 0
+                            ? "border-violet-500/30 bg-violet-500/10 text-violet-300"
+                            : "border-red-500/30 bg-red-500/10 text-red-300"
+                    }`}
                 >
                     {hintsRemaining}/2 remaining
                 </Badge>

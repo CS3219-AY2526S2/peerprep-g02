@@ -244,20 +244,15 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 setLanguage(ack.state.session.language);
 
                 // Initialize AI hints and user names from join response
-                const joinAck = ack as {
-                    hints?: AiHint[];
-                    hintsRemaining?: number;
-                    userNames?: Record<string, string>;
-                };
-                if (joinAck.hints) {
-                    setHints(joinAck.hints);
+                if (ack.hints) {
+                    setHints(ack.hints);
                 }
-                if (joinAck.hintsRemaining !== undefined) {
-                    setHintsRemaining(joinAck.hintsRemaining);
+                if (ack.hintsRemaining !== undefined) {
+                    setHintsRemaining(ack.hintsRemaining);
                 }
-                if (joinAck.userNames) {
-                    setUserNames(joinAck.userNames);
-                    userNamesRef.current = joinAck.userNames;
+                if (ack.userNames) {
+                    setUserNames(ack.userNames);
+                    userNamesRef.current = ack.userNames;
                 }
 
                 // F4.4.2 & F4.4.3 - Initialize OT client with server state (empty for first user, synced for joining user)

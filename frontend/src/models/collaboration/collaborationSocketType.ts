@@ -42,6 +42,9 @@ export type CollaborationJoinAck =
     | {
           ok: true;
           state: import("./collaborationType").CollaborationJoinState;
+          hints?: import("./aiHintType").AiHint[];
+          hintsRemaining?: number;
+          userNames?: Record<string, string>;
       }
     | {
           ok: false;

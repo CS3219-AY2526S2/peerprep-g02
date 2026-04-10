@@ -2,6 +2,7 @@ import { randomUUID, type UUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
 
 import { ERROR_CODES, SOCKET_EVENTS } from "@/config/constants.js";
+import { AppError } from "@/utils/errors.js";
 import { env } from "@/config/env.js";
 import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import type { OTOperation } from "@/models/session.js";
@@ -380,7 +381,7 @@ export function registerSocketHandlers(io: Server): void {
                     );
                 } catch (error) {
                     const message =
-                        error instanceof Error ? error.message : "Failed to generate hint.";
+                        error instanceof AppError ? error.message : "Failed to generate hint.";
                     ack?.({ ok: false, error: message });
 
                     logger.error(
