@@ -27,14 +27,15 @@ import { TopicInfo } from "@/models/question/questionType";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
-import { useTopics } from "@/services/question/TopicProvider";
+import { useTopics } from "@/context/TopicProvider";
 import { createTopic, deleteTopic, editTopic } from "@/services/question/topicService";
 
 export function TopicEdit() {
-    const { topics } = useTopics();
+    const { topics, refreshTopics } = useTopics();
     const [topicInfos, updateTopicInfos] = useState<TopicInfo[]>([]);
     const [openConfirm, setOpenConfirm] = useState<boolean>(false);
     const [target, setTarget] = useState<UUID | null>(null);
+    const [openForm, setOpenForm] = useState<boolean>(false);
     if (topics == null) {
         return <div>Apologies, an error has occurred</div>;
     }
@@ -77,6 +78,22 @@ export function TopicEdit() {
         if (newTopics.length > 0) {
             createTopic(newTopics);
         }
+
+        refresh()
+    }
+
+    function DelayedPageUpdate() {
+        const timer = setTimeout(() => {
+            setOpenForm(false);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }
+
+    async function refresh() {
+        await refreshTopics();
+
+        DelayedPageUpdate();
     }
 
     function RemoveTopic(index: number) {
@@ -120,12 +137,12 @@ export function TopicEdit() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            <Dialog>
-                <DialogTrigger className="bg-secondary text-white hover:bg-primary-200 px-3 py-1 rounded-full font-semibold ml-1">
+            <Dialog open = {openForm}>
+                <DialogTrigger onClick={() => setOpenForm(true)} className="bg-secondary text-white hover:bg-primary-200 px-3 py-1 rounded-full font-semibold ml-1">
                     Edit
                 </DialogTrigger>
                 <DialogContent
-                    className="bg-white"
+                    className="[&>button]:hidden  bg-white"
                     style={{ display: openConfirm ? "none" : "grid" }}
                 >
                     <DialogHeader>
@@ -172,13 +189,13 @@ export function TopicEdit() {
                         >
                             Add Topic
                         </Button>
-                        <DialogClose
+                        <Button
                             type="button"
                             className="bg-secondary text-white hover:bg-primary-200 px-3 py-1 rounded-full font-semibold ml-1"
                             onClick={() => saveChanges()}
                         >
                             Save Changes
-                        </DialogClose>
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -187,3 +204,4 @@ export function TopicEdit() {
 }
 
 export default TopicEdit;
+

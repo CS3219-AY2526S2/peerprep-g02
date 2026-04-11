@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import QuestionForm from "@/components/question/QuestionForm";
 
 import Admin from "@/views/question/QuestionEditorView";
 
-import { TopicProvider, UseCaseProvider, useTopics } from "@/services/question/TopicProvider";
-import { getTopics } from "@/services/question/topicService";
+import { TopicProvider, UseCaseProvider } from "@/context/TopicProvider";
+
 
 export default function QuestionMainView() {
     return (
@@ -18,26 +18,26 @@ export default function QuestionMainView() {
 }
 
 function AdminPage() {
-    const [loading, setLoading] = useState<boolean>(true);
+    // const [loading, setLoading] = useState<boolean>(true);
     const [activeMain, setToggle] = useState<boolean>(true);
-    const { setTopics } = useTopics();
+    // const { setTopics } = useTopics();
 
-    useEffect(() => {
-        const fetchTopics = async () => {
-            const topics = await getTopics();
+    // useEffect(() => {
+    //     const fetchTopics = async () => {
+    //         const topics = await getTopics();
 
-            //get all topics
-            if (topics != null) {
-                setTopics(topics);
-            }
-            setLoading(false);
-        };
-        fetchTopics();
-    }, []);
+    //         //get all topics
+    //         if (topics != null) {
+    //             setTopics(topics);
+    //         }
+    //         setLoading(false);
+    //     };
+    //     fetchTopics();
+    // }, []);
 
-    if (loading) {
-        return <div>Loading</div>;
-    }
+    // if (loading) {
+    //     return <div>Loading</div>;
+    // }
     return activeMain === true ? (
         <Admin toggler={setToggle} />
     ) : (

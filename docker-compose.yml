@@ -157,22 +157,45 @@ services:
       - matching-redis-network
 
   # Questions Service
+  # questions-service:
+  #   build: ./backend/services/questionService
+  #   container_name: questions-service
+  #   env_file:
+  #     - ./backend/services/questionService/.env
+  #   environment:
+  #     - DB_HOST=questions-db
+  #   ports:
+  #     - "3005:3005"
+  #   depends_on:
+  #     questions-db:
+  #       condition: service_started
+  #     cloudsql-proxy:
+  #       condition: service_started
+  #   networks:
+  #     - gateway-network
+  #     - questions-db-network
+  #   restart: unless-stopped
+
   questions-service:
     build: ./backend/services/questionService
     container_name: questions-service
     env_file:
       - ./backend/services/questionService/.env
     environment:
-      - DB_HOST=questions-db
+      - DB_HOST=cloudsql-proxy   # <- must point to the proxy
+      - DB_PORT=5432
+      - DB_USER=cs3219
+      - DB_PASSWORD=Arcanum123!
+      - DB_NAME=postgres
     ports:
       - "3005:3005"
     depends_on:
-      questions-db:
-        condition: service_started
+      - cloudsql-proxy
     networks:
       - gateway-network
       - questions-db-network
     restart: unless-stopped
+
 
   questions-db:
     image: postgres:16-alpine
@@ -203,6 +226,21 @@ services:
       - questions-db-network
     restart: unless-stopped
 
+  cloudsql-proxy:
+    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.8.0
+    command:
+      - "--address=0.0.0.0"
+      - "--port=5432"
+      - "cs3219-491608:asia-southeast1:questions-db"
+    volumes:
+      - ./gcp-key.json:/secrets/gcp-key.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+    networks:
+      - questions-db-network
+    # ports:
+    #   - "5432:5432"
+      
   # Collaboration Service
   collaboration-service:
     build: ./backend/services/collaborationService

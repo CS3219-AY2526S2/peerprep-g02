@@ -14,15 +14,13 @@ export const getTopics = async (): Promise<TopicMap | null> => {
 
         const data = await res.json();
         if (!data || !data.body) return null;
-        console.log(data.body);
-        const topics: TopicMap = data.body.reduce((mapping: TopicMap, item: any) => {
+        const topics: TopicMap = data.body.reduce((mapping: TopicMap, item: TopicInfo) => {
             if (mapping == null) mapping = {};
-            mapping[item.tid] = item.topic;
+            if (item.tid !== null) mapping[item.tid] = item.topic;
             return mapping;
         }, {});
         return topics;
     } catch (e) {
-        console.error(e);
         return null;
     }
 };

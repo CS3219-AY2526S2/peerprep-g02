@@ -14,6 +14,7 @@ import {
     SearchQuestionDatabase,
 } from "../services/questionDatabase";
 import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDatabase";
+import { generateUploadUrl, getSignedImageUrl } from "@/services/questionImage";
 
 const router = Router();
 
@@ -98,6 +99,25 @@ router.get("/topics", async (req, res) => {
     });
 });
 
+router.get("/leetcode", async (req, res) => {
+    const result = await getLeetCodeAuto();
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to retrieve leetcode questions.",
+        });
+    }
+    return res.status(200).json({
+        message: "Get leetcode questions success.",
+        body: result,
+    });
+});
+
+router.get("/image-upload", async (req, res) => {
+  const { file } = req.query;
+  const url = await getSignedImageUrl(file as string);
+  res.json({ url });
+});
 
 // --- ADMIN ONLY ROUTES (Middleware applied here) ---
 
@@ -151,7 +171,6 @@ router.delete("/:id", async (req, res) => {
 
 //Search for matching question in question database
 router.post("/search-database", async (req, res) => {
-    console.log("search the database");
     const result = await SearchQuestionDatabase(req.body.title);
 
     if (!result) {
@@ -183,19 +202,9 @@ router.post("/leetcode", async (req, res) => {
 });
 
 
-router.get("/leetcode", async (req, res) => {
-    const result = await getLeetCodeAuto();
 
-    if (!result) {
-        return res.status(400).json({
-            message: "Unable to retrieve leetcode questions.",
-        });
-    }
-    return res.status(200).json({
-        message: "Get leetcode questions success.",
-        body: result,
-    });
-});
+
+
 
 
 
@@ -257,6 +266,19 @@ router.delete("/topics/:id", async (req, res) => {
     return res.status(200).json({
         message: "Topic successfully deleted from the database.",
     });
+});
+
+// Route to generate signed URL for uploading files
+router.post("/image-upload", async (req, res) => {
+  try {
+
+    const { fileName, contentType } = req.body;
+    const uniqueName = `uploads/${Date.now()}-${fileName}`;
+    const data = await generateUploadUrl(uniqueName, contentType);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate URL" });
+  }
 });
 
 export default router;

@@ -27,12 +27,12 @@ export const API_ENDPOINTS = {
 
     QUESTIONS: {
         BASE: `${QS_PREFIX}/`,
-        TOPICS: `${QS_PREFIX}/topics`,
         POPULAR: `${QS_PREFIX}/popular`,
         GET_ONE: `${QS_PREFIX}/get`,
         LEETCODE: `${QS_PREFIX}/leetcode`,
         SEARCH_DATABASE: `${QS_PREFIX}/search-database`,
         TOPICS: `${QS_PREFIX}/topics`,
+        IMAGE: `${QS_PREFIX}/image-upload`
     },
 
     COLLABORATION: {

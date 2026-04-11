@@ -93,10 +93,10 @@ export async function getLeetCodeAuto() {
         return [];
     }
     const topicNames: string[] = topics.rows.map((row: any) => row.topic);
-    console.log(topicNames);
+
 
     for (const topic of topicNames) {
-        console.log(topic);
+
         const result = await getLeetCodeTotal(topic);
         if (result.total < total) {
             return result.questions;

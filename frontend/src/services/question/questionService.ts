@@ -75,6 +75,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
             difficulty: data.difficulty,
             testCase: cases,
             description: data.description,
+            qnImage: data.qnImage
         };
     } catch {
         return null;
@@ -191,3 +192,40 @@ export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => 
         return null;
     }
 };
+
+
+export const imageUpload = async (file: File | null) => {
+    if (!file) return;
+
+    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.IMAGE, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType: file.type,
+      }),
+    });
+
+    const { uploadUrl, filePath } = await res.json();
+
+    await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type,
+      },
+      body: file,
+    });
+
+    console.log("File uploaded successfully!");
+    console.log("File accessible at:", `https://storage.googleapis.com/${filePath}`);
+    return filePath;
+  };
+
+export const getImage = async() => {
+    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.IMAGE + "?file=1775759499047-test-image-upload.png");
+    const { url } = await res.json();
+    console.log(url);
+    return url;
+}

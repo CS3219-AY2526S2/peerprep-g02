@@ -19,7 +19,7 @@ export function QuestionSearch(props: QuestionSearchProp) {
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
     ) => {
         const { value } = e.target;
-        console.log("???");
+
         if (value !== "" && !/[a-zA-Z ]/.test(value.charAt(value.length - 1))) return;
         updateSearcString(value);
     };

@@ -12,6 +12,9 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+import { Dialog, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
+
 import {
     Field,
     FieldDescription,
@@ -41,8 +44,10 @@ import {
     deleteQuestion,
     editQuestion,
     getQuestion,
+    imageUpload,
 } from "@/services/question/questionService";
-import { useTopics, useUseCase } from "@/services/question/TopicProvider";
+import { useTopics, useUseCase } from "@/context/TopicProvider";
+import { Spinner } from "../ui/spinner";
 
 interface ITestCase {
     input: string;
@@ -61,6 +66,7 @@ function TestCases(info: ITestCase) {
                     </FieldLabel>
 
                     <Textarea
+                        required={true}
                         id="input"
                         name="input"
                         placeholder="[0,1,2]"
@@ -78,6 +84,7 @@ function TestCases(info: ITestCase) {
                     </FieldLabel>
 
                     <Textarea
+                        required={true}
                         id="output"
                         name="output"
                         placeholder="3"
@@ -219,6 +226,8 @@ interface FormProp {
 }
 
 function QuestionForm(props: FormProp): JSX.Element {
+    const [file, setFile] = useState<File | null>(null);
+    const allowedFileTypes = ["image/jpeg", "image/png"];
     const { useCase } = useUseCase();
     const [openConfirm, setOpenConfirm] = useState<boolean>(false);
     const [formData, setFormData] = useState<FormData>({
@@ -231,6 +240,9 @@ function QuestionForm(props: FormProp): JSX.Element {
     });
 
     const [loading, setLoading] = useState(true);
+    const [isUploading, setUploading] = useState(false);
+
+    const [imageError, setImageError] = useState<String>("");
 
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -257,6 +269,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                     difficulty: newQuestions.difficulty as Difficulty,
                     qnTopics: newQuestions.topics,
                     testCase: newQuestions.testCase,
+                    qnImage: newQuestions.qnImage
                 }));
                 DelayedDifficultyUpdate(newQuestions.difficulty);
             }
@@ -294,21 +307,49 @@ function QuestionForm(props: FormProp): JSX.Element {
         DelayedPageUpdate();
         return;
     }
-    function handleSubmit() {
+
+    function submitData() {
+        if (
+            formData.qnTopics.length == 0 ||
+            formData.testCase.length == 0 ||
+            (file !== null && file.size > 1024 * 1024)
+        ) {
+            return;
+        }
+        setUploading(true);
+        handleSubmit();
+    }
+    async function handleSubmit() {
+        let finalFormData: FormData = { ...formData };
+
+        if (file !== null) {
+            const result = await imageUpload(file);
+            if (result == undefined) {
+                console.log("SHOW ERROR");
+                return;
+            }
+
+            finalFormData.qnImage = result;
+        } else {
+            finalFormData.qnImage = null;
+        }
+        console.log(finalFormData);
         if (useCase == null) {
             //create
-            const data = JSON.stringify(formData);
-            createQuestion(data);
+            const data = JSON.stringify(finalFormData);
+            const feedback = await createQuestion(data);
+            console.log(feedback);
+            DelayedPageUpdate();
         } else {
             //edit
             const data = JSON.stringify({
                 quid: useCase,
-                ...formData,
+                ...finalFormData,
             });
-            editQuestion(data);
+            const feedback = await editQuestion(data);
+            console.log(feedback);
+            DelayedPageUpdate();
         }
-
-        DelayedPageUpdate();
     }
 
     const handleInputChange = (
@@ -347,8 +388,46 @@ function QuestionForm(props: FormProp): JSX.Element {
         }));
     };
 
+    const setImage = (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => {
+        const image = e.target.files?.[0];
+        if (image == undefined) return;
+
+        if (!allowedFileTypes.includes(image.type)) {
+            (document.getElementById("questionFile") as HTMLInputElement).value = "";
+            setImageError("Error: File not supported. Only png and jpg are accepted.");
+            return;
+        }
+
+        if (image.size > 1024 * 1024) {
+            (document.getElementById("questionFile") as HTMLInputElement).value = "";
+            setImageError("Error: File size exceeded maximum size allowed.");
+            return;
+        }
+        setFile(image || null);
+        setImageError("");
+    };
+
+    const removeImage = () => {
+        setFile(null);
+        (document.getElementById("questionFile") as HTMLInputElement).value = "";
+        setImageError("");
+    };
+
+    // const handleUpload = async () => {
+    //     const result = await imageUpload(file);
+    // };
+
     return (
         <div className="flex w-screen h-screen pt-8 flex-col">
+            <Dialog open={isUploading} onOpenChange={setUploading}>
+                <DialogOverlay>
+                    <DialogContent className="[&>button]:hidden flex flex-col items-center bg-white">
+                        <DialogTitle>Saving changes, please wait...</DialogTitle>
+                        <Spinner className="size-6" />
+                    </DialogContent>
+                </DialogOverlay>
+            </Dialog>
+
             <header className="flex justify-between h-[10vh] px-[3%]">
                 <button
                     onClick={() => props.toggler(true)}
@@ -357,7 +436,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                     Back to questions
                 </button>
             </header>
-            <form action={handleSubmit} className="m-8">
+            <form action={submitData} className="m-8">
                 <FieldGroup>
                     <div className="ml-8 my-3">
                         <h2 className="font-bold text-3xl">Create New Question</h2>
@@ -371,6 +450,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                                 Question Title
                             </FieldLabel>
                             <Textarea
+                                required={true}
                                 id="qnTitile"
                                 name="qnTitle"
                                 className="border-2 border-grey-200 placeholder:text-grey-400"
@@ -389,6 +469,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                                 Question Description
                             </FieldLabel>
                             <Textarea
+                                required={true}
                                 id="qnDesc"
                                 name="qnDesc"
                                 className="border-2 border-grey-200 placeholder:text-grey-400"
@@ -433,13 +514,36 @@ function QuestionForm(props: FormProp): JSX.Element {
                             <FieldLabel htmlFor="file" className="font-bold">
                                 Supporting Diagram
                             </FieldLabel>
-                            <Input
-                                id="questionFile"
-                                name="questionFile"
-                                type="file"
-                                className="border-2 border-grey-200 rounded-lg"
-                            />
-                            <FieldDescription>Select a file to upload.</FieldDescription>
+                            {formData.qnImage && <img src={formData.qnImage} alt="question" />}
+                            <div className="flex">
+                                <Input
+                                    id="questionFile"
+                                    name="questionFile"
+                                    type="file"
+                                    className="border-2 border-grey-200 rounded-lg"
+                                    onChange={(e) => setImage(e)}
+                                />
+                                <Button
+                                    type="button"
+                                    className="bg-transparent text-red-500 text-lg"
+                                    style={{ display: file == null ? "none" : "inline" }}
+                                    onClick={() => removeImage()}
+                                >
+                                    x
+                                </Button>
+                            </div>
+
+                            <FieldDescription>
+                                Select a file to upload. Please note that only png and jpeg are
+                                accepted with a maximum file size allowed of 1MB.
+                            </FieldDescription>
+                            <FieldDescription
+                                style={{
+                                    color: "red",
+                                }}
+                            >
+                                {imageError}
+                            </FieldDescription>
                         </Field>
                     </BorderedDiv>
 

@@ -97,4 +97,8 @@ router.post("/select", async (req, res) => {
     });
 });
 
+router.post("/update-popularity", async(req, res) => {
+
+})
+
 export default router;

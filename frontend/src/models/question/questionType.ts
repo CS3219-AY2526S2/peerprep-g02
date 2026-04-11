@@ -14,13 +14,14 @@ export type QuestionData = {
     difficulty: string;
     testCase: TestCase[];
     description: string;
+    qnImage: string | null;
 };
 
 export interface FormData {
     qnTitle: string;
     qnDesc: string;
     testCase: TestCase[];
-    qnImage?: File | null;
+    qnImage?: string | null;
     difficulty: Difficulty;
     qnTopics: UUID[];
 }
@@ -53,6 +54,7 @@ export type TopicMap = Record<UUID, string> | null;
 export type TopicContextType = {
     topics: TopicMap;
     setTopics: React.Dispatch<React.SetStateAction<TopicMap>>;
+    refreshTopics: () => Promise<void>;
 };
 
 export type UseCaseContextType = {

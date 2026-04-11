@@ -15,7 +15,7 @@ import {
     getPopularQuestions,
     getQuestions,
 } from "@/services/question/questionService";
-import { useTopics, useUseCase } from "@/services/question/TopicProvider";
+import { useTopics, useUseCase } from "@/context/TopicProvider";
 
 interface QuestionProp {
     toggler: React.Dispatch<React.SetStateAction<boolean>>;
@@ -132,6 +132,7 @@ function Admin(props: AdminProp) {
     const [popularQuestions, setPopularQuestions] = useState<string[]>([]);
     const [leetcodeQuestions, setLeetcodeQuestions] = useState<LeetcodeInfo[]>([]);
     const { topics } = useTopics();
+
     useEffect(() => {
         const fetchQuestions = async () => {
             const newQuestions = await getQuestions();
@@ -152,6 +153,7 @@ function Admin(props: AdminProp) {
             if (leetcode != null) {
                 setLeetcodeQuestions(leetcode);
             }
+
             setLoading(false);
         };
         fetchQuestions();
