@@ -2,13 +2,11 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import {
-    ArrowLeftRight,
     CheckCircle2,
     Clock3,
     Code2,
     LoaderCircle,
     LogOut,
-    MessageSquareText,
     Play,
     Radio,
     Send,
@@ -21,13 +19,14 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
 
 import { useCollaborationSession } from "@/services/collaboration/useCollaborationSession";
+import CollaborationChat from "@/services/message/LiveText";
 
 function formatElapsed(createdAt: string | undefined, now: number): string {
     if (!createdAt) {
@@ -288,7 +287,7 @@ export default function CollaborationSessionView() {
                                                 <span className="font-semibold text-slate-200">
                                                     Output:
                                                 </span>{" "}
-                                                {testRow.output}
+                                                {testRow.actualOutput}
                                             </p>
                                         </CardContent>
                                     </Card>
@@ -564,74 +563,81 @@ export default function CollaborationSessionView() {
                             </div>
 
                             <div className="flex min-h-[320px] flex-col">
-                                <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                                    <div className="flex items-center gap-3">
-                                        <MessageSquareText className="size-5 text-blue-300" />
-                                        <h2 className="text-2xl font-semibold text-white">Chat</h2>
-                                    </div>
-                                    <p className="text-sm text-slate-400">
-                                        Live collaboration shell
-                                    </p>
-                                </div>
-
-                                <div className="flex-1 space-y-4 overflow-auto px-5 py-5">
-                                    {participants.map((participant) => (
-                                        <div
-                                            key={participant.userId}
-                                            className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3"
-                                        >
-                                            <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-sm font-bold text-slate-950">
-                                                {getInitials(participant.userId)}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <p className="truncate font-semibold text-white">
-                                                        {participant.userId}
-                                                    </p>
-                                                    <Badge
-                                                        variant={
-                                                            participant.status === "connected"
-                                                                ? "success"
-                                                                : participant.status ===
-                                                                    "disconnected"
-                                                                  ? "warning"
-                                                                  : "destructive"
-                                                        }
-                                                        className="rounded-full"
-                                                    >
-                                                        {participant.status}
-                                                    </Badge>
-                                                </div>
-                                                <p className="mt-1 text-sm text-slate-400">
-                                                    {participant.connectionCount} active connection
-                                                    {participant.connectionCount === 1 ? "" : "s"}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="border-t border-white/10 px-5 py-4">
-                                    <div className="flex items-end gap-3">
-                                        <Textarea
-                                            disabled
-                                            placeholder="Chat messaging will plug into the collaboration socket next."
-                                            className="min-h-20 border-white/10 bg-white/[0.03] text-slate-100 placeholder:text-slate-500"
-                                        />
-                                        <Button
-                                            size="icon-lg"
-                                            className="rounded-2xl bg-blue-500 text-white hover:bg-blue-400"
-                                            disabled
-                                        >
-                                            <ArrowLeftRight className="size-4 rotate-45" />
-                                        </Button>
-                                    </div>
-                                    <CardDescription className="mt-3 text-slate-500">
-                                        Messaging UI is ready; live chat transport will be wired in
-                                        the next realtime step.
-                                    </CardDescription>
-                                </div>
+                                <CollaborationChat
+                                    collaborationId={collaborationId}
+                                    userId={participants[0].userId}
+                                />
                             </div>
+
+                            {/* // <div className="flex min-h-[320px] flex-col">
+                            //     <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                            //         <div className="flex items-center gap-3">
+                            //             <MessageSquareText className="size-5 text-blue-300" />
+                            //             <h2 className="text-2xl font-semibold text-white">Chat</h2>
+                            //         </div>
+                            //         <p className="text-sm text-slate-400">
+                            //             Live collaboration shell
+                            //         </p>
+                            //     </div>
+
+                            //     <div className="flex-1 space-y-4 overflow-auto px-5 py-5">
+                            //         {participants.map((participant) => (
+                            //             <div
+                            //                 key={participant.userId}
+                            //                 className="flex items-start gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3"
+                            //             >
+                            //                 <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 text-sm font-bold text-slate-950">
+                            //                     {getInitials(participant.userId)}
+                            //                 </div>
+                            //                 <div className="min-w-0 flex-1">
+                            //                     <div className="flex flex-wrap items-center gap-2">
+                            //                         <p className="truncate font-semibold text-white">
+                            //                             {participant.userId}
+                            //                         </p>
+                            //                         <Badge
+                            //                             variant={
+                            //                                 participant.status === "connected"
+                            //                                     ? "success"
+                            //                                     : participant.status ===
+                            //                                         "disconnected"
+                            //                                       ? "warning"
+                            //                                       : "destructive"
+                            //                             }
+                            //                             className="rounded-full"
+                            //                         >
+                            //                             {participant.status}
+                            //                         </Badge>
+                            //                     </div>
+                            //                     <p className="mt-1 text-sm text-slate-400">
+                            //                         {participant.connectionCount} active connection
+                            //                         {participant.connectionCount === 1 ? "" : "s"}
+                            //                     </p>
+                            //                 </div>
+                            //             </div>
+                            //         ))}
+                            //     </div>
+
+                            //     <div className="border-t border-white/10 px-5 py-4">
+                            //         <div className="flex items-end gap-3">
+                            //             <Textarea
+                            //                 disabled
+                            //                 placeholder="Chat messaging will plug into the collaboration socket next."
+                            //                 className="min-h-20 border-white/10 bg-white/[0.03] text-slate-100 placeholder:text-slate-500"
+                            //             />
+                            //             <Button
+                            //                 size="icon-lg"
+                            //                 className="rounded-2xl bg-blue-500 text-white hover:bg-blue-400"
+                            //                 disabled
+                            //             >
+                            //                 <ArrowLeftRight className="size-4 rotate-45" />
+                            //             </Button>
+                            //         </div>
+                            //         <CardDescription className="mt-3 text-slate-500">
+                            //             Messaging UI is ready; live chat transport will be wired in
+                            //             the next realtime step.
+                            //         </CardDescription>
+                            //     </div>
+                            // </div> */}
                         </div>
                     </div>
                 </section>

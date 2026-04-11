@@ -30,6 +30,7 @@ services:
       - questions-service
       - attempts-service
       - collaboration-service
+      - message-service
     networks:
       - gateway-network
     restart: unless-stopped
@@ -299,6 +300,31 @@ services:
       retries: 10
     restart: unless-stopped
 
+
+  # Questions Service
+  message-service:
+    build: ./backend/services/messageService
+    container_name: message-service
+    env_file:
+      - ./backend/services/messageService/.env
+    ports:
+      - "3019:3019"
+    depends_on:
+      message-redis:
+        condition: service_started
+    networks:
+      - gateway-network
+      - message-network
+    restart: unless-stopped
+
+
+  message-redis:
+    image: redis:latest
+    container_name: message-redis
+    restart: unless-stopped
+    networks:
+      - message-network
+
 volumes:
   user_data:
   matching_data:
@@ -318,4 +344,6 @@ networks:
   collaboration-redis-network:
     driver: bridge
   attempts-db-network:
+    driver: bridge
+  message-network:
     driver: bridge
