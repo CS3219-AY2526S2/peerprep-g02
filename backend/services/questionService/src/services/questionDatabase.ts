@@ -2,7 +2,6 @@ import { UUID } from "node:crypto";
 
 import pool from "../database";
 import { deleteImage, getSignedImageUrl } from "./questionImage";
-import { env } from "node:process";
 
 type TestCase = {
     input: string;
@@ -266,7 +265,7 @@ export async function SearchQuestion(
             }
 
         }
-        catch (e) {
+        catch {
             return defaultQuestion[0];
         }
         return defaultQuestion[0];

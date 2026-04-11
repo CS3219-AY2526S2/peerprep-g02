@@ -10,12 +10,12 @@ import { Button } from "@/components/ui/button";
 
 import { Difficulty, LeetcodeInfo, QuestionInfo } from "@/models/question/questionType";
 
+import { useTopics, useUseCase } from "@/context/useTopic";
 import {
     getLeetcodeQuestions,
     getPopularQuestions,
     getQuestions,
 } from "@/services/question/questionService";
-import { useTopics, useUseCase } from "@/context/TopicProvider";
 
 interface QuestionProp {
     toggler: React.Dispatch<React.SetStateAction<boolean>>;

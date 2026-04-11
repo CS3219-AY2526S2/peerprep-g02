@@ -12,9 +12,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
 import { Dialog, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
-
 import {
     Field,
     FieldDescription,
@@ -37,8 +35,10 @@ import { Difficulty, FormData } from "../../models/question/questionType";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Spinner } from "../ui/spinner";
 
 import { BorderedDiv } from "./QuestionComponents";
+import { useTopics, useUseCase } from "@/context/useTopic";
 import {
     createQuestion,
     deleteQuestion,
@@ -46,8 +46,6 @@ import {
     getQuestion,
     imageUpload,
 } from "@/services/question/questionService";
-import { useTopics, useUseCase } from "@/context/TopicProvider";
-import { Spinner } from "../ui/spinner";
 
 interface ITestCase {
     input: string;
@@ -128,7 +126,7 @@ export function TopicSearch(props: SearchFieldProps) {
         setTopicPool(topicIds);
         updateSearchSpace(Object.keys(topicIds));
         setResults(Object.values(topics));
-    }, []);
+    }, [topics]);
 
     const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -242,7 +240,16 @@ function QuestionForm(props: FormProp): JSX.Element {
     const [loading, setLoading] = useState(true);
     const [isUploading, setUploading] = useState(false);
 
-    const [imageError, setImageError] = useState<String>("");
+    const [imageError, setImageError] = useState<string>("");
+
+    function DelayedDifficultyUpdate(difficulty: string) {
+        const timer = setTimeout(() => {
+            const selectDifficulty = document.getElementById("difficulty") as HTMLSelectElement;
+            selectDifficulty.value = difficulty;
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }
 
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -269,7 +276,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                     difficulty: newQuestions.difficulty as Difficulty,
                     qnTopics: newQuestions.topics,
                     testCase: newQuestions.testCase,
-                    qnImage: newQuestions.qnImage
+                    qnImage: newQuestions.qnImage,
                 }));
                 DelayedDifficultyUpdate(newQuestions.difficulty);
             }
@@ -277,18 +284,9 @@ function QuestionForm(props: FormProp): JSX.Element {
             setLoading(false);
         };
         fetchQuestions();
-    }, []);
+    }, [useCase]);
     if (loading) {
         return <div></div>;
-    }
-
-    function DelayedDifficultyUpdate(difficulty: string) {
-        const timer = setTimeout(() => {
-            const selectDifficulty = document.getElementById("difficulty") as HTMLSelectElement;
-            selectDifficulty.value = difficulty;
-        }, 500);
-
-        return () => clearTimeout(timer);
     }
 
     function DelayedPageUpdate() {
@@ -320,12 +318,11 @@ function QuestionForm(props: FormProp): JSX.Element {
         handleSubmit();
     }
     async function handleSubmit() {
-        let finalFormData: FormData = { ...formData };
+        const finalFormData: FormData = { ...formData };
 
         if (file !== null) {
             const result = await imageUpload(file);
             if (result == undefined) {
-                console.log("SHOW ERROR");
                 return;
             }
 
@@ -333,13 +330,16 @@ function QuestionForm(props: FormProp): JSX.Element {
         } else {
             finalFormData.qnImage = null;
         }
-        console.log(finalFormData);
+
         if (useCase == null) {
             //create
             const data = JSON.stringify(finalFormData);
             const feedback = await createQuestion(data);
-            console.log(feedback);
-            DelayedPageUpdate();
+            if (feedback == 200) {
+                DelayedPageUpdate();
+            } else {
+                setUploading(false);
+            }
         } else {
             //edit
             const data = JSON.stringify({
@@ -347,8 +347,11 @@ function QuestionForm(props: FormProp): JSX.Element {
                 ...finalFormData,
             });
             const feedback = await editQuestion(data);
-            console.log(feedback);
-            DelayedPageUpdate();
+            if (feedback == 200) {
+                DelayedPageUpdate();
+            } else {
+                setUploading(false);
+            }
         }
     }
 

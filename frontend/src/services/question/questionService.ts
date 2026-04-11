@@ -2,7 +2,13 @@ import { UUID } from "node:crypto";
 
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { apiFetch } from "@/utils/apiClient";
-import { LeetcodeInfo, QuestionData, QuestionInfo, TestCase } from "@/models/question/questionType";
+import {
+    LeetcodeApiItem,
+    LeetcodeInfo,
+    QuestionData,
+    QuestionInfo,
+    TestCase,
+} from "@/models/question/questionType";
 
 export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
     try {
@@ -15,15 +21,14 @@ export const getQuestions = async (): Promise<QuestionInfo[] | null> => {
         const data = await res.json();
         if (!data || !data.body) return null;
 
-        const questions: QuestionInfo[] = data.body.map((item: any) => ({
+        const questions: QuestionInfo[] = data.body.map((item: QuestionInfo) => ({
             quid: item.quid,
             title: item.title,
             topics: item.topics,
             difficulty: item.difficulty,
         }));
         return questions;
-    } catch (e) {
-        console.error(e);
+    } catch {
         return null;
     }
 };
@@ -60,7 +65,6 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
 
         if (!data) return null;
 
-
         const cases: TestCase[] = data.test_case.map(
             (item: { input: unknown; output: unknown }) => ({
                 input: JSON.stringify(item.input).slice(1, -1),
@@ -75,7 +79,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
             difficulty: data.difficulty,
             testCase: cases,
             description: data.description,
-            qnImage: data.qnImage
+            qnImage: data.qnImage,
         };
     } catch {
         return null;
@@ -98,7 +102,7 @@ export const SearchQuestionDatabase = async (title: string): Promise<QuestionInf
 
         if (!data) return null;
 
-        const questions: QuestionInfo[] = data.map((item: any) => ({
+        const questions: QuestionInfo[] = data.map((item: QuestionInfo) => ({
             quid: item.quid,
             title: item.title,
             topics: item.topics,
@@ -106,8 +110,7 @@ export const SearchQuestionDatabase = async (title: string): Promise<QuestionInf
         }));
 
         return questions;
-    } catch (e) {
-        console.error(e);
+    } catch {
         return null;
     }
 };
@@ -140,32 +143,29 @@ export const deleteQuestion = async (id: UUID): Promise<number> => {
     return res.status;
 };
 
-// export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => {
-//     try {
-//         const res = await apiFetch(API_ENDPOINTS.QUESTIONS.LEETCODE, {
-//             method: "POST",
-//             headers: {
-//                 "Content-Type": "application/json",
-//                 "cache-control": "no-cache"
-//             },
-//             body: JSON.stringify({ topic: "String" }),
-//         });
-//         const data = await res.json();
-//         const questions: LeetcodeInfo[] = data.body.map((item: any) => ({
-//             quid: item.quid,
-//             title: item.title,
-//             title_slug: item.titleSlug,
-//             topics: item.topicTags.map((topic: any) => topic.name),
-//             difficulty: item.difficulty,
-//         }));
-//         return questions;
-
-//     } catch (e: any) {
-//         console.log(e);
-//         return null;
-//     }
-
-// }
+export const getLeetcodeQuestionsManual = async (): Promise<LeetcodeInfo[] | null> => {
+    try {
+        const res = await apiFetch(API_ENDPOINTS.QUESTIONS.LEETCODE, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "cache-control": "no-cache",
+            },
+            body: JSON.stringify({ topic: "String" }),
+        });
+        const data = await res.json();
+        const questions: LeetcodeInfo[] = data.body.map((item: LeetcodeApiItem) => ({
+            quid: item.quid,
+            title: item.title,
+            title_slug: item.titleSlug,
+            topics: item.topicTags.map((topic) => topic.name),
+            difficulty: item.difficulty,
+        }));
+        return questions;
+    } catch {
+        return null;
+    }
+};
 
 export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => {
     try {
@@ -177,55 +177,41 @@ export const getLeetcodeQuestions = async (): Promise<LeetcodeInfo[] | null> => 
             },
         });
         const data = await res.json();
-        // console.log(data);
-        // console.log(data.body[0].quid);
-        const questions: LeetcodeInfo[] = data.body.map((item: any) => ({
+        const questions: LeetcodeInfo[] = data.body.map((item: LeetcodeApiItem) => ({
             quid: item.quid,
             title: item.title,
             title_slug: item.titleSlug,
-            topics: item.topicTags.map((topic: {name: string}) => topic.name),
+            topics: item.topicTags.map((topic) => topic.name),
             difficulty: item.difficulty,
         }));
         return questions;
-    } catch (e) {
-        console.log(e);
+    } catch {
         return null;
     }
 };
-
 
 export const imageUpload = async (file: File | null) => {
     if (!file) return;
 
     const res = await apiFetch(API_ENDPOINTS.QUESTIONS.IMAGE, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        fileName: file.name,
-        contentType: file.type,
-      }),
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            fileName: file.name,
+            contentType: file.type,
+        }),
     });
 
     const { uploadUrl, filePath } = await res.json();
 
     await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Type": file.type,
-      },
-      body: file,
+        method: "PUT",
+        headers: {
+            "Content-Type": file.type,
+        },
+        body: file,
     });
-
-    console.log("File uploaded successfully!");
-    console.log("File accessible at:", `https://storage.googleapis.com/${filePath}`);
     return filePath;
-  };
-
-export const getImage = async() => {
-    const res = await apiFetch(API_ENDPOINTS.QUESTIONS.IMAGE + "?file=1775759499047-test-image-upload.png");
-    const { url } = await res.json();
-    console.log(url);
-    return url;
-}
+};

@@ -1,9 +1,6 @@
-// components/CustomDiv.tsx
 import { cn } from "@/lib/utils";
 
-interface CustomDivProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-export function BorderedDiv({ className, ...props }: CustomDivProps) {
+export function BorderedDiv({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
     return (
         <div
             className={cn(

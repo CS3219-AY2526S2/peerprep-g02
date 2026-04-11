@@ -32,7 +32,7 @@ export const API_ENDPOINTS = {
         LEETCODE: `${QS_PREFIX}/leetcode`,
         SEARCH_DATABASE: `${QS_PREFIX}/search-database`,
         TOPICS: `${QS_PREFIX}/topics`,
-        IMAGE: `${QS_PREFIX}/image-upload`
+        IMAGE: `${QS_PREFIX}/image-upload`,
     },
 
     COLLABORATION: {

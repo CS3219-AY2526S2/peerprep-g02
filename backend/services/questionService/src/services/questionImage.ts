@@ -1,5 +1,4 @@
 import { Storage } from "@google-cloud/storage";
-import path from "node:path";
 
 const storage = new Storage({
     keyFilename: process.env.GOOGLE_BUCKET,

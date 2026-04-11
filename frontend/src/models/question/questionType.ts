@@ -66,3 +66,15 @@ export type TopicInfo = {
     tid: UUID | null;
     topic: string;
 };
+
+export type TopicTag = {
+    name: string;
+};
+
+export type LeetcodeApiItem = {
+    quid: number;
+    title: string;
+    titleSlug: string;
+    topicTags: TopicTag[];
+    difficulty: string;
+};

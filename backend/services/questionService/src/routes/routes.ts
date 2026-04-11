@@ -276,7 +276,7 @@ router.post("/image-upload", async (req, res) => {
     const uniqueName = `uploads/${Date.now()}-${fileName}`;
     const data = await generateUploadUrl(uniqueName, contentType);
     res.json(data);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to generate URL" });
   }
 });

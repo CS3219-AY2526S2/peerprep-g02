@@ -20,7 +20,7 @@ export const getTopics = async (): Promise<TopicMap | null> => {
             return mapping;
         }, {});
         return topics;
-    } catch (e) {
+    } catch {
         return null;
     }
 };

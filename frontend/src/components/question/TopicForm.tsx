@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
     Dialog,
-    DialogClose,
     DialogContent,
     DialogDescription,
     DialogHeader,
@@ -27,7 +26,7 @@ import { TopicInfo } from "@/models/question/questionType";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 
-import { useTopics } from "@/context/TopicProvider";
+import { useTopics } from "@/context/useTopic";
 import { createTopic, deleteTopic, editTopic } from "@/services/question/topicService";
 
 export function TopicEdit() {
@@ -79,7 +78,7 @@ export function TopicEdit() {
             createTopic(newTopics);
         }
 
-        refresh()
+        refresh();
     }
 
     function DelayedPageUpdate() {
@@ -137,8 +136,11 @@ export function TopicEdit() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            <Dialog open = {openForm}>
-                <DialogTrigger onClick={() => setOpenForm(true)} className="bg-secondary text-white hover:bg-primary-200 px-3 py-1 rounded-full font-semibold ml-1">
+            <Dialog open={openForm}>
+                <DialogTrigger
+                    onClick={() => setOpenForm(true)}
+                    className="bg-secondary text-white hover:bg-primary-200 px-3 py-1 rounded-full font-semibold ml-1"
+                >
                     Edit
                 </DialogTrigger>
                 <DialogContent
@@ -204,4 +206,3 @@ export function TopicEdit() {
 }
 
 export default TopicEdit;
-
