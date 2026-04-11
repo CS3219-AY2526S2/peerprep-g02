@@ -63,7 +63,6 @@ export async function GetQuestion(quid: UUID) {
         } else {
             return result.rows;
         }
-
     } catch (e) {
         console.log(e);
         return null;
@@ -89,15 +88,21 @@ function parseTestCases(testCases: TestCase[]): string {
 }
 
 export async function CreateQuestion(data: QuestionData) {
-    const insertQuestion =
-        `INSERT INTO questions(title, description,test_case,difficulty, topics, image) 
+    const insertQuestion = `INSERT INTO questions(title, description,test_case,difficulty, topics, image) 
             VALUES($1, $2, $3, $4, $5, $6) 
             RETURNING quid`;
 
     const topics = data.qnTopics.map((topic) => topic as UUID);
 
     const cases = parseTestCases(data.testCase);
-    const insertQuestionValues = [data.qnTitle, data.qnDesc, cases, data.difficulty, topics, data.qnImage];
+    const insertQuestionValues = [
+        data.qnTitle,
+        data.qnDesc,
+        cases,
+        data.difficulty,
+        topics,
+        data.qnImage,
+    ];
     try {
         await pool.query("BEGIN");
         const result = await pool.query(insertQuestion, insertQuestionValues);
@@ -108,10 +113,11 @@ export async function CreateQuestion(data: QuestionData) {
         const quid = result.rows[0].quid;
 
         for (const topicId of topics) {
-            await pool.query(
-                "INSERT INTO qn_topics (quid, tid, difficulty) VALUES ($1, $2, $3)",
-                [quid, topicId, data.difficulty]
-            );
+            await pool.query("INSERT INTO qn_topics (quid, tid, difficulty) VALUES ($1, $2, $3)", [
+                quid,
+                topicId,
+                data.difficulty,
+            ]);
         }
 
         await pool.query("COMMIT");
@@ -123,27 +129,31 @@ export async function CreateQuestion(data: QuestionData) {
     }
 
     return 0;
-
 }
 
 export async function EditQuestion(data: QuestionEdit) {
-
-    const updateQuestion =
-        `UPDATE questions 
+    const updateQuestion = `UPDATE questions 
             SET title = $2, description = $3,test_case = $4, difficulty = $5, topics = $6, image = $7 
             WHERE quid = $1 RETURNING quid`;
     const topics = data.qnTopics.map((topic) => topic as UUID);
 
     const cases = parseTestCases(data.testCase);
-    const updateQuestionValues = [data.quid, data.qnTitle, data.qnDesc, cases, data.difficulty, topics, data.qnImage];
+    const updateQuestionValues = [
+        data.quid,
+        data.qnTitle,
+        data.qnDesc,
+        cases,
+        data.difficulty,
+        topics,
+        data.qnImage,
+    ];
 
     try {
         await pool.query("BEGIN");
         // version check
-        const check = await pool.query(
-            "SELECT version FROM questions WHERE quid = $1",
-            [data.quid]
-        );
+        const check = await pool.query("SELECT version FROM questions WHERE quid = $1", [
+            data.quid,
+        ]);
 
         if (check.rows[0].version !== data.qnVersion) {
             await pool.query("ROLLBACK");
@@ -160,14 +170,12 @@ export async function EditQuestion(data: QuestionEdit) {
             `UPDATE qn_topics 
                 SET difficulty = $1 
                 WHERE quid = $2`,
-            [data.difficulty, data.quid]
+            [data.difficulty, data.quid],
         );
 
         await pool.query("COMMIT");
 
         return result.rowCount;
-
-
     } catch {
         await pool.query("ROLLBACK");
         console.log("Edit failed");
@@ -232,7 +240,7 @@ export async function SearchQuestion(
                         "Content-Type": "application/json",
                         "x-internal-auth": process.env.INTERNAL_SERVICE_API_KEY!,
                     },
-                }
+                },
             );
 
             const userBRes = await fetch(
@@ -243,29 +251,30 @@ export async function SearchQuestion(
                         "Content-Type": "application/json",
                         "x-internal-auth": process.env.INTERNAL_SERVICE_API_KEY!,
                     },
-                }
+                },
             );
 
             const userAData = await userARes.json();
             const userBData = await userBRes.json();
 
-
             const aQuestions: UUID[] = userAData.data.questionIds.map((r: UUID) => r);
             const bQuestions: UUID[] = userBData.data.questionIds.map((r: UUID) => r);
 
             //Get an unattempted question for both users
-            const unattemptedBoth = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) && !bQuestions.includes(qid));
+            const unattemptedBoth = allQuestions.filter(
+                (qid: UUID) => !aQuestions.includes(qid) && !bQuestions.includes(qid),
+            );
             if (unattemptedBoth.length >= 2) {
                 return randomQuestion(unattemptedBoth);
             }
             //Get an unattempted question for either users
-            const unattemptedEither = allQuestions.filter((qid: UUID) => !aQuestions.includes(qid) || !bQuestions.includes(qid));
+            const unattemptedEither = allQuestions.filter(
+                (qid: UUID) => !aQuestions.includes(qid) || !bQuestions.includes(qid),
+            );
             if (unattemptedEither.length >= 1) {
                 return randomQuestion(unattemptedBoth);
             }
-
-        }
-        catch {
+        } catch {
             return defaultQuestion[0];
         }
         return defaultQuestion[0];

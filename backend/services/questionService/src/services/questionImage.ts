@@ -13,16 +13,15 @@ export async function generateUploadUrl(fileName: string, contentType: string) {
     const [url] = await file.getSignedUrl({
         version: "v4",
         action: "write",
-        expires: Date.now() + 5 * 60 * 1000, 
-        contentType, 
+        expires: Date.now() + 5 * 60 * 1000,
+        contentType,
     });
 
     return {
         uploadUrl: url,
-        filePath: fileName, 
+        filePath: fileName,
     };
 }
-
 
 export async function getSignedImageUrl(filename: string) {
     const options = {
@@ -31,10 +30,7 @@ export async function getSignedImageUrl(filename: string) {
         expires: Date.now() + 15 * 60 * 1000,
     };
 
-    const [url] = await storage
-        .bucket("question-image")
-        .file(filename)
-        .getSignedUrl(options);
+    const [url] = await storage.bucket("question-image").file(filename).getSignedUrl(options);
 
     return url;
 }

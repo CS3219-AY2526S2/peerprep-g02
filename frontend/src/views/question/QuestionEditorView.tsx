@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 
 import { UUID } from "crypto";
 
-import { BorderedDiv } from "@/components/question/QuestionComponents";
 import QuestionSearch from "@/components/question/QuestionSearchComponent";
 import TopicEdit from "@/components/question/TopicForm";
 import { Badge } from "@/components/ui/badge";
+import { BorderedDiv } from "@/components/ui/bordered-div";
 import { Button } from "@/components/ui/button";
 
 import { Difficulty, LeetcodeInfo, QuestionInfo } from "@/models/question/questionType";

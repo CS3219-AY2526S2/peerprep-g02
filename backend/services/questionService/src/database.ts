@@ -19,9 +19,8 @@ const pool = new Pool({
     database: process.env.DB_NAME || "postgres",
 });
 
-
 pool.connect()
-  .then(() => console.log('Connected to Cloud SQL'))
-  .catch((err: any) => console.error('DB connection error:', err));
+    .then(() => console.log("Connected to Cloud SQL"))
+    .catch((err: any) => console.error("DB connection error:", err));
 
 export default pool;

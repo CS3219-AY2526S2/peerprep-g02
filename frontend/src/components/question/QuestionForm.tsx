@@ -33,11 +33,11 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { Difficulty, FormData } from "../../models/question/questionType";
 import { Badge } from "../ui/badge";
+import { BorderedDiv } from "../ui/bordered-div";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Spinner } from "../ui/spinner";
 
-import { BorderedDiv } from "./QuestionComponents";
 import { useTopics, useUseCase } from "@/context/useTopic";
 import {
     createQuestion,
@@ -320,14 +320,14 @@ function QuestionForm(props: FormProp): JSX.Element {
     async function handleSubmit() {
         const finalFormData: FormData = { ...formData };
 
-        if (file !== null) {
+        if (file !== null && useCase == null) {
             const result = await imageUpload(file);
             if (result == undefined) {
                 return;
             }
 
             finalFormData.qnImage = result;
-        } else {
+        } else if (useCase == null) {
             finalFormData.qnImage = null;
         }
 

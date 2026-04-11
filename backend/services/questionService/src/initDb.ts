@@ -7,13 +7,11 @@
 
 // const sqlFilePath = path.resolve(__dirname, "../QUDB.sql");
 
-
 // const DB_HOST = process.env.DB_HOST || "questions-db";
 // const DB_PORT = Number(process.env.DB_PORT) || 5435;
 // const DB_USER = process.env.DB_USER || "postgres";
 // const DB_PASSWORD = process.env.DB_PASSWORD || "postgres";
 // const TARGET_DB = process.env.DB_NAME || "questions";
-
 
 // function quoteIdentifier(identifier: string): string {
 //     return `"${identifier.replace(/"/g, '""')}"`;
