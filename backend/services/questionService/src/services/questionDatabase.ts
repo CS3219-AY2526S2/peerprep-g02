@@ -52,13 +52,15 @@ export async function GetPopularQuestions() {
 
 export async function GetQuestion(quid: UUID) {
     try {
-        const result = await pool.query("SELECT * FROM questions WHERE quid = $1", [quid]);
+        const result = await pool.query(
+            "SELECT q.*, ARRAY(SELECT t.topic FROM topics t WHERE t.tid = ANY(q.topics)) AS topics FROM questions q WHERE q.quid = $1",
+            [quid],
+        );
         if (result.rowCount == 0) return null;
 
         const question = result.rows[0];
         if (question.image !== null) {
             const link = await getSignedImageUrl(question.image);
-            console.log([{ ...question, qnImage: link }]);
             return [{ ...question, qnImage: link }];
         } else {
             return result.rows;
@@ -88,11 +90,15 @@ function parseTestCases(testCases: TestCase[]): string {
 }
 
 export async function CreateQuestion(data: QuestionData) {
-    const insertQuestion = `INSERT INTO questions(title, description,test_case,difficulty, topics, image) 
-            VALUES($1, $2, $3, $4, $5, $6) 
+    const insertQuestion = `INSERT INTO questions(title, description,test_case,difficulty, topics, image, function_name)
+            VALUES($1, $2, $3, $4, $5, $6, $7)
             RETURNING quid`;
 
     const topics = data.qnTopics.map((topic) => topic as UUID);
+    const functionName = data.qnTitle
+        .split(/\s+/)
+        .map((word, i) => i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join("");
 
     const cases = parseTestCases(data.testCase);
     const insertQuestionValues = [
@@ -102,6 +108,7 @@ export async function CreateQuestion(data: QuestionData) {
         data.difficulty,
         topics,
         data.qnImage,
+        functionName,
     ];
     try {
         await pool.query("BEGIN");
@@ -219,7 +226,7 @@ export async function SearchQuestion(
     try {
         //Default random question
         const result = await pool.query(
-            "SELECT quid FROM qn_topics WHERE tid = $1 AND difficulty = $2",
+            "SELECT qt.quid FROM qn_topics qt JOIN topics t ON qt.tid = t.tid WHERE t.topic = $1 AND qt.difficulty = $2",
             [topic, difficulty],
         );
         if (result == undefined || result.rows.length == 0) return null;
@@ -238,7 +245,7 @@ export async function SearchQuestion(
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
-                        "x-internal-auth": process.env.INTERNAL_SERVICE_API_KEY!,
+                        "x-internal-service-key": process.env.INTERNAL_SERVICE_API_KEY!,
                     },
                 },
             );
@@ -249,7 +256,7 @@ export async function SearchQuestion(
                     method: "GET",
                     headers: {
                         "Content-Type": "application/json",
-                        "x-internal-auth": process.env.INTERNAL_SERVICE_API_KEY!,
+                        "x-internal-service-key": process.env.INTERNAL_SERVICE_API_KEY!,
                     },
                 },
             );

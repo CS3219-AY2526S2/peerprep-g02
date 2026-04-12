@@ -1,7 +1,7 @@
 import amqp, { type Channel, type ChannelModel } from "amqplib";
 import { Server } from "socket.io";
 
-import type { CreateSessionRequest, CreateSessionResponse } from "@/types/collab.js";
+import type { CreateSessionFailure, CreateSessionRequest, CreateSessionResponse } from "@/types/collab.js";
 import { REQ_QUEUE, RES_QUEUE } from "@/types/rabbitmq.js";
 import { rabbitMQLogger } from "@/utils/logger.js";
 
@@ -92,7 +92,27 @@ export class RabbitMQManager {
             const retryCount = (headers["x-retry-count"] || 0) as number;
 
             try {
-                const response: CreateSessionResponse = JSON.parse(msg.content.toString());
+                const parsed = JSON.parse(msg.content.toString());
+
+                // Handle session creation failure
+                if (parsed.error === true) {
+                    const failure = parsed as CreateSessionFailure;
+                    rabbitMQLogger.warn(
+                        { userAId: failure.userAId, userBId: failure.userBId, message: failure.message },
+                        "Session creation failed, notifying users",
+                    );
+
+                    const errorPayload = {
+                        message: failure.message || "Failed to create collaboration session. Please try matching again.",
+                    };
+                    io.to(failure.userAId).emit("match_error", errorPayload);
+                    io.to(failure.userBId).emit("match_error", errorPayload);
+
+                    ch.ack(msg);
+                    return;
+                }
+
+                const response = parsed as CreateSessionResponse;
 
                 rabbitMQLogger.info(
                     { collaborationId: response.session.collaborationId },

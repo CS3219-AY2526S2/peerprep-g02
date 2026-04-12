@@ -327,6 +327,7 @@ export class RabbitMQManager {
                 { err: error, code: (error as AppError).code },
                 "Non-retryable error, discarding message",
             );
+            this.publishSessionFailure(msg, (error as AppError).message);
             ch.ack(msg);
             return;
         }
@@ -360,7 +361,27 @@ export class RabbitMQManager {
             }
         } else {
             logger.error("Max retries reached. Discarding message.");
+            this.publishSessionFailure(msg, "Session creation failed after maximum retries.");
             ch.nack(msg, false, false);
+        }
+    }
+
+    private publishSessionFailure(msg: amqp.ConsumeMessage, errorMessage: string): void {
+        if (!this.channel) return;
+
+        try {
+            const payload = JSON.parse(msg.content.toString());
+            const { userAId, userBId } = payload;
+            if (!userAId || !userBId) return;
+
+            this.channel.sendToQueue(
+                RES_QUEUE,
+                Buffer.from(JSON.stringify({ error: true, userAId, userBId, message: errorMessage })),
+                { persistent: true },
+            );
+            logger.info({ userAId, userBId }, "Published session failure response");
+        } catch (err) {
+            logger.error({ err }, "Failed to publish session failure response");
         }
     }
 
