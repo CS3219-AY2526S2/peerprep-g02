@@ -12,6 +12,7 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
 - [High-Level Overview](#high-level-overview)
 - [Network Isolation](#network-isolation)
 - [Quick Start](#-quick-start-local-development)
+- [Authentication Architecture](#-authentication-architecture)
 - [Microservices Documentation](#-microservices-documentation)
   - [User Service](#1-user-service)
   - [Matching Service](#2-matching-service)
@@ -20,7 +21,6 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
   - [Execution Service](#5-execution-service)
   - [Attempt Service](#6-attempt-service)
 - [Inter-Service Flows](#-inter-service-flows--integrations)
-- [Authentication Architecture](#-authentication-architecture)
 - [CI/CD Pipeline](#-cicd-pipeline)
 - [Team Members](#-team-members-group-02)
 
@@ -219,6 +219,61 @@ Once running, the following UIs are available:
 | Ngrok Inspector | http://localhost:4040 | Tunnel traffic inspector |
 
 > **Note:** Database seeding and migrations run automatically on startup.
+
+---
+
+## Authentication Architecture
+
+PeerPrep uses [Clerk](https://clerk.com/) as its identity provider with a layered auth strategy.
+
+```
+                       Authentication Flow
+                       ====================
+
+  +----------+     1. Sign in via Clerk      +----------+
+  |          | ----------------------------> |  Clerk   |
+  |  Client  | <---------------------------- | (OAuth)  |
+  |          |     2. Receive JWT token      +----------+
+  +----+-----+
+       |
+       | 3. Every request includes:
+       |    Authorization: Bearer <JWT>
+       v
+  +----+------+
+  |   Nginx   |  Forwards auth headers as-is
+  |  Gateway  |
+  +----+------+
+       |
+       +--------> For HTTP routes:
+       |          Service uses @clerk/express to validate JWT
+       |          Then checks user role (admin, super_user, regular)
+       |
+       +--------> For WebSocket connections:
+                  JWT passed in Socket.IO auth handshake
+                  Service calls User Service internal endpoint:
+                  GET /users/internal/authz/context
+                  (validated via x-internal-service-key header)
+
+  +----------------------------------------------------------------+
+  |                  Internal Service Auth                          |
+  |                                                                |
+  |  Service A  ---[x-internal-service-key: <shared-secret>]--->   |
+  |                                                Service B       |
+  |                                                                |
+  |  Used for: question selection, attempt recording,              |
+  |            code execution, user auth context lookups            |
+  +----------------------------------------------------------------+
+```
+
+### Auth Layers Summary
+
+| Layer | Mechanism | Used By |
+|-------|-----------|---------|
+| Frontend -> Gateway | Clerk JWT in `Authorization` header | All client requests |
+| Gateway -> Service | JWT forwarded, validated by Clerk SDK | HTTP endpoints |
+| Client -> WebSocket | JWT in Socket.IO `auth` object | Matching & Collaboration |
+| Service -> Service | `x-internal-service-key` shared secret | All internal calls |
+| Clerk -> User Service | Webhook signatures | User lifecycle events |
 
 ---
 
@@ -1708,63 +1763,6 @@ This is the complete flow from login to completing a coding session:
   - Messages include x-retry-count header (max 5 retries)
   - Non-retryable errors are discriminated and dead-lettered
 ```
-
----
-
-## Authentication Architecture
-
-PeerPrep uses [Clerk](https://clerk.com/) as its identity provider with a layered auth strategy.
-
-```
-                       Authentication Flow
-                       ====================
-
-  +----------+     1. Sign in via Clerk      +----------+
-  |          | ----------------------------> |  Clerk   |
-  |  Client  | <---------------------------- | (OAuth)  |
-  |          |     2. Receive JWT token      +----------+
-  +----+-----+
-       |
-       | 3. Every request includes:
-       |    Authorization: Bearer <JWT>
-       v
-  +----+------+
-  |   Nginx   |  Forwards auth headers as-is
-  |  Gateway  |
-  +----+------+
-       |
-       +--------> For HTTP routes:
-       |          Service uses @clerk/express to validate JWT
-       |          Then checks user role (admin, super_user, regular)
-       |
-       +--------> For WebSocket connections:
-                  JWT passed in Socket.IO auth handshake
-                  Service calls User Service internal endpoint:
-                  GET /users/internal/authz/context
-                  (validated via x-internal-service-key header)
-
-  +----------------------------------------------------------------+
-  |                  Internal Service Auth                          |
-  |                                                                |
-  |  Service A  ---[x-internal-service-key: <shared-secret>]--->   |
-  |                                                Service B       |
-  |                                                                |
-  |  Used for: question selection, attempt recording,              |
-  |            code execution, user auth context lookups            |
-  +----------------------------------------------------------------+
-```
-
-### Auth Layers Summary
-
-| Layer | Mechanism | Used By |
-|-------|-----------|---------|
-| Frontend -> Gateway | Clerk JWT in `Authorization` header | All client requests |
-| Gateway -> Service | JWT forwarded, validated by Clerk SDK | HTTP endpoints |
-| Client -> WebSocket | JWT in Socket.IO `auth` object | Matching & Collaboration |
-| Service -> Service | `x-internal-service-key` shared secret | All internal calls |
-| Clerk -> User Service | Webhook signatures | User lifecycle events |
-
----
 
 ## CI/CD Pipeline
 
