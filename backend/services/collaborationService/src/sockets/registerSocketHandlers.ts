@@ -2,6 +2,7 @@ import { randomUUID, type UUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
 
 import { ERROR_CODES, SOCKET_EVENTS } from "@/config/constants.js";
+import { AppError } from "@/utils/errors.js";
 import { env } from "@/config/env.js";
 import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import type { OTOperation } from "@/models/session.js";
@@ -31,6 +32,9 @@ type CodeRunPayload = {
 type SocketAck = (response: {
     ok: boolean;
     state?: Awaited<ReturnType<typeof collaborationSessionService.joinSession>>;
+    hints?: Awaited<ReturnType<typeof collaborationSessionService.getHints>>;
+    hintsRemaining?: number;
+    userNames?: Record<string, string>;
     error?: string;
     message?: string;
 }) => void;
@@ -110,8 +114,15 @@ export function registerSocketHandlers(io: Server): void {
 
                     socket.join(collaborationRoom(payload.collaborationId));
 
+                    // Include existing hints and user names in join response
+                    const [hints, hintsRemaining, userNames] = await Promise.all([
+                        collaborationSessionService.getHints(payload.collaborationId),
+                        collaborationSessionService.getHintsRemaining(payload.collaborationId, userId as string),
+                        collaborationSessionService.getUserNames([state.session.userAId, state.session.userBId]),
+                    ]);
+
                     // Send full state to joining user
-                    ack?.({ ok: true, state });
+                    ack?.({ ok: true, state, hints, hintsRemaining, userNames });
 
                     // F4.3.2 - Notify other users in the room that this user joined
                     socket
@@ -247,74 +258,137 @@ export function registerSocketHandlers(io: Server): void {
                     return;
                 }
 
-                const result = await collaborationSessionService.leaveSession(socket.id, userId);
+                try {
+                    const result = await collaborationSessionService.leaveSession(socket.id, userId);
 
-                if (!result) {
+                    if (!result) {
+                        ack?.({ ok: false });
+                        return;
+                    }
+
+                    // Leave the socket room using the authoritative collaborationId from the binding
+                    socket.leave(collaborationRoom(result.collaborationId));
+
+                    if (result.isLastSocket) {
+                        // F4.8.1 - Notify other users that this user left intentionally
+                        io.to(collaborationRoom(result.collaborationId)).emit(
+                            SOCKET_EVENTS.USER_LEFT,
+                            {
+                                collaborationId: result.collaborationId,
+                                userId: result.userId,
+                            },
+                        );
+                    }
+
+                    // Broadcast updated presence
+                    io.to(collaborationRoom(result.collaborationId)).emit(
+                        SOCKET_EVENTS.PRESENCE_UPDATED,
+                        {
+                            collaborationId: result.collaborationId,
+                            participants: result.participants,
+                        },
+                    );
+
+                    // F4.8.2 - If session ended (both left), notify all
+                    if (result.sessionEnded) {
+                        io.to(collaborationRoom(result.collaborationId)).emit(
+                            SOCKET_EVENTS.SESSION_ENDED,
+                            {
+                                collaborationId: result.collaborationId,
+                                reason: "both_users_left",
+                            },
+                        );
+
+                        logger.info(
+                            { collaborationId: result.collaborationId },
+                            "Session ended - both users left",
+                        );
+                    }
+
+                    logger.info(
+                        {
+                            socketId: socket.id,
+                            userId,
+                            collaborationId: result.collaborationId,
+                            sessionEnded: result.sessionEnded,
+                        },
+                        "User intentionally left collaboration session",
+                    );
+
+                    ack?.({ ok: true });
+                } catch (error) {
+                    logger.error(
+                        { err: error, socketId: socket.id, userId, collaborationId: payload.collaborationId },
+                        "Error processing session leave",
+                    );
                     ack?.({ ok: false });
+                }
+            },
+        );
+
+        /**
+         * AI Hints - Request an AI-generated hint (max 2 per user per session).
+         * Calls Gemini API with the question context and current code.
+         * Broadcasts the hint to all users in the room.
+         */
+        socket.on(
+            SOCKET_EVENTS.HINT_REQUEST,
+            async (
+                payload: { collaborationId?: string },
+                ack?: (response: {
+                    ok: boolean;
+                    hints?: Awaited<ReturnType<typeof collaborationSessionService.getHints>>;
+                    hintsRemaining?: number;
+                    error?: string;
+                }) => void,
+            ) => {
+                if (!payload?.collaborationId) {
+                    ack?.({ ok: false, error: "collaborationId is required." });
                     return;
                 }
 
-                // Leave the socket room
-                socket.leave(collaborationRoom(payload.collaborationId));
+                try {
+                    const result = await collaborationSessionService.requestHint(
+                        payload.collaborationId,
+                        userId as string,
+                    );
 
-                // Force-disconnect other tabs of the same user
-                const otherSocketIds = result.removedSocketIds.filter(
-                    (id) => id !== socket.id,
-                );
-                for (const otherSocketId of otherSocketIds) {
-                    const otherSocket = io.sockets.sockets.get(otherSocketId);
-                    if (otherSocket) {
-                        otherSocket.emit(SOCKET_EVENTS.SESSION_ENDED, {
-                            collaborationId: result.collaborationId,
-                            reason: "both_users_left",
-                        });
-                        otherSocket.leave(collaborationRoom(result.collaborationId));
-                        otherSocket.disconnect(true);
-                    }
-                }
+                    ack?.({
+                        ok: true,
+                        hints: result.hints,
+                        hintsRemaining: result.hintsRemaining,
+                    });
 
-                // F4.8.1 - Notify other users that this user left intentionally
-                io.to(collaborationRoom(result.collaborationId)).emit(SOCKET_EVENTS.USER_LEFT, {
-                    collaborationId: result.collaborationId,
-                    userId: result.userId,
-                });
-
-                // Broadcast updated presence
-                io.to(collaborationRoom(result.collaborationId)).emit(
-                    SOCKET_EVENTS.PRESENCE_UPDATED,
-                    {
-                        collaborationId: result.collaborationId,
-                        participants: result.participants,
-                    },
-                );
-
-                // F4.8.2 - If session ended (both left), notify all
-                if (result.sessionEnded) {
-                    io.to(collaborationRoom(result.collaborationId)).emit(
-                        SOCKET_EVENTS.SESSION_ENDED,
+                    // Broadcast updated hints to all users in the room
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.HINT_UPDATED,
                         {
-                            collaborationId: result.collaborationId,
-                            reason: "both_users_left",
+                            collaborationId: payload.collaborationId,
+                            hints: result.hints,
+                            requestedBy: userId,
                         },
                     );
 
                     logger.info(
-                        { collaborationId: result.collaborationId },
-                        "Session ended - both users left",
+                        {
+                            socketId: socket.id,
+                            userId,
+                            collaborationId: payload.collaborationId,
+                            hintsRemaining: result.hintsRemaining,
+                            totalHints: result.hints.length,
+                        },
+                        "AI hint generated",
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof AppError ? error.message : "Failed to generate hint.";
+                    ack?.({ ok: false, error: message });
+
+                    logger.error(
+                        { err: error, collaborationId: payload.collaborationId, userId },
+                        "AI hint request failed",
                     );
                 }
-
-                logger.info(
-                    {
-                        socketId: socket.id,
-                        userId,
-                        collaborationId: result.collaborationId,
-                        sessionEnded: result.sessionEnded,
-                    },
-                    "User intentionally left collaboration session",
-                );
-
-                ack?.({ ok: true });
             },
         );
 

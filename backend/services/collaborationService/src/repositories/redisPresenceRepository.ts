@@ -375,8 +375,20 @@ export class RedisPresenceRepository {
         const presenceKey = KEYS.presence(collaborationId, userId);
         const state = await this.redis.hgetall(presenceKey);
 
-        // First time joining or already connected
-        if (!state.status || state.status === "connected") {
+        // No presence data — either first join or data expired.
+        // Check if the session sockets set exists to distinguish the two cases.
+        if (!state.status) {
+            const socketCount = await this.redis.scard(KEYS.sockets(collaborationId));
+            if (socketCount === 0) {
+                // Presence data expired — do not allow rejoin
+                return { canRejoin: false, disconnectDurationMs: -1, gracePeriodMs };
+            }
+            // Session is live, user is joining for the first time
+            return { canRejoin: true, disconnectDurationMs: 0, gracePeriodMs };
+        }
+
+        // Already connected
+        if (state.status === "connected") {
             return { canRejoin: true, disconnectDurationMs: 0, gracePeriodMs };
         }
 

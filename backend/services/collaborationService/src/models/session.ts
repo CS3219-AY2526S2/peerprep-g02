@@ -20,6 +20,7 @@ export type CreateSessionRequest = {
 export type UserValidationRecord = {
     userId: UUID;
     status: "active" | "inactive" | "suspended" | "deleted" | "unknown";
+    name?: string | null;
 };
 
 export type SelectedQuestion = {
