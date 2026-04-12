@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useUser } from "@clerk/clerk-react";
@@ -24,9 +24,17 @@ export function MatchingView() {
     const { isLoaded, user } = useUser();
 
     const { topics: topicMap } = useTopics();
-    const topicOptions = topicMap ? Object.values(topicMap) : [];
+    const topicOptions = useMemo(() => {
+        return topicMap ? Object.values(topicMap) : [];
+    }, [topicMap]);
 
-    const [topics, setTopics] = useState<string[]>([]);
+    const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+    const topics = useMemo(() => {
+        if (selectedTopics.length > 0) return selectedTopics;
+        if (topicOptions.length > 0) return [topicOptions[0]];
+        return [];
+    }, [selectedTopics, topicOptions]);
+
     const [languages, setLanguages] = useState<Language[]>([LANGUAGE_OPTIONS[0]]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
@@ -67,12 +75,6 @@ export function MatchingView() {
             );
         }
     }, [isLoaded, user]);
-
-    useEffect(() => {
-        if (topicOptions.length > 0 && topics.length === 0) {
-            setTopics([topicOptions[0]]);
-        }
-    }, [topicOptions, topics.length]);
 
     const handleNavigation = (id: string) => {
         startTransition(() => {
@@ -116,7 +118,7 @@ export function MatchingView() {
                         topicOptions={topicOptions}
                         languageOptions={LANGUAGE_OPTIONS}
                         topics={topics}
-                        setTopics={setTopics}
+                        setTopics={setSelectedTopics}
                         userScore={userScore}
                         languages={languages}
                         setLanguages={setLanguages}
