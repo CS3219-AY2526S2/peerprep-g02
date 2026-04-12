@@ -5,9 +5,7 @@ import QuestionForm from "@/components/question/QuestionForm";
 import Admin from "@/views/question/QuestionEditorView";
 
 export default function QuestionMainView() {
-    return (
-        <AdminPage />
-    );
+    return <AdminPage />;
 }
 
 function AdminPage() {

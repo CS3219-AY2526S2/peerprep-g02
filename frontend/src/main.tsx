@@ -7,10 +7,10 @@ import ToastHost from "@/components/toast/ToastHost";
 
 import "./index.css";
 
-import App from "@/App";
-import { AuthInterceptorProvider } from "@/context/AuthInterceptorProvider";
 import { TopicProvider } from "./context/TopicProvider";
 import { UseCaseProvider } from "./context/UsecaseContext";
+import App from "@/App";
+import { AuthInterceptorProvider } from "@/context/AuthInterceptorProvider";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
