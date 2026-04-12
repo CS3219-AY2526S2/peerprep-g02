@@ -4,16 +4,9 @@ import QuestionForm from "@/components/question/QuestionForm";
 
 import Admin from "@/views/question/QuestionEditorView";
 
-import { TopicProvider } from "@/context/TopicProvider";
-import { UseCaseProvider } from "@/context/UsecaseContext";
-
 export default function QuestionMainView() {
     return (
-        <TopicProvider>
-            <UseCaseProvider>
-                <AdminPage />
-            </UseCaseProvider>
-        </TopicProvider>
+        <AdminPage />
     );
 }
 

@@ -9,6 +9,8 @@ import "./index.css";
 
 import App from "@/App";
 import { AuthInterceptorProvider } from "@/context/AuthInterceptorProvider";
+import { TopicProvider } from "./context/TopicProvider";
+import { UseCaseProvider } from "./context/UsecaseContext";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -20,8 +22,12 @@ createRoot(document.getElementById("root")!).render(
     <StrictMode>
         <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/account/login">
             <AuthInterceptorProvider>
-                <App />
-                <ToastHost />
+                <TopicProvider>
+                    <UseCaseProvider>
+                        <App />
+                        <ToastHost />
+                    </UseCaseProvider>
+                </TopicProvider>
             </AuthInterceptorProvider>
         </ClerkProvider>
     </StrictMode>,
