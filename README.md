@@ -634,35 +634,48 @@ The `match_preparing` payload includes `partnerId` so the frontend can show who 
 The score range is widened by the **client**, not by a server-side timer:
 
 ```
-  Client Timer                         Server (Matching Service)
-  ============                         ========================
+Client (Frontend)                         Server (Matching Service)
+  ================                         ========================
       |                                        |
-      | join_queue {scoreRange: 0,             |
-      |   isUpdate: false}                     |
-      +--------------------------------------->|  attemptRejoin (guard)
-      |                                        |  then FIND_MATCH
+      | T=0s: join_queue {range: 0,            |
+      |   diff: ["Easy"], isUpdate: false}     |
+      +--------------------------------------->| 1. attemptRejoin (guard)
+      |                                        | 2. FIND_MATCH (Exact, "Easy")
       |        match_waiting                   |
       |<---------------------------------------+
       |                                        |
-      | (5 seconds pass...)                    |
+      | (12s: Tier 1 - Expand Range)           |
       |                                        |
-      | join_queue {scoreRange: 50,            |
-      |   isUpdate: true}                      |
-      +--------------------------------------->|  skip attemptRejoin
-      |                                        |  (isUpdate=true)
-      |                                        |  FIND_MATCH with wider
-      |                                        |  range, re-enqueue
-      |        match_waiting                   |
+      | join_queue {range: 50,                 |
+      |   diff: ["Easy"], isUpdate: true}      |
+      +--------------------------------------->| 3. FIND_MATCH (±50, "Easy")
       |<---------------------------------------+
       |                                        |
-      | (10 seconds pass...)                   |
+      | (24s: Tier 2 - Max Range)              |
       |                                        |
-      | join_queue {scoreRange: 100,           |
-      |   isUpdate: true}                      |
-      +--------------------------------------->|  FIND_MATCH with even
-      |                                        |  wider range
-      |        match_preparing!                |
+      | join_queue {range: 100,                |
+      |   diff: ["Easy"], isUpdate: true}      |
+      +--------------------------------------->| 4. FIND_MATCH (±100, "Easy")
       |<---------------------------------------+
+      |                                        |
+      | (36s: Tier 3 - Adjacent Difficulty)    |
+      |                                        |
+      | join_queue {range: 150,                |
+      |   diff: ["Easy", "Medium"], isUpd: T}  |
+      +--------------------------------------->| 5. FIND_MATCH (±150, "Easy"|"Med")
+      |<---------------------------------------+
+      |                                        |
+      | (48s: Tier 4 - Full Relaxation)        |
+      |                                        |
+      | join_queue {range: 200,                |
+      |   diff: ["E", "M", "H"], isUpd: T}     |
+      +--------------------------------------->| 6. FIND_MATCH (±200, Any Diff)
+      |<---------------------------------------+
+      |                                        |
+      | (60s: Max Timeout)                     |
+      |                                        |
+      |          cancelSearch()                | (Cleanup Redis & inform user)
+      +--------------------------------------->|
 
   - isUpdate: false --> attemptRejoin runs first (prevent duplicate entry)
   - isUpdate: true  --> skip attemptRejoin, go straight to FIND_MATCH
@@ -795,49 +808,6 @@ Socket connections are authenticated via the User Service before any events are 
 2. Forward to User Service at `GET /users/internal/authz/context` with the JWT and `x-internal-service-key`
 3. Reject if: no token, User Service returns non-OK, or `status !== "active"`
 4. Store `socket.data.userId` and `socket.data.role` for use in handlers
-
-#### Matchmaking Sequence
-
-```mermaid
-sequenceDiagram
-    participant C1 as Client A
-    participant C2 as Client B
-    participant MS as Matching Service
-    participant R as Redis (Lua Scripts)
-    participant RMQ as RabbitMQ
-    participant Collab as Collaboration Service
-
-    C1->>MS: Connect (WebSocket) + JWT
-    MS-->>C1: Verify Auth & Accept Connection
-    C1->>MS: Emit join_queue (Java, Easy, Arrays)
-    
-    MS->>R: Execute FIND_MATCH_LUA
-    R-->>MS: Return enqueued
-    MS-->>C1: Emit match_waiting
-
-    C2->>MS: Connect (WebSocket) + JWT
-    C2->>MS: Emit join_queue (Java, Easy, Arrays)
-    
-    MS->>R: Execute FIND_MATCH_LUA
-    Note over R: Atomic Lua execution checks Queue Set & User Hashes
-    R-->>MS: Return matched (Client A & B)
-    
-    par Notify Microservices
-        MS->>RMQ: Publish match_created (User A, User B, MatchId)
-        RMQ->>Collab: Initialize Workspace
-    and Notify Clients
-        MS-->>C1: Emit match_preparing (MatchId)
-        MS-->>C2: Emit match_preparing (MatchId)
-    end
-```
-
-#### Design Considerations
-
-- **Atomicity via Lua Scripts** -- All four matchmaking operations (find, rejoin, disconnect, cancel) are atomic Lua scripts. No partial state is ever visible to concurrent operations.
-- **Horizontal Scalability** -- All state resides in Redis, allowing stateless WebSocket servers across instances. Socket.IO rooms group all tabs for a user, and all emits use `io.to(userId)`.
-- **Lazy Cleanup** -- No background workers are needed. Expired disconnected users are cleaned up opportunistically by the next FIND_MATCH that encounters them. This simplifies the architecture at the cost of briefly stale queue entries.
-- **FIFO with Score Gating** -- Sorted sets use timestamps as scores for FIFO ordering, while the Lua script applies an additional `|seekerScore - candScore| <= seekerRange` check to filter by skill proximity.
-- **Client-Driven Relaxation** -- The server is purely reactive. Widening decisions and timing are the client's responsibility via `isUpdate: true` re-submissions, keeping the server stateless and simple.
 
 ---
 
