@@ -1,5 +1,7 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/HpD0QZBI)
+
 # CS3219 Project (PeerPrep) - AY2526S2
+
 ## Group: G02
 
 PeerPrep is a real-time collaborative platform designed to help students ace their technical interviews. By matching users based on their proficiency, preferred programming language, and topic, PeerPrep provides an isolated, synchronized workspace to solve algorithmic challenges together.
@@ -18,8 +20,12 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
 ## Table of Contents
 
 - [System Architecture](#system-architecture)
+- [System Architecture](#system-architecture)
 - [High-Level Overview](#high-level-overview)
 - [Network Isolation](#network-isolation)
+- [Quick Start](#quick-start-local-development)
+- [Authentication Architecture](#authentication-architecture)
+- [Microservices Documentation](#microservices-documentation)
 - [Quick Start](#quick-start-local-development)
 - [Authentication Architecture](#authentication-architecture)
 - [Microservices Documentation](#microservices-documentation)
@@ -59,7 +65,7 @@ The system follows a **microservices architecture** with an Nginx API gateway, t
              | Routes requests by URL prefix:
              |
              | /v1/api/us/*    /v1/api/ms/*    /v1/api/qs/*    /v1/api/cs/*    /v1/api/as/*
-             |                                  
+             |
     +--------+--------+-----------+-----------+-----------+
     |        |        |           |           |           |
     v        v        v           v           v           v
@@ -184,6 +190,7 @@ Docker Compose defines **7 isolated bridge networks** to enforce strict service 
 ## Quick Start (Local Development)
 
 ### Prerequisites
+
 - Docker and Docker Compose
 - Node.js (v18+)
 - A [Clerk](https://clerk.com/) account (for authentication)
@@ -217,14 +224,14 @@ docker-compose up --build
 
 Once running, the following UIs are available:
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| Frontend | http://localhost:5173 | PeerPrep web application |
-| API Gateway | http://localhost:8080 | Nginx reverse proxy |
+| Service             | URL                    | Description                            |
+| ------------------- | ---------------------- | -------------------------------------- |
+| Frontend            | http://localhost:5173  | PeerPrep web application               |
+| API Gateway         | http://localhost:8080  | Nginx reverse proxy                    |
 | RabbitMQ Management | http://localhost:15672 | Message broker dashboard (guest/guest) |
-| pgAdmin | http://localhost:5050 | PostgreSQL admin GUI |
-| Dozzle | http://localhost:8888 | Real-time Docker log viewer |
-| Ngrok Inspector | http://localhost:4040 | Tunnel traffic inspector |
+| pgAdmin             | http://localhost:5050  | PostgreSQL admin GUI                   |
+| Dozzle              | http://localhost:8888  | Real-time Docker log viewer            |
+| Ngrok Inspector     | http://localhost:4040  | Tunnel traffic inspector               |
 
 > **Note:** Database seeding and migrations run automatically on startup.
 
@@ -275,13 +282,13 @@ PeerPrep uses [Clerk](https://clerk.com/) as its identity provider with a layere
 
 ### Auth Layers Summary
 
-| Layer | Mechanism | Used By |
-|-------|-----------|---------|
-| Frontend -> Gateway | Clerk JWT in `Authorization` header | All client requests |
-| Gateway -> Service | JWT forwarded, validated by Clerk SDK | HTTP endpoints |
-| Client -> WebSocket | JWT in Socket.IO `auth` object | Matching & Collaboration |
-| Service -> Service | `x-internal-service-key` shared secret | All internal calls |
-| Clerk -> User Service | Webhook signatures | User lifecycle events |
+| Layer                 | Mechanism                              | Used By                  |
+| --------------------- | -------------------------------------- | ------------------------ |
+| Frontend -> Gateway   | Clerk JWT in `Authorization` header    | All client requests      |
+| Gateway -> Service    | JWT forwarded, validated by Clerk SDK  | HTTP endpoints           |
+| Client -> WebSocket   | JWT in Socket.IO `auth` object         | Matching & Collaboration |
+| Service -> Service    | `x-internal-service-key` shared secret | All internal calls       |
+| Clerk -> User Service | Webhook signatures                     | User lifecycle events    |
 
 ---
 
@@ -292,6 +299,7 @@ PeerPrep uses [Clerk](https://clerk.com/) as its identity provider with a layere
 Manages user accounts, roles, and authentication. Acts as the **centralized auth authority** for the entire system -- no other service validates JWTs directly; they all delegate to the User Service.
 
 #### Tech Stack
+
 - **Runtime:** Node.js / TypeScript
 - **Framework:** Express 4
 - **Database:** PostgreSQL 16
@@ -301,17 +309,17 @@ Manages user accounts, roles, and authentication. Acts as the **centralized auth
 
 #### API Routes
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/users/me` | User | Get or bootstrap current user |
-| `DELETE` | `/users/me` | User | Delete own account (from Clerk + local DB) |
-| `GET` | `/users/admin/users` | Admin | List all users with emails from Clerk |
-| `PATCH` | `/users/admin/users/:id/role` | Admin | Promote/demote user (audit logged) |
-| `PATCH` | `/users/admin/users/:id/status` | Admin | Suspend/unsuspend user (synced to Clerk) |
-| `POST` | `/users/webhooks/clerk` | Webhook | Clerk lifecycle events (Svix-verified) |
-| `GET` | `/users/internal/authz/context` | Internal | Auth context for other services |
-| `POST` | `/users/internal/validation/batch` | Internal | Batch validate user statuses |
-| `POST` | `/users/internal/deltas` | Internal | Apply score changes (transactional) |
+| Method   | Endpoint                           | Auth     | Description                                |
+| -------- | ---------------------------------- | -------- | ------------------------------------------ |
+| `GET`    | `/users/me`                        | User     | Get or bootstrap current user              |
+| `DELETE` | `/users/me`                        | User     | Delete own account (from Clerk + local DB) |
+| `GET`    | `/users/admin/users`               | Admin    | List all users with emails from Clerk      |
+| `PATCH`  | `/users/admin/users/:id/role`      | Admin    | Promote/demote user (audit logged)         |
+| `PATCH`  | `/users/admin/users/:id/status`    | Admin    | Suspend/unsuspend user (synced to Clerk)   |
+| `POST`   | `/users/webhooks/clerk`            | Webhook  | Clerk lifecycle events (Svix-verified)     |
+| `GET`    | `/users/internal/authz/context`    | Internal | Auth context for other services            |
+| `POST`   | `/users/internal/validation/batch` | Internal | Batch validate user statuses               |
+| `POST`   | `/users/internal/deltas`           | Internal | Apply score changes (transactional)        |
 
 #### JWT Authentication Flow
 
@@ -413,10 +421,10 @@ Clerk sends webhook events when user accounts change. The webhook route is mount
 
 #### Roles and Access Control
 
-| Role | Permissions | Assignment |
-|------|-------------|------------|
-| `user` | Access own profile, join matchmaking, collaborate | Default on sign-up |
-| `admin` | All user permissions + manage users and questions | Promoted by super_user or another admin |
+| Role         | Permissions                                          | Assignment                                       |
+| ------------ | ---------------------------------------------------- | ------------------------------------------------ |
+| `user`       | Access own profile, join matchmaking, collaborate    | Default on sign-up                               |
+| `admin`      | All user permissions + manage users and questions    | Promoted by super_user or another admin          |
 | `super_user` | All admin permissions, cannot be modified or deleted | Seeded during migration via `CLERK_SUPERUSER_ID` |
 
 The `super_user` role acts as a safeguard -- exactly one super_user exists, seeded at migration time. They cannot be deleted, suspended, or have their role changed through the API.
@@ -426,6 +434,7 @@ When an admin **suspends** a user, the service also calls `clerkClient.users.ban
 #### Account Deletion
 
 When a user deletes their account via `DELETE /users/me`:
+
 1. Verifies the user is not the `super_user` (rejects with 403)
 2. Deletes the user from **Clerk** first (`clerkClient.users.deleteUser()`)
 3. Soft-deletes locally by setting `status = 'deleted'`
@@ -469,6 +478,7 @@ When a user deletes their account via `DELETE /users/me`:
 Pairs users in real-time based on selected topics, difficulties, and programming languages. Uses WebSockets for bidirectional communication and Redis with atomic Lua scripts for concurrency-safe matchmaking. Matching is a **two-phase notification** -- users are told immediately when a match is found (`match_preparing`), then again when the collaboration workspace is ready (`match_success`).
 
 #### Tech Stack
+
 - **Runtime:** Node.js / TypeScript
 - **Framework:** Express 5
 - **Communication:** Socket.IO (WebSockets)
@@ -481,20 +491,22 @@ Pairs users in real-time based on selected topics, difficulties, and programming
 All matchmaking state is centralized in Redis (no in-process memory) so that multiple Matching Service instances can be run behind a load balancer.
 
 **Queue Sorted Sets** (`mm:q:{topic}:{difficulty}:{language}`)
+
 - Type: Sorted Set (ZSET)
 - Score: Entry timestamp (ms) for FIFO ordering
 - Member: Seeker's Redis key (`mm:us:{userId}`)
 
 **Seeker Hash** (`mm:us:{userId}`)
+
 - Type: Hash (HSET)
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | String | `READY` or `DISCONNECTED` |
-| `last_seen` | Timestamp (ms) | Last time status was updated |
+| Field        | Type           | Description                                              |
+| ------------ | -------------- | -------------------------------------------------------- |
+| `status`     | String         | `READY` or `DISCONNECTED`                                |
+| `last_seen`  | Timestamp (ms) | Last time status was updated                             |
 | `start_time` | Timestamp (ms) | Original queue entry time (preserved across re-enqueues) |
-| `queues` | JSON array | Queue keys this user is currently in |
-| `score` | Number | User's skill score for range-based matching |
+| `queues`     | JSON array     | Queue keys this user is currently in                     |
+| `score`      | Number         | User's skill score for range-based matching              |
 
 A single user can be a member of **multiple queues simultaneously** (one per topic/difficulty/language combination selected in the matchmaking form).
 
@@ -502,21 +514,21 @@ A single user can be a member of **multiple queues simultaneously** (one per top
 
 **Client -> Server:**
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `join_queue` | `{ topics[], difficulties[], languages[], userScore, scoreRange, isUpdate? }` | Enter matchmaking (validated by Zod) |
-| `cancel_queue` | -- | Leave all matchmaking queues |
-| `disconnect` | -- | Built-in Socket.IO event (tab close, network loss) |
+| Event          | Payload                                                                       | Description                                        |
+| -------------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
+| `join_queue`   | `{ topics[], difficulties[], languages[], userScore, scoreRange, isUpdate? }` | Enter matchmaking (validated by Zod)               |
+| `cancel_queue` | --                                                                            | Leave all matchmaking queues                       |
+| `disconnect`   | --                                                                            | Built-in Socket.IO event (tab close, network loss) |
 
 **Server -> Client:**
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `match_waiting` | `{ matchFound: false, startTime }` | User is queued, searching for a partner |
-| `match_preparing` | `{ matchFound: true, matchId, partnerId, topic, difficulty, language }` | Match found, workspace being created (immediate) |
-| `match_success` | `{ matchFound: true, collaborationId, matchId, topic, difficulty, language }` | Workspace ready, navigate to collaboration page (async, via RabbitMQ) |
-| `match_cancelled` | -- | Queue exit confirmed |
-| `match_error` | `{ message }` | Validation failure, cancel failure, or unexpected error |
+| Event             | Payload                                                                       | Description                                                           |
+| ----------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `match_waiting`   | `{ matchFound: false, startTime }`                                            | User is queued, searching for a partner                               |
+| `match_preparing` | `{ matchFound: true, matchId, partnerId, topic, difficulty, language }`       | Match found, workspace being created (immediate)                      |
+| `match_success`   | `{ matchFound: true, collaborationId, matchId, topic, difficulty, language }` | Workspace ready, navigate to collaboration page (async, via RabbitMQ) |
+| `match_cancelled` | --                                                                            | Queue exit confirmed                                                  |
+| `match_error`     | `{ message }`                                                                 | Validation failure, cancel failure, or unexpected error               |
 
 #### Request Validation (Zod)
 
@@ -824,6 +836,7 @@ Socket connections are authenticated via the User Service before any events are 
 Provides CRUD operations for coding questions and topics. Supports LeetCode question import for content management. Serves as the question bank for the entire platform, with internal endpoints consumed by the Collaboration Service during session creation.
 
 #### Tech Stack
+
 - **Runtime:** Node.js / TypeScript
 - **Framework:** Express 5
 - **Database:** Google Cloud SQL (PostgreSQL) in production, local PostgreSQL 16 in development
@@ -887,10 +900,11 @@ In local development, Docker Compose overrides `DB_HOST=questions-db` to point a
 **Design choice:** Topics are stored both as a UUID array on the `questions` table (for fast reads) and in the `qn_topics` join table (for indexed queries by topic + difficulty). The join table has a composite index on `(tid, difficulty)` to optimize question selection during matchmaking.
 
 **Test cases** are stored as a JSON array on each question:
+
 ```json
 [
   { "input": [[1, 3, -1, -3, 5, 3, 6, 7], 3], "output": [3, 3, 5, 5, 6, 7] },
-  { "input": [{"val": 2, "left": {"val": 1}}, 1], "output": true }
+  { "input": [{ "val": 2, "left": { "val": 1 } }, 1], "output": true }
 ]
 ```
 
@@ -898,22 +912,22 @@ The `function_name` field (e.g., `"twoSum"`, `"isValidBST"`) tells the Execution
 
 #### API Routes
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/` | Public | List all questions |
-| `GET` | `/popular` | Public | Get popular questions (by score) |
-| `POST` | `/get` | Public | Get a single question by ID |
-| `POST` | `/search` | Public | Search by topic + difficulty |
-| `GET` | `/topics` | Public | List all topics |
-| `POST` | `/` | Admin | Create a question |
-| `PUT` | `/` | Admin | Edit a question |
-| `DELETE` | `/:id` | Admin | Delete a question |
-| `POST` | `/leetcode` | Admin | Fetch questions from LeetCode GraphQL API |
-| `POST` | `/topics` | Admin | Create a topic |
-| `PUT` | `/topics` | Admin | Edit a topic |
-| `DELETE` | `/topics/:id` | Admin | Delete a topic |
-| `POST` | `/internal/select` | Internal | Select a random question for a match |
-| `POST` | `/internal/get` | Internal | Get full question details (with test cases) |
+| Method   | Endpoint           | Auth     | Description                                 |
+| -------- | ------------------ | -------- | ------------------------------------------- |
+| `GET`    | `/`                | Public   | List all questions                          |
+| `GET`    | `/popular`         | Public   | Get popular questions (by score)            |
+| `POST`   | `/get`             | Public   | Get a single question by ID                 |
+| `POST`   | `/search`          | Public   | Search by topic + difficulty                |
+| `GET`    | `/topics`          | Public   | List all topics                             |
+| `POST`   | `/`                | Admin    | Create a question                           |
+| `PUT`    | `/`                | Admin    | Edit a question                             |
+| `DELETE` | `/:id`             | Admin    | Delete a question                           |
+| `POST`   | `/leetcode`        | Admin    | Fetch questions from LeetCode GraphQL API   |
+| `POST`   | `/topics`          | Admin    | Create a topic                              |
+| `PUT`    | `/topics`          | Admin    | Edit a topic                                |
+| `DELETE` | `/topics/:id`      | Admin    | Delete a topic                              |
+| `POST`   | `/internal/select` | Internal | Select a random question for a match        |
+| `POST`   | `/internal/get`    | Internal | Get full question details (with test cases) |
 
 #### Question Selection for Matchmaking
 
@@ -968,6 +982,7 @@ Internal routes (`/internal/*`) are mounted **before** the admin middleware in t
 Manages real-time collaborative coding sessions. This is the most complex service in the system -- it orchestrates real-time code synchronization via Operational Transformation, handles multi-tab connections, manages disconnection/reconnection with grace periods, runs code against test cases, and records attempt history.
 
 #### Tech Stack
+
 - **Runtime:** Node.js / TypeScript
 - **Framework:** Express 4, Socket.IO 4 with Redis adapter
 - **State:** Redis (session data, OT documents, presence tracking, Socket.IO pub/sub)
@@ -1017,6 +1032,7 @@ Manages real-time collaborative coding sessions. This is the most complex servic
 ```
 
 When the OT document is initialized, a **language-specific code template** is generated:
+
 - Python: `class Solution:\n    def twoSum(self):\n        pass`
 - JavaScript/TypeScript: `class Solution {\n    twoSum() {\n    }\n}`
 - Java: `class Solution {\n    public void twoSum() {\n    }\n}`
@@ -1086,6 +1102,7 @@ The Collaboration Service implements **Operational Transformation (OT)** to sync
 ```
 
 **Operation types:**
+
 - `insert` -- Insert text at a position
 - `delete` -- Remove a count of characters from a position
 - `retain` -- No-op (produced when overlapping deletes cancel out)
@@ -1149,12 +1166,14 @@ The service tracks three distinct presence states for each user in a session:
 **Multi-tab support:** A user can have multiple browser tabs open to the same session. Each tab is a separate Socket.IO connection. The `socketCount` field tracks active connections per user. A user is only marked `DISCONNECTED` when **all** their sockets disconnect (count reaches 0).
 
 **Reconnection flow:** When a disconnected user reconnects within the 30-second grace period:
+
 1. The server validates `lastDisconnectTime + 30s > now`
 2. Clears the `lastDisconnectTime`, sets status back to `CONNECTED`
 3. Returns the full authoritative state (code snapshot, revision, participants, question) with `wasDisconnected: true`
 4. Broadcasts `user:joined` with `wasDisconnected: true` to the room
 
 **Intentional leave flow:**
+
 1. User's status is set to `LEFT`, added to the `left:{collabId}` Redis set
 2. The user's `active-session` index is cleared (so they won't see a stale rejoin prompt on the home page)
 3. **All** sockets for this user in this session are forcibly removed (handles multi-tab)
@@ -1225,15 +1244,16 @@ Both operations execute code, but they differ in whether an attempt is recorded:
 
 A session can end in three ways:
 
-| Trigger | Description |
-|---------|-------------|
-| Both users left | One user leaves, then the other also leaves or is disconnected |
-| Inactivity timeout | No code changes for 30 minutes (configurable) |
-| Session TTL | Redis keys expire after 1 hour (configurable) |
+| Trigger            | Description                                                    |
+| ------------------ | -------------------------------------------------------------- |
+| Both users left    | One user leaves, then the other also leaves or is disconnected |
+| Inactivity timeout | No code changes for 30 minutes (configurable)                  |
+| Session TTL        | Redis keys expire after 1 hour (configurable)                  |
 
 The **inactivity sweeper** runs every 60 seconds with a Redis distributed lock (`SET NX PX`), ensuring only one server instance runs the check when scaling horizontally. It scans all active sessions and ends any that have been idle beyond the timeout.
 
 When a session ends, the service:
+
 1. Fetches the final code and revision from the OT document
 2. Marks the session as `inactive`
 3. Deletes all session data from Redis (session hash, presence, OT document, output)
@@ -1243,62 +1263,63 @@ When a session ends, the service:
 
 **Client -> Server:**
 
-| Event | Payload | Description |
-|-------|---------|-------------|
-| `session:check-active` | -- | Check if user has a session to rejoin |
-| `session:join` | `{ collaborationId }` | Join a room; returns full session state |
-| `code:change` | `{ collaborationId, revision, operations[] }` | Send OT operations |
-| `session:leave` | `{ collaborationId }` | Intentionally leave (permanent) |
-| `code:run` | `{ collaborationId }` | Execute code (no attempt recorded) |
-| `code:submit` | `{ collaborationId }` | Execute code + record attempt |
-| `hint:request` | `{ collaborationId }` | Request an AI-generated hint |
+| Event                  | Payload                                       | Description                             |
+| ---------------------- | --------------------------------------------- | --------------------------------------- |
+| `session:check-active` | --                                            | Check if user has a session to rejoin   |
+| `session:join`         | `{ collaborationId }`                         | Join a room; returns full session state |
+| `code:change`          | `{ collaborationId, revision, operations[] }` | Send OT operations                      |
+| `session:leave`        | `{ collaborationId }`                         | Intentionally leave (permanent)         |
+| `code:run`             | `{ collaborationId }`                         | Execute code (no attempt recorded)      |
+| `code:submit`          | `{ collaborationId }`                         | Execute code + record attempt           |
+| `hint:request`         | `{ collaborationId }`                         | Request an AI-generated hint            |
 
 **Server -> Client:**
 
-| Event | Payload | Scope | Description |
-|-------|---------|-------|-------------|
-| `connection:ready` | `{ userId }` | Sender only | Auth confirmed |
-| `user:joined` | `{ userId, wasDisconnected }` | Room (excl. sender) | User joined/reconnected |
-| `presence:updated` | `{ participants[] }` | Room (all) | Updated presence for all users |
-| `code:change` | `{ userId, revision, operations[] }` | Room (excl. sender) | Broadcast OT operations |
-| `code:sync` | `{ code, revision }` | Sender only | Full doc sync (fallback) |
-| `user:disconnected` | `{ userId, reason }` | Room (all) | User's last connection dropped |
-| `user:left` | `{ userId }` | Room (all) | User intentionally left |
-| `session:ended` | `{ reason }` | Room (all) | Session terminated |
-| `code:running` | -- | Room (all) | Code execution in progress |
-| `output:updated` | `{ output }` | Room (all) | Execution results |
-| `submission:complete` | `{ success, testCasesPassed }` | Submitter only | Attempt recorded |
-| `hint:updated` | `{ collaborationId, hints[], requestedBy }` | Room (all) | New AI hint available |
+| Event                 | Payload                                     | Scope               | Description                    |
+| --------------------- | ------------------------------------------- | ------------------- | ------------------------------ |
+| `connection:ready`    | `{ userId }`                                | Sender only         | Auth confirmed                 |
+| `user:joined`         | `{ userId, wasDisconnected }`               | Room (excl. sender) | User joined/reconnected        |
+| `presence:updated`    | `{ participants[] }`                        | Room (all)          | Updated presence for all users |
+| `code:change`         | `{ userId, revision, operations[] }`        | Room (excl. sender) | Broadcast OT operations        |
+| `code:sync`           | `{ code, revision }`                        | Sender only         | Full doc sync (fallback)       |
+| `user:disconnected`   | `{ userId, reason }`                        | Room (all)          | User's last connection dropped |
+| `user:left`           | `{ userId }`                                | Room (all)          | User intentionally left        |
+| `session:ended`       | `{ reason }`                                | Room (all)          | Session terminated             |
+| `code:running`        | --                                          | Room (all)          | Code execution in progress     |
+| `output:updated`      | `{ output }`                                | Room (all)          | Execution results              |
+| `submission:complete` | `{ success, testCasesPassed }`              | Submitter only      | Attempt recorded               |
+| `hint:updated`        | `{ collaborationId, hints[], requestedBy }` | Room (all)          | New AI hint available          |
 
 #### Session Configuration
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Session TTL | 1 hour | TTL on all Redis keys for a session |
-| Disconnect grace period | 30 seconds | Window for reconnection after disconnect |
-| Inactivity timeout | 30 minutes | Time without code changes before session ends |
-| Inactivity check interval | 60 seconds | How often the sweeper runs |
-| Heartbeat interval | 25 seconds | Socket.IO ping interval |
-| Heartbeat timeout | 20 seconds | Socket.IO pong timeout (disconnect if exceeded) |
-| Execution timeout | 60 seconds | Max time for code execution requests |
-| OT max history | 50 operations | Capped operation history for transforms |
-| OT max retries | 5 | CAS retry limit for concurrent writes |
+| Setting                   | Default       | Description                                     |
+| ------------------------- | ------------- | ----------------------------------------------- |
+| Session TTL               | 1 hour        | TTL on all Redis keys for a session             |
+| Disconnect grace period   | 30 seconds    | Window for reconnection after disconnect        |
+| Inactivity timeout        | 30 minutes    | Time without code changes before session ends   |
+| Inactivity check interval | 60 seconds    | How often the sweeper runs                      |
+| Heartbeat interval        | 25 seconds    | Socket.IO ping interval                         |
+| Heartbeat timeout         | 20 seconds    | Socket.IO pong timeout (disconnect if exceeded) |
+| Execution timeout         | 60 seconds    | Max time for code execution requests            |
+| OT max history            | 50 operations | Capped operation history for transforms         |
+| OT max retries            | 5             | CAS retry limit for concurrent writes           |
 
 #### Internal Dependencies
 
-| Dependency | Purpose |
-|------------|---------|
-| User Service | Validate user identity on WebSocket connection |
-| Question Service | Select and retrieve coding questions for sessions |
-| Execution Service | Run submitted code in a sandbox |
-| Attempt Service | Record coding attempt results |
-| Google Gemini API | Generate context-aware AI hints (2.5 Flash) |
-| RabbitMQ | Receive session creation requests, publish responses |
-| Redis | Session state, OT documents, presence, hints, Socket.IO adapter |
+| Dependency        | Purpose                                                         |
+| ----------------- | --------------------------------------------------------------- |
+| User Service      | Validate user identity on WebSocket connection                  |
+| Question Service  | Select and retrieve coding questions for sessions               |
+| Execution Service | Run submitted code in a sandbox                                 |
+| Attempt Service   | Record coding attempt results                                   |
+| Google Gemini API | Generate context-aware AI hints (2.5 Flash)                     |
+| RabbitMQ          | Receive session creation requests, publish responses            |
+| Redis             | Session state, OT documents, presence, hints, Socket.IO adapter |
 
 #### Horizontal Scaling Design
 
 The service is built for multi-instance deployment:
+
 - **Socket.IO Redis adapter** synchronizes events across instances via Redis pub/sub
 - **OT atomic updates** use a Redis Lua compare-and-swap script to prevent race conditions
 - **Inactivity sweeper** uses a Redis distributed lock so only one instance runs the check
@@ -1358,6 +1379,7 @@ The Collaboration Service integrates with **Google Gemini 2.5 Flash** to provide
 ```
 
 **Prompt design:** The hint prompt has two modes:
+
 - **Code written** -- Analyzes the user's current code for bugs, logical errors, or missing edge cases
 - **No code yet** -- Suggests algorithms, data structures, or techniques to approach the problem
 
@@ -1367,10 +1389,10 @@ The prompt explicitly instructs Gemini to **never provide full solutions or comp
 
 **Redis data:**
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `hints:{collaborationId}` | List | All hints for the session (JSON objects) |
-| `hints:count:{collaborationId}:{userId}` | String (counter) | Number of hints used by this user |
+| Key                                      | Type             | Description                              |
+| ---------------------------------------- | ---------------- | ---------------------------------------- |
+| `hints:{collaborationId}`                | List             | All hints for the session (JSON objects) |
+| `hints:count:{collaborationId}:{userId}` | String (counter) | Number of hints used by this user        |
 
 ---
 
@@ -1379,6 +1401,7 @@ The prompt explicitly instructs Gemini to **never provide full solutions or comp
 A sandboxed code execution adapter that wraps the [Piston](https://github.com/engineer-man/piston) engine. It receives user code and test cases from the Collaboration Service, wraps the code in a **language-specific test harness**, runs everything in a single Piston process, and returns per-test-case results.
 
 #### Tech Stack
+
 - **Runtime:** Node.js / TypeScript
 - **Framework:** Express 4
 - **Execution Engine:** Piston (self-hosted, sandboxed)
@@ -1386,23 +1409,24 @@ A sandboxed code execution adapter that wraps the [Piston](https://github.com/en
 
 #### Supported Languages
 
-| Language | Piston Runtime | Version |
-|----------|---------------|---------|
-| Python | `python` | 3.10.0 |
-| JavaScript | `node` | 18.15.0 |
-| TypeScript | `typescript` | 5.0.3 |
-| Java | `java` | 15.0.2 |
+| Language   | Piston Runtime | Version |
+| ---------- | -------------- | ------- |
+| Python     | `python`       | 3.10.0  |
+| JavaScript | `node`         | 18.15.0 |
+| TypeScript | `typescript`   | 5.0.3   |
+| Java       | `java`         | 15.0.2  |
 
 Runtimes are **auto-installed** on first startup. The service retries connecting to Piston up to 15 times (3s apart, ~45s total), then fires concurrent install requests for any missing runtimes (10-minute timeout each). The HTTP server is available immediately while runtimes install in the background.
 
 #### API
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
+| Method | Endpoint   | Auth     | Description                     |
+| ------ | ---------- | -------- | ------------------------------- |
 | `POST` | `/execute` | Internal | Execute code against test cases |
-| `GET` | `/health` | None | Health check |
+| `GET`  | `/health`  | None     | Health check                    |
 
 **Request payload:**
+
 ```
 {
   code: string           // User's source code
@@ -1415,6 +1439,7 @@ Runtimes are **auto-installed** on first startup. The service retries connecting
 ```
 
 **Response payload:**
+
 ```
 {
   results: [
@@ -1518,25 +1543,25 @@ Each language gets a wrapper that resolves the user's function, iterates over te
 
 The service detects and reports several categories of failure:
 
-| Failure | How Detected | Reported As |
-|---------|-------------|-------------|
-| Compilation error | `compile.code !== 0` | `"Compilation error: <stderr>"` for all test cases |
-| Time limit exceeded | `run.signal === "SIGKILL"` and no "memory" in stderr | `"Time limit exceeded"` for all test cases |
-| Memory limit exceeded | `run.signal === "SIGKILL"` and "memory" in stderr | `"Memory limit exceeded"` for all test cases |
-| Runtime exception | Per-test-case `error` in harness output | Error message from the exception |
-| Function not found | Harness resolution fails | `"Method <name> not found"` or reference error |
-| Unparseable output | stdout is not valid JSON | `stderr` or `"Runtime error"` for all test cases |
+| Failure               | How Detected                                         | Reported As                                        |
+| --------------------- | ---------------------------------------------------- | -------------------------------------------------- |
+| Compilation error     | `compile.code !== 0`                                 | `"Compilation error: <stderr>"` for all test cases |
+| Time limit exceeded   | `run.signal === "SIGKILL"` and no "memory" in stderr | `"Time limit exceeded"` for all test cases         |
+| Memory limit exceeded | `run.signal === "SIGKILL"` and "memory" in stderr    | `"Memory limit exceeded"` for all test cases       |
+| Runtime exception     | Per-test-case `error` in harness output              | Error message from the exception                   |
+| Function not found    | Harness resolution fails                             | `"Method <name> not found"` or reference error     |
+| Unparseable output    | stdout is not valid JSON                             | `stderr` or `"Runtime error"` for all test cases   |
 
 #### Sandbox Limits
 
-| Parameter | Default | Configurable |
-|-----------|---------|-------------|
-| Run timeout | 10 seconds | `PISTON_RUN_TIMEOUT` |
-| Memory limit | 128 MB | `PISTON_RUN_MEMORY_LIMIT` |
-| Compile timeout | 15 seconds | Hardcoded |
-| Request body limit | 1 MB | Hardcoded |
-| Max output | 64 KB | Piston container env |
-| Networking | Disabled | Piston container env |
+| Parameter          | Default    | Configurable              |
+| ------------------ | ---------- | ------------------------- |
+| Run timeout        | 10 seconds | `PISTON_RUN_TIMEOUT`      |
+| Memory limit       | 128 MB     | `PISTON_RUN_MEMORY_LIMIT` |
+| Compile timeout    | 15 seconds | Hardcoded                 |
+| Request body limit | 1 MB       | Hardcoded                 |
+| Max output         | 64 KB      | Piston container env      |
+| Networking         | Disabled   | Piston container env      |
 
 ---
 
@@ -1545,6 +1570,7 @@ The service detects and reports several categories of failure:
 Records and retrieves user coding attempt history. Called internally by the Collaboration Service when a user submits code, and exposes a user-facing endpoint for viewing past attempts. Integrates with the User Service to **update proficiency scores** based on attempt outcomes.
 
 #### Tech Stack
+
 - **Runtime:** Node.js / TypeScript
 - **Framework:** Express 4
 - **Database:** PostgreSQL 16
@@ -1552,11 +1578,11 @@ Records and retrieves user coding attempt history. Called internally by the Coll
 
 #### API Routes
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/attempts/me` | User (JWT) | Get current user's attempt history (newest first) |
-| `POST` | `/attempts/` | Internal | Record a new attempt + update user score |
-| `GET` | `/attempts/users/:id/questions` | Internal | List distinct question IDs attempted by a user |
+| Method | Endpoint                        | Auth       | Description                                       |
+| ------ | ------------------------------- | ---------- | ------------------------------------------------- |
+| `GET`  | `/attempts/me`                  | User (JWT) | Get current user's attempt history (newest first) |
+| `POST` | `/attempts/`                    | Internal   | Record a new attempt + update user score          |
+| `GET`  | `/attempts/users/:id/questions` | Internal   | List distinct question IDs attempted by a user    |
 
 #### How Attempts Are Recorded
 
@@ -1747,6 +1773,7 @@ This is the complete flow from login to completing a coding session:
 GitHub Actions workflows run on every push and pull request to `main`:
 
 ### Backend (`backend.yml`)
+
 - **Node.js 24**
 - Runs lint + tests for:
   - User Service
@@ -1756,10 +1783,12 @@ GitHub Actions workflows run on every push and pull request to `main`:
   - Attempt Service
 
 ### Frontend (`frontend.yml`)
+
 - **Node.js 25**
 - Runs lint checks
 
 ### Code Quality
+
 - **Linting:** ESLint
 - **Formatting:** Prettier
 - **Testing:** Vitest (unit and integration tests)
