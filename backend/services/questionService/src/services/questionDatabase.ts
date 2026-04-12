@@ -50,7 +50,13 @@ export async function GetPopularQuestions() {
 
 export async function GetQuestion(quid: UUID) {
     try {
-        const result = await pool.query("SELECT * FROM questions WHERE quid = $1", [quid]);
+        const result = await pool.query(
+            `SELECT q.*,
+                    ARRAY(SELECT t.topic FROM topics t WHERE t.tid = ANY(q.topics)) AS topic_names
+             FROM questions q
+             WHERE q.quid = $1`,
+            [quid],
+        );
         return result.rows;
     } catch (e) {
         console.log(e);
@@ -58,11 +64,29 @@ export async function GetQuestion(quid: UUID) {
     }
 }
 
+function safeJsonParse(value: string): unknown {
+    try {
+        return JSON.parse(value);
+    } catch {
+        // If parsing fails, fall back to the original string to avoid throwing.
+        return value;
+    }
+}
+
+function parseTestCases(testCases: TestCase[]): string {
+    return JSON.stringify(
+        testCases.map((tc) => ({
+            input: typeof tc.input === "string" ? safeJsonParse(tc.input) : tc.input,
+            output: typeof tc.output === "string" ? safeJsonParse(tc.output) : tc.output,
+        })),
+    );
+}
+
 export async function CreateQuestion(data: QuestionData) {
     const insert =
         "INSERT INTO questions(title, description,test_case,difficulty, topics) VALUES($1, $2, $3, $4, $5) RETURNING quid";
     const topics = data.qnTopics.split(",");
-    const cases = JSON.stringify(data.testCase);
+    const cases = parseTestCases(data.testCase);
     const values = [data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
     try {
         await pool.query(insert, values);
@@ -77,7 +101,7 @@ export async function EditQuestion(data: QuestionEdit) {
     const update =
         "UPDATE questions SET title = $2, description = $3,test_case = $4, difficulty = $5, topics = $6  WHERE quid = $1 RETURNING quid";
     const topics = data.qnTopics.split(",");
-    const cases = JSON.stringify(data.testCase);
+    const cases = parseTestCases(data.testCase);
 
     const values = [data.quid, data.qnTitle, data.qnDesc, cases, data.difficulty, topics];
     try {

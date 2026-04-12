@@ -27,6 +27,8 @@ export const ERROR_CODES = {
     SESSION_CAPACITY_REACHED: "SESSION_CAPACITY_REACHED",
     INVALID_JOIN_REQUEST: "INVALID_JOIN_REQUEST",
     REJOIN_GRACE_PERIOD_EXPIRED: "REJOIN_GRACE_PERIOD_EXPIRED",
+    HINT_LIMIT_REACHED: "HINT_LIMIT_REACHED",
+    HINT_GENERATION_FAILED: "HINT_GENERATION_FAILED",
 } as const;
 
 export const DEFAULTS = {
@@ -41,6 +43,22 @@ export const DEFAULTS = {
     HEARTBEAT_TIMEOUT_MS: 20 * 1000, // Socket.IO pingTimeout
     SESSION_INACTIVITY_TIMEOUT_MS: 30 * 60 * 1000, // 30 minutes inactivity timeout
     INACTIVITY_CHECK_INTERVAL_MS: 60 * 1000, // Check every minute
+    MAX_HINTS_PER_USER: 2, // Maximum AI hints per user per session
+} as const;
+
+export const NON_RETRYABLE_ERROR_CODES: Set<string> = new Set([
+    ERROR_CODES.ACTIVE_SESSION_CONFLICT,
+    ERROR_CODES.USER_VALIDATION_FAILED,
+    ERROR_CODES.QUESTION_NOT_FOUND,
+    ERROR_CODES.INVALID_SESSION_REQUEST,
+]);
+
+export const RABBITMQ_DEFAULTS = {
+    MAX_RETRIES: 5,
+    RECONNECT_DELAY_MS: 5000,
+    PREFETCH_COUNT: 1,
+    /** Base delay for exponential backoff on retries (delay = base * 2^retryCount). */
+    RETRY_BASE_DELAY_MS: 2000,
 } as const;
 
 export const SOCKET_EVENTS = {
@@ -51,6 +69,7 @@ export const SOCKET_EVENTS = {
     SESSION_JOIN: "session:join",
     SESSION_LEAVE: "session:leave",
     SESSION_ENDED: "session:ended",
+    SESSION_CHECK_ACTIVE: "session:check-active",
 
     // Presence events
     PRESENCE_UPDATED: "presence:updated",
@@ -73,4 +92,8 @@ export const SOCKET_EVENTS = {
 
     // Submission events
     SUBMISSION_COMPLETE: "submission:complete",
+
+    // AI hint events
+    HINT_REQUEST: "hint:request",
+    HINT_UPDATED: "hint:updated",
 } as const;

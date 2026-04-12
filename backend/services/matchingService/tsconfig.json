@@ -22,6 +22,7 @@
         "verbatimModuleSyntax": true,
         "moduleDetection": "force",
         "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
         "forceConsistentCasingInFileNames": true,
 
         "sourceMap": true,

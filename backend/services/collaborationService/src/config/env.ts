@@ -67,4 +67,6 @@ export const env = {
         trimTrailingSlash(process.env.CS_EXECUTION_SERVICE_URL) ?? "http://execution-service:3006",
     attemptServiceUrl:
         trimTrailingSlash(process.env.CS_ATTEMPT_SERVICE_URL) ?? "http://attempts-service:3004",
+    rabbitmqUrl: process.env.CS_RABBITMQ_URL ?? "amqp://localhost:5672",
+    geminiApiKey: process.env.CS_GEMINI_API_KEY ?? "",
 };

@@ -51,6 +51,7 @@ const KEYS = {
     session: (id: string) => `session:${id}`,
     sessionByPair: (userA: string, userB: string) => `session:pair:${buildPairKey(userA, userB)}`,
     sessionByIdempotency: (key: string) => `session:idempotency:${key}`,
+    userActiveSession: (userId: string) => `user:active-session:${userId}`,
 };
 
 function parseSession(data: Record<string, string>): CollaborationSession | null {
@@ -152,6 +153,10 @@ export class RedisSessionRepository {
         // Set idempotency lookup
         pipeline.set(idempotencyKeyFull, session.collaborationId, "PX", this.ttlMs);
 
+        // Set user → active session index for both users
+        pipeline.set(KEYS.userActiveSession(session.userAId), session.collaborationId, "PX", this.ttlMs);
+        pipeline.set(KEYS.userActiveSession(session.userBId), session.collaborationId, "PX", this.ttlMs);
+
         await pipeline.exec();
 
         return {
@@ -182,6 +187,10 @@ export class RedisSessionRepository {
         // Remove from active pair lookup
         await this.redis.del(KEYS.sessionByPair(session.userAId, session.userBId));
 
+        // Remove user → active session index
+        await this.redis.del(KEYS.userActiveSession(session.userAId));
+        await this.redis.del(KEYS.userActiveSession(session.userBId));
+
         return session;
     }
 
@@ -199,16 +208,21 @@ export class RedisSessionRepository {
         // Delete pair lookup
         pipeline.del(KEYS.sessionByPair(session.userAId, session.userBId));
 
+        // Delete user → active session index
+        pipeline.del(KEYS.userActiveSession(session.userAId));
+        pipeline.del(KEYS.userActiveSession(session.userBId));
+
         await pipeline.exec();
     }
 
     async storeQuestionDetails(
         collaborationId: string,
-        details: { questionTitle: string; testCases: string; functionName: string },
+        details: { questionTitle: string; questionDescription: string; testCases: string; functionName: string },
     ): Promise<void> {
         const sessionKey = KEYS.session(collaborationId);
         await this.redis.hset(sessionKey, {
             questionTitle: details.questionTitle,
+            questionDescription: details.questionDescription,
             testCases: details.testCases,
             functionName: details.functionName,
         });
@@ -216,11 +230,12 @@ export class RedisSessionRepository {
 
     async getQuestionDetails(
         collaborationId: string,
-    ): Promise<{ questionTitle: string; testCases: string; functionName: string } | null> {
+    ): Promise<{ questionTitle: string; questionDescription: string; testCases: string; functionName: string } | null> {
         const sessionKey = KEYS.session(collaborationId);
-        const [questionTitle, testCases, functionName] = await this.redis.hmget(
+        const [questionTitle, questionDescription, testCases, functionName] = await this.redis.hmget(
             sessionKey,
             "questionTitle",
+            "questionDescription",
             "testCases",
             "functionName",
         );
@@ -229,9 +244,30 @@ export class RedisSessionRepository {
         }
         return {
             questionTitle: questionTitle ?? "",
+            questionDescription: questionDescription ?? "",
             testCases: testCases ?? "[]",
             functionName: functionName ?? "",
         };
+    }
+
+    async getActiveSessionForUser(userId: string): Promise<CollaborationSession | null> {
+        const collaborationId = await this.redis.get(KEYS.userActiveSession(userId));
+        if (!collaborationId) {
+            return null;
+        }
+
+        const session = await this.getSessionByCollaborationId(collaborationId);
+        if (!session || session.status !== "active") {
+            // Stale index — clean up
+            await this.redis.del(KEYS.userActiveSession(userId));
+            return null;
+        }
+
+        return session;
+    }
+
+    async clearUserActiveSession(userId: string): Promise<void> {
+        await this.redis.del(KEYS.userActiveSession(userId));
     }
 
     async getActiveSessions(): Promise<CollaborationSession[]> {

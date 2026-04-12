@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { pushToast } from "@/utils/toast";
+import type { AiHint, HintUpdatedPayload } from "@/models/collaboration/aiHintType";
 import { COLLABORATION_SOCKET_EVENTS } from "@/models/collaboration/collaborationSocketType";
 import type {
     CodeChangePayload,
@@ -34,7 +35,6 @@ export function useCollaborationSession(collaborationId: string | undefined) {
     const [editorValue, setEditorValue] = useState("");
     const [participants, setParticipants] = useState<CollaborationParticipant[]>([]);
     const [joinError, setJoinError] = useState<string | null>(null);
-    const [partnerNotification, setPartnerNotification] = useState<string | null>(null);
     const [executionOutput, setExecutionOutput] = useState<string>("");
     const [language, setLanguage] = useState<string>("");
     const [isExecuting, setIsExecuting] = useState(false);
@@ -46,6 +46,15 @@ export function useCollaborationSession(collaborationId: string | undefined) {
     const [offlineChanges, setOfflineChanges] = useState<OfflineChanges | null>(null);
     // F4.8 & F4.9 - Track session ended state
     const [sessionEnded, setSessionEnded] = useState<SessionEndedPayload | null>(null);
+
+    // AI hints state
+    const [hints, setHints] = useState<AiHint[]>([]);
+    const [isHintLoading, setIsHintLoading] = useState(false);
+    const [hintsRemaining, setHintsRemaining] = useState(2);
+
+    // User names mapping (userId -> display name)
+    const [userNames, setUserNames] = useState<Record<string, string>>({});
+    const userNamesRef = useRef<Record<string, string>>({});
 
     // OT client reference
     const otClientRef = useRef<OTClient | null>(null);
@@ -129,7 +138,11 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         setIsExecuting(true);
         setExecutionResults(null);
         try {
-            await collaborationService.runCode(collaborationId);
+            const ack = await collaborationService.runCode(collaborationId);
+            if (!ack.ok) {
+                pushToast({ tone: "error", message: ack.error ?? "Failed to run code" });
+                setIsExecuting(false);
+            }
         } catch {
             pushToast({ tone: "error", message: "Failed to run code" });
             setIsExecuting(false);
@@ -142,10 +155,34 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         setExecutionResults(null);
         setSubmissionResult(null);
         try {
-            await collaborationService.submitCode(collaborationId);
+            const ack = await collaborationService.submitCode(collaborationId);
+            if (!ack.ok) {
+                pushToast({ tone: "error", message: ack.error ?? "Failed to submit code" });
+                setIsExecuting(false);
+            }
         } catch {
             pushToast({ tone: "error", message: "Failed to submit code" });
             setIsExecuting(false);
+        }
+    }, [collaborationId]);
+
+    const requestHint = useCallback(async () => {
+        if (!collaborationId) return;
+        setIsHintLoading(true);
+        try {
+            const ack = await collaborationService.requestHint(collaborationId);
+            if (ack.ok && ack.hints) {
+                setHints(ack.hints);
+                if (ack.hintsRemaining !== undefined) {
+                    setHintsRemaining(ack.hintsRemaining);
+                }
+            } else {
+                pushToast({ tone: "error", message: ack.error ?? "Failed to get hint" });
+            }
+        } catch {
+            pushToast({ tone: "error", message: "Failed to get hint" });
+        } finally {
+            setIsHintLoading(false);
         }
     }, [collaborationId]);
 
@@ -206,6 +243,18 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 setParticipants(ack.state.participants);
                 setLanguage(ack.state.session.language);
 
+                // Initialize AI hints and user names from join response
+                if (ack.hints) {
+                    setHints(ack.hints);
+                }
+                if (ack.hintsRemaining !== undefined) {
+                    setHintsRemaining(ack.hintsRemaining);
+                }
+                if (ack.userNames) {
+                    setUserNames(ack.userNames);
+                    userNamesRef.current = ack.userNames;
+                }
+
                 // F4.4.2 & F4.4.3 - Initialize OT client with server state (empty for first user, synced for joining user)
                 otClient.reset(ack.state.codeSnapshot, ack.state.codeRevision);
                 setEditorValue(ack.state.codeSnapshot);
@@ -216,12 +265,6 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 // F4.7.2 & F4.7.3 - Show notification if rejoining after disconnect
                 // Server state is authoritative - OT client synced above
                 if (ack.state.wasDisconnected) {
-                    const durationSec = Math.round(ack.state.disconnectDurationMs / 1000);
-                    pushToast({
-                        tone: "info",
-                        message: `Reconnected to session (was disconnected for ${durationSec}s)`,
-                    });
-
                     // F4.7.4 & F4.7.5 - Check for offline changes
                     if (otClient.hasOfflineChanges()) {
                         setOfflineChanges(otClient.getOfflineChanges());
@@ -258,10 +301,13 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             }
         };
 
-        void joinSession();
+        let hasJoined = false;
 
         const handleConnect = () => {
-            void joinSession();
+            if (hasJoined) {
+                // Only re-join on reconnection, not on initial connect
+                void joinSession();
+            }
         };
 
         const handleDisconnect = () => {
@@ -292,25 +338,20 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             setParticipants(payload.participants);
         };
 
+        const displayName = (uid: string) => userNamesRef.current[uid] ?? "Partner";
+
         // F4.3.2 - Handle user joined notification
         const handleUserJoined = (payload: UserJoinedPayload) => {
             if (!isMounted || payload.collaborationId !== collaborationId) {
                 return;
             }
 
+            const name = displayName(payload.userId);
             const message = payload.wasDisconnected
-                ? `${payload.userId} has reconnected`
-                : `${payload.userId} has joined the session`;
+                ? `${name} has reconnected`
+                : `${name} has joined the session`;
 
-            setPartnerNotification(message);
-            pushToast({ tone: "info", message });
-
-            // Clear notification after 3 seconds
-            setTimeout(() => {
-                if (isMounted) {
-                    setPartnerNotification(null);
-                }
-            }, 3000);
+            pushToast({ tone: "success", message });
         };
 
         // F4.6.1 - Handle user disconnected notification
@@ -327,15 +368,8 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                       ? " (connection lost)"
                       : "";
 
-            const message = `${payload.userId} has disconnected${reasonText}`;
-            setPartnerNotification(message);
-            pushToast({ tone: "warning", message });
-
-            setTimeout(() => {
-                if (isMounted) {
-                    setPartnerNotification(null);
-                }
-            }, 5000); // Longer timeout for disconnect notices
+            const name = displayName(payload.userId);
+            pushToast({ tone: "error", message: `${name} has disconnected${reasonText}` });
         };
 
         // F4.3.4 - Handle user left notification
@@ -344,9 +378,8 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 return;
             }
 
-            const message = `${payload.userId} has left the session`;
-            setPartnerNotification(message);
-            pushToast({ tone: "warning", message });
+            const name = displayName(payload.userId);
+            pushToast({ tone: "error", message: `${name} has left the session` });
         };
 
         // F4.4.3 - Handle remote code changes
@@ -380,10 +413,21 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             }
 
             // The server sends execution results as payload.output directly
-            const output = payload.output as unknown as ExecutionResults | { error?: string };
-            setExecutionOutput(payload.output);
-            if (output && "results" in output) {
-                setExecutionResults(output);
+            const raw = payload.output;
+            if (typeof raw === "object" && raw !== null) {
+                const output = raw as ExecutionResults | { error?: string };
+                if ("results" in output) {
+                    setExecutionOutput(JSON.stringify(output, null, 2));
+                    setExecutionResults(output);
+                } else if ("error" in output && output.error) {
+                    setExecutionOutput(output.error);
+                    setExecutionResults(null);
+                    pushToast({ tone: "error", message: output.error });
+                } else {
+                    setExecutionOutput(JSON.stringify(raw));
+                }
+            } else {
+                setExecutionOutput(typeof raw === "string" ? raw : JSON.stringify(raw));
             }
             setIsExecuting(false);
         };
@@ -405,6 +449,14 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 ? `Solution submitted! All ${payload.totalTestCases} test cases passed!`
                 : `Solution submitted. ${payload.testCasesPassed}/${payload.totalTestCases} test cases passed.`;
             pushToast({ tone: payload.success ? "success" : "warning", message });
+        };
+
+        // Handle AI hint updates (broadcast from server to all users in room)
+        const handleHintUpdated = (payload: HintUpdatedPayload) => {
+            if (!isMounted || payload.collaborationId !== collaborationId) {
+                return;
+            }
+            setHints(payload.hints);
         };
 
         // F4.8.2 & F4.8.3 - Handle session ended
@@ -444,6 +496,11 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             socket.on(COLLABORATION_SOCKET_EVENTS.CODE_RUNNING, handleCodeRunning);
             socket.on(COLLABORATION_SOCKET_EVENTS.SUBMISSION_COMPLETE, handleSubmissionComplete);
             socket.on(COLLABORATION_SOCKET_EVENTS.SESSION_ENDED, handleSessionEnded);
+            socket.on(COLLABORATION_SOCKET_EVENTS.HINT_UPDATED, handleHintUpdated);
+
+            // Join once after all handlers are registered
+            hasJoined = true;
+            void joinSession();
         });
 
         return () => {
@@ -470,6 +527,7 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                     handleSubmissionComplete,
                 );
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.SESSION_ENDED, handleSessionEnded);
+                socketRef.off(COLLABORATION_SOCKET_EVENTS.HINT_UPDATED, handleHintUpdated);
             }
         };
     }, [collaborationId]);
@@ -482,7 +540,6 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         setEditorValue: handleEditorChange,
         participants,
         joinError,
-        partnerNotification,
         leaveSession,
         executionOutput,
         language,
@@ -498,5 +555,12 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         isExecuting,
         executionResults,
         submissionResult,
+        // AI hints
+        hints,
+        isHintLoading,
+        hintsRemaining,
+        requestHint,
+        // User names
+        userNames,
     };
 }

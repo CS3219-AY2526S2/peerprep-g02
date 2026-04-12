@@ -10,6 +10,7 @@ import { SCORE_RANGE } from "@/models/matching/matchingDetailsType";
 import {
     MatchCancelledPayload,
     MatchErrorPayload,
+    MatchPreparingPayload,
     MatchSuccessPayload,
     MatchWaitingPayload,
     SocketEvents,
@@ -26,6 +27,8 @@ export function useMatchingQueue(
 ) {
     const [isConnected, setIsConnected] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
+    const [isPreparing, setIsPreparing] = useState(false);
+
     const [activeTier, setActiveTier] = useState(0);
 
     const [userScore, setUserScore] = useState<number | null>(null);
@@ -46,7 +49,10 @@ export function useMatchingQueue(
                 const response = await apiFetch(API_ENDPOINTS.USERS.ME);
 
                 if (!response.ok) {
-                    console.error(`Error ${response.status}: Failed to fetch profile`);
+                    pushToast({
+                        tone: "error",
+                        message: "Failed to fetch user score.",
+                    });
                     return;
                 }
 
@@ -56,10 +62,10 @@ export function useMatchingQueue(
                 if (score !== undefined) {
                     setUserScore(score);
                 }
-            } catch (error) {
+            } catch {
                 pushToast({
                     tone: "error",
-                    message: "Unable to fetch user score.",
+                    message: "Failed to fetch user score.",
                 });
             }
         };
@@ -75,90 +81,134 @@ export function useMatchingQueue(
     }, [isSearching]);
 
     useEffect(() => {
+        let active = true;
         let socketInstance: Socket | null = null;
+        let preparingTimer: ReturnType<typeof setTimeout> | null = null;
 
-        const setupListeners = async () => {
-            socketInstance = await matchingService.connect();
-            setIsConnected(socketInstance.connected);
-
-            socketInstance.on(SocketEvents.CONNECT, () => {
-                if (userScore === null) {
-                    return;
-                }
-                setIsConnected(true);
-                if (isSearchingRef.current) {
-                    matchingService.joinQueue({
-                        topics: topics,
-                        difficulties: [difficulty],
-                        languages: languages,
-                        userScore: userScore,
-                        scoreRange: SCORE_RANGE.DEFAULT,
-                    });
-                }
-            });
-
-            socketInstance.on(SocketEvents.DISCONNECT, () => {
-                console.log("Socket disconnected.");
-                setIsConnected(false);
-            });
-
-            socketInstance.on(SocketEvents.MATCH_WAITING, (data: MatchWaitingPayload) => {
-                console.log(data.message);
-                setIsSearching(true);
-                if (data.startTime) searchStartTime.current = data.startTime;
-            });
-
-            const resetSearchState = () => {
-                setIsSearching(false);
-                searchStartTime.current = null;
-                relaxationTier.current = 0;
-                setActiveTier(0);
-            };
-
-            socketInstance.on(SocketEvents.MATCH_CANCELLED, (_data: MatchCancelledPayload) => {
-                resetSearchState();
-            });
-
-            socketInstance.on(SocketEvents.MATCH_ERROR, (_data: MatchErrorPayload) => {
-                resetSearchState();
-            });
-
-            socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
-                resetSearchState();
-
-                if (data.collaborationId && onMatchFoundRef.current) {
-                    onMatchFoundRef.current(data);
-                    return;
-                }
-
-                pushToast({
-                    tone: "info",
-                    message:
-                        "Match found. Waiting for collaboration session routing to become available.",
-                    durationMs: 4500,
-                });
-            });
+        const clearPreparingTimer = () => {
+            if (preparingTimer) {
+                clearTimeout(preparingTimer);
+                preparingTimer = null;
+            }
         };
 
-        setupListeners();
+        const setupListeners = async () => {
+            try {
+                const connectedSocket = await matchingService.connect();
+
+                if (!active) return;
+
+                socketInstance = connectedSocket;
+                setIsConnected(socketInstance.connected);
+
+                socketInstance.on(SocketEvents.CONNECT, () => {
+                    if (userScore === null) return;
+                    setIsConnected(true);
+                    if (isSearchingRef.current) {
+                        matchingService.joinQueue({
+                            topics: topics,
+                            difficulties: [difficulty],
+                            languages: languages,
+                            userScore: userScore,
+                            scoreRange: SCORE_RANGE.DEFAULT,
+                        });
+                    }
+                });
+
+                socketInstance.on(SocketEvents.DISCONNECT, () => {
+                    setIsConnected(false);
+                });
+
+                socketInstance.on(SocketEvents.MATCH_WAITING, (data: MatchWaitingPayload) => {
+                    setIsSearching(true);
+                    if (data.startTime) searchStartTime.current = data.startTime;
+                });
+
+                const resetSearchState = () => {
+                    setIsSearching(false);
+                    setIsPreparing(false);
+                    searchStartTime.current = null;
+                    relaxationTier.current = 0;
+                    setActiveTier(0);
+                    clearPreparingTimer();
+                };
+
+                socketInstance.on(SocketEvents.MATCH_CANCELLED, (_data: MatchCancelledPayload) => {
+                    resetSearchState();
+                });
+
+                socketInstance.on(SocketEvents.MATCH_ERROR, (_data: MatchErrorPayload) => {
+                    resetSearchState();
+                    pushToast({
+                        tone: "error",
+                        message: "An error occurred during matching. Please try again.",
+                    });
+                });
+
+                socketInstance.on(SocketEvents.MATCH_PREPARING, (_data: MatchPreparingPayload) => {
+                    setIsPreparing(true);
+                    setIsSearching(false);
+                    clearPreparingTimer();
+
+                    preparingTimer = setTimeout(() => {
+                        resetSearchState();
+                        matchingService.cancelQueue();
+                        pushToast({
+                            tone: "error",
+                            message:
+                                "Collaboration session failed to start in time. Please try matching again.",
+                        });
+                    }, 20000);
+                });
+
+                socketInstance.on(SocketEvents.MATCH_SUCCESS, (data: MatchSuccessPayload) => {
+                    resetSearchState();
+
+                    if (data.collaborationId && onMatchFoundRef.current) {
+                        onMatchFoundRef.current(data);
+                        return;
+                    }
+
+                    pushToast({
+                        tone: "info",
+                        message:
+                            "Match found. Waiting for collaboration session routing to become available.",
+                        durationMs: 4500,
+                    });
+                });
+            } catch {
+                if (!active) return;
+                setIsConnected(false);
+                setIsSearching(false);
+                pushToast({
+                    tone: "error",
+                    message: "Failed to connect to matching service. Please try again.",
+                });
+            }
+        };
+
+        void setupListeners();
 
         return () => {
+            active = false;
+            clearPreparingTimer();
+
             if (socketInstance) {
                 socketInstance.off(SocketEvents.CONNECT);
                 socketInstance.off(SocketEvents.MATCH_WAITING);
                 socketInstance.off(SocketEvents.MATCH_CANCELLED);
                 socketInstance.off(SocketEvents.MATCH_ERROR);
                 socketInstance.off(SocketEvents.MATCH_SUCCESS);
+                socketInstance.off(SocketEvents.MATCH_PREPARING);
                 socketInstance.off(SocketEvents.DISCONNECT);
             }
         };
     }, [topics, languages, difficulty, userScore]);
 
-    // 2. Relaxation Timer Logic
     useEffect(() => {
-        let relaxationTimer: NodeJS.Timeout;
+        let relaxationTimer: ReturnType<typeof setInterval>;
 
-        if (isSearching && isConnected) {
+        if (isSearching && isConnected && !isPreparing) {
             relaxationTimer = setInterval(() => {
                 if (!searchStartTime.current) return;
 
@@ -202,26 +252,57 @@ export function useMatchingQueue(
         return () => {
             if (relaxationTimer) clearInterval(relaxationTimer);
         };
-    }, [isSearching, isConnected, topics, difficulty, languages, userScore]);
+    }, [isSearching, isPreparing, isConnected, topics, difficulty, languages, userScore]);
+
+    useEffect(() => {
+        return () => {
+            if (isSearchingRef.current) {
+                matchingService.cancelQueue();
+                setIsSearching(false);
+                setIsPreparing(false);
+            }
+        };
+    }, []);
 
     const startSearch = async () => {
         if (userScore === null) {
+            pushToast({
+                tone: "error",
+                message: "User score not found. Please refresh and try again.",
+            });
             return;
         }
-        setIsSearching(true);
-        relaxationTier.current = 0;
-        setActiveTier(0);
-        searchStartTime.current = Date.now();
 
-        await matchingService.connect();
-        matchingService.joinQueue({
-            topics: topics,
-            difficulties: [difficulty],
-            languages: languages,
-            userScore: userScore,
-            scoreRange: SCORE_RANGE.DEFAULT,
-        });
+        try {
+            setIsSearching(true);
+            relaxationTier.current = 0;
+            setActiveTier(0);
+            searchStartTime.current = Date.now();
+
+            await matchingService.connect();
+            matchingService.joinQueue({
+                topics: topics,
+                difficulties: [difficulty],
+                languages: languages,
+                userScore: userScore,
+                scoreRange: SCORE_RANGE.DEFAULT,
+            });
+        } catch {
+            setIsSearching(false);
+            pushToast({
+                tone: "error",
+                message: "Failed to connect to matching service. Please try again.",
+            });
+        }
     };
 
-    return { isSearching, activeTier, startSearch, cancelSearch, userScore, isConnected };
+    return {
+        isSearching,
+        isPreparing,
+        activeTier,
+        startSearch,
+        cancelSearch,
+        userScore,
+        isConnected,
+    };
 }

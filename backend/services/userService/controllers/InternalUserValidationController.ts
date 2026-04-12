@@ -29,6 +29,7 @@ export class InternalUserValidationController {
                 return {
                     userId,
                     status: user?.status ?? "unknown",
+                    name: user?.name ?? null,
                 };
             }),
         );

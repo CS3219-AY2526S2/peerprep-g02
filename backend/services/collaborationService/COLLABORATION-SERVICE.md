@@ -30,23 +30,23 @@ and full session lifecycle management. All runtime data is stored in Redis (no P
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND (React)                                │
+│                              FRONTEND (React)                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  CollaborationSessionView.tsx                                                │
+│  CollaborationSessionView.tsx 
 │  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐  │
-│  │ useCollaborationSession │  │    OTClient      │  │   UI Components   │  │
-│  │ - connection mgmt   │  │ - local operations │  │ - Editor          │  │
-│  │ - event handlers    │  │ - server sync      │  │ - Presence        │  │
-│  │ - state management  │  │ - offline changes  │  │ - Question        │  │
-│  │ - run/submit code   │  │                    │  │ - Test Results    │  │
+│  │ useCollaborationSession │  │    OTClient      │  │   UI Components   │   │
+│  │ - connection mgmt   │  │ - local operations │  │ - Editor          │     │
+│  │ - event handlers    │  │ - server sync      │  │ - Presence        │     │
+│  │ - state management  │  │ - offline changes  │  │ - Question        │     │ 
+│  │ - run/submit code   │  │                    │  │ - Test Results    │     │
 │  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────┘
                     │ HTTP (REST)              │ WebSocket (Socket.IO)
                     ▼                          ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         COLLABORATION SERVICE                                │
+│                         COLLABORATION SERVICE                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  Routes                                   Sockets                            │
+│  Routes                                   Sockets                           │
 │  ┌────────────────────┐                   ┌────────────────────────────┐    │
 │  │ POST /sessions     │                   │ registerSocketHandlers.ts  │    │
 │  │ GET  /health       │                   │ - session:join/leave       │    │
@@ -55,7 +55,7 @@ and full session lifecycle management. All runtime data is stored in Redis (no P
 │                                           │ - presence events          │    │
 │                                           └────────────────────────────┘    │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  Services                                                                    │
+│  Services                                                                   │
 │  ┌──────────────────────────┐  ┌──────────────────────────────────────┐     │
 │  │CollaborationSessionService│  │      OTDocumentManager (OTService)  │     │
 │  │ - createSession()        │  │ - getDocument() / initDocument()     │     │

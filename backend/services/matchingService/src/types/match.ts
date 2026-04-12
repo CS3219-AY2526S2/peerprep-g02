@@ -17,10 +17,9 @@ export type MatchRequest = z.infer<typeof MatchDetailsSchema> & { userId: string
 export const QUEUE_PREFIX = "mm:q";
 export const USER_STATUS_PREFIX = "mm:us";
 
-export interface MatchResultSuccess {
+export interface MatchResultPreparing {
     matchFound: true;
     matchId: string;
-    collaborationId: string;
     matchedTopic: string;
     matchedDifficulty: Difficulty;
     matchedLanguage: string;
@@ -33,7 +32,7 @@ export interface MatchResultWaiting {
     startTime: number;
 }
 
-export type MatchResult = MatchResultSuccess | MatchResultWaiting;
+export type MatchResult = MatchResultPreparing | MatchResultWaiting;
 
 export interface RejoinResult {
     success: boolean;

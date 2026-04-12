@@ -6,18 +6,19 @@ import {
     DISCONNECT_LUA_SCRIPT,
     FIND_MATCH_LUA_SCRIPT,
 } from "@/luaScripts/matchmaking.js";
+import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import RedisManager from "@/managers/redisManager.js";
-import { createCollaborationSession } from "@/services/collaborationService.js";
 import {
-    type Difficulty,
     type MatchRequest,
     type MatchResult,
     type RejoinResult,
+    zDifficultySchema,
 } from "@/types/match.js";
 import { buildQueueKey, buildUserStatusKey } from "@/utils/match.js";
 
 export async function findMatch(req: MatchRequest): Promise<MatchResult> {
     const redis = RedisManager.getInstance();
+    const rabbitMQ = RabbitMQManager.getInstance();
 
     const queueKeys = req.topics.flatMap((topic) =>
         req.difficulties.flatMap((diff) =>
@@ -40,26 +41,22 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
 
     if (status === "matched") {
         const matchId = uuidv4();
+        const difficulty = zDifficultySchema.parse(matchedDifficulty);
 
-        const collaborationId = await createCollaborationSession({
+        await rabbitMQ.publishCreateSession({
             matchId,
             userAId: req.userId,
             userBId: partnerId,
-            difficulty: matchedDifficulty,
+            difficulty,
             language: matchedLanguage,
             topic: matchedTopic,
         });
 
-        if (!collaborationId) {
-            return { matchFound: false, startTime: Date.now() };
-        }
-
         return {
             matchFound: true,
             matchId,
-            collaborationId,
             matchedTopic,
-            matchedDifficulty: matchedDifficulty as Difficulty,
+            matchedDifficulty: difficulty,
             matchedLanguage,
             userId: req.userId,
             partnerId,
