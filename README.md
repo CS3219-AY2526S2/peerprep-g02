@@ -6,23 +6,31 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
 
 ---
 
+## Team Members (Group 02)
+
+- Kevin Limantoro (A0276912X)
+- V Varsha (A0286877B)
+- Kenny Lewi (A0281398N)
+- Low Hsin Yi (A0278079L)
+
+---
+
 ## Table of Contents
 
-- [System Architecture](#-system-architecture)
+- [System Architecture](#system-architecture)
 - [High-Level Overview](#high-level-overview)
 - [Network Isolation](#network-isolation)
-- [Quick Start](#-quick-start-local-development)
-- [Authentication Architecture](#-authentication-architecture)
-- [Microservices Documentation](#-microservices-documentation)
+- [Quick Start](#quick-start-local-development)
+- [Authentication Architecture](#authentication-architecture)
+- [Microservices Documentation](#microservices-documentation)
   - [User Service](#1-user-service)
   - [Matching Service](#2-matching-service)
   - [Question Service](#3-question-service)
   - [Collaboration Service](#4-collaboration-service)
   - [Execution Service](#5-execution-service)
   - [Attempt Service](#6-attempt-service)
-- [Inter-Service Flows](#-inter-service-flows--integrations)
-- [CI/CD Pipeline](#-cicd-pipeline)
-- [Team Members](#-team-members-group-02)
+- [Inter-Service Flows](#inter-service-flows--integrations)
+- [CI/CD Pipeline](#cicd-pipeline)
 
 ---
 
@@ -1777,12 +1785,3 @@ GitHub Actions workflows run on every push and pull request to `main`:
 | **Logging** | Pino |
 | **Validation** | Zod |
 | **Testing** | Vitest |
-
----
-
-## Team Members (Group 02)
-
-- Kevin Limantoro (A0276912X)
-- V Varsha (A0286877B)
-- Kenny Lewi (A0281398N)
-- Low Hsin Yi (A0278079L)
