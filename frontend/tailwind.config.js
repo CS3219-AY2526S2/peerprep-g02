@@ -15,10 +15,14 @@ export default {
                     300: "#6B1ED7",
                     400: "#5920A5",
                     500: "#823AE6",
+
                     foreground: "hsl(var(--primary-foreground))",
                 },
                 secondary: {
-                    DEFAULT: "hsl(var(--secondary))",
+                    DEFAULT: "#5046E6",
+                    200: "#BCBCF7",
+                    600: "#5046E6",
+                    700: "#4338CA",
                     foreground: "hsl(var(--secondary-foreground))",
                 },
                 background: "hsl(var(--background))",
@@ -46,6 +50,9 @@ export default {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
                 ring: "hsl(var(--ring))",
+                grey: {
+                    200: "#E7E9EC",
+                },
             },
             borderRadius: {
                 lg: "var(--radius)",

@@ -26,6 +26,13 @@ export type CreateSessionResponse = {
     cacheWriteSucceeded: boolean;
 };
 
+export type CreateSessionFailure = {
+    error: true;
+    userAId: string;
+    userBId: string;
+    message: string;
+};
+
 export type CollaborationSuccessPayload = {
     matchFound: true;
     matchId?: string;

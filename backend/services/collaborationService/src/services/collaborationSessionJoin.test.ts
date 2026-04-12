@@ -75,6 +75,8 @@ describe("CollaborationSessionService join flow", () => {
             {
                 getQuestionDetails: vi.fn().mockResolvedValue(null),
             } as never,
+            {} as never,
+            {} as never,
         );
 
         const firstJoin = await service.joinSession({
@@ -129,6 +131,8 @@ describe("CollaborationSessionService join flow", () => {
                 getOutput: vi.fn(),
                 deleteOutput: vi.fn(),
             } as never,
+            {} as never,
+            {} as never,
             {} as never,
             {} as never,
             {} as never,

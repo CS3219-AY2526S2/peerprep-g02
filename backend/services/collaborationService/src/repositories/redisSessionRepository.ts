@@ -217,11 +217,12 @@ export class RedisSessionRepository {
 
     async storeQuestionDetails(
         collaborationId: string,
-        details: { questionTitle: string; testCases: string; functionName: string },
+        details: { questionTitle: string; questionDescription: string; testCases: string; functionName: string },
     ): Promise<void> {
         const sessionKey = KEYS.session(collaborationId);
         await this.redis.hset(sessionKey, {
             questionTitle: details.questionTitle,
+            questionDescription: details.questionDescription,
             testCases: details.testCases,
             functionName: details.functionName,
         });
@@ -229,11 +230,12 @@ export class RedisSessionRepository {
 
     async getQuestionDetails(
         collaborationId: string,
-    ): Promise<{ questionTitle: string; testCases: string; functionName: string } | null> {
+    ): Promise<{ questionTitle: string; questionDescription: string; testCases: string; functionName: string } | null> {
         const sessionKey = KEYS.session(collaborationId);
-        const [questionTitle, testCases, functionName] = await this.redis.hmget(
+        const [questionTitle, questionDescription, testCases, functionName] = await this.redis.hmget(
             sessionKey,
             "questionTitle",
+            "questionDescription",
             "testCases",
             "functionName",
         );
@@ -242,6 +244,7 @@ export class RedisSessionRepository {
         }
         return {
             questionTitle: questionTitle ?? "",
+            questionDescription: questionDescription ?? "",
             testCases: testCases ?? "[]",
             functionName: functionName ?? "",
         };

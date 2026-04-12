@@ -1,17 +1,15 @@
-import type { UUID } from "node:crypto";
+import { randomUUID, type UUID } from "node:crypto";
 import type { Server, Socket } from "socket.io";
 
 import { ERROR_CODES, SOCKET_EVENTS } from "@/config/constants.js";
+import { AppError } from "@/utils/errors.js";
 import { env } from "@/config/env.js";
+import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import type { OTOperation } from "@/models/session.js";
-import { AttemptRecordingService } from "@/services/attemptRecordingService.js";
-import { CodeExecutionService } from "@/services/codeExecutionService.js";
 import { collaborationSessionService } from "@/services/collaborationSessionService.js";
+import type { ExecutionRequestMessage } from "@/types/executionRabbitmq.js";
 import { logger } from "@/utils/logger.js";
 import { getRedisClient } from "@/utils/redis.js";
-
-const codeExecutionService = new CodeExecutionService();
-const attemptRecordingService = new AttemptRecordingService();
 
 type JoinSessionPayload = {
     collaborationId?: string;
@@ -34,6 +32,9 @@ type CodeRunPayload = {
 type SocketAck = (response: {
     ok: boolean;
     state?: Awaited<ReturnType<typeof collaborationSessionService.joinSession>>;
+    hints?: Awaited<ReturnType<typeof collaborationSessionService.getHints>>;
+    hintsRemaining?: number;
+    userNames?: Record<string, string>;
     error?: string;
     message?: string;
 }) => void;
@@ -113,8 +114,15 @@ export function registerSocketHandlers(io: Server): void {
 
                     socket.join(collaborationRoom(payload.collaborationId));
 
+                    // Include existing hints and user names in join response
+                    const [hints, hintsRemaining, userNames] = await Promise.all([
+                        collaborationSessionService.getHints(payload.collaborationId),
+                        collaborationSessionService.getHintsRemaining(payload.collaborationId, userId as string),
+                        collaborationSessionService.getUserNames([state.session.userAId, state.session.userBId]),
+                    ]);
+
                     // Send full state to joining user
-                    ack?.({ ok: true, state });
+                    ack?.({ ok: true, state, hints, hintsRemaining, userNames });
 
                     // F4.3.2 - Notify other users in the room that this user joined
                     socket
@@ -250,63 +258,143 @@ export function registerSocketHandlers(io: Server): void {
                     return;
                 }
 
-                const result = await collaborationSessionService.leaveSession(socket.id, userId);
+                try {
+                    const result = await collaborationSessionService.leaveSession(socket.id, userId);
 
-                if (!result) {
+                    if (!result) {
+                        ack?.({ ok: false });
+                        return;
+                    }
+
+                    // Leave the socket room using the authoritative collaborationId from the binding
+                    socket.leave(collaborationRoom(result.collaborationId));
+
+                    if (result.isLastSocket) {
+                        // F4.8.1 - Notify other users that this user left intentionally
+                        io.to(collaborationRoom(result.collaborationId)).emit(
+                            SOCKET_EVENTS.USER_LEFT,
+                            {
+                                collaborationId: result.collaborationId,
+                                userId: result.userId,
+                            },
+                        );
+                    }
+
+                    // Broadcast updated presence
+                    io.to(collaborationRoom(result.collaborationId)).emit(
+                        SOCKET_EVENTS.PRESENCE_UPDATED,
+                        {
+                            collaborationId: result.collaborationId,
+                            participants: result.participants,
+                        },
+                    );
+
+                    // F4.8.2 - If session ended (both left), notify all
+                    if (result.sessionEnded) {
+                        io.to(collaborationRoom(result.collaborationId)).emit(
+                            SOCKET_EVENTS.SESSION_ENDED,
+                            {
+                                collaborationId: result.collaborationId,
+                                reason: "both_users_left",
+                            },
+                        );
+
+                        logger.info(
+                            { collaborationId: result.collaborationId },
+                            "Session ended - both users left",
+                        );
+                    }
+
+                    logger.info(
+                        {
+                            socketId: socket.id,
+                            userId,
+                            collaborationId: result.collaborationId,
+                            sessionEnded: result.sessionEnded,
+                        },
+                        "User intentionally left collaboration session",
+                    );
+
+                    ack?.({ ok: true });
+                } catch (error) {
+                    logger.error(
+                        { err: error, socketId: socket.id, userId, collaborationId: payload.collaborationId },
+                        "Error processing session leave",
+                    );
                     ack?.({ ok: false });
+                }
+            },
+        );
+
+        /**
+         * AI Hints - Request an AI-generated hint (max 2 per user per session).
+         * Calls Gemini API with the question context and current code.
+         * Broadcasts the hint to all users in the room.
+         */
+        socket.on(
+            SOCKET_EVENTS.HINT_REQUEST,
+            async (
+                payload: { collaborationId?: string },
+                ack?: (response: {
+                    ok: boolean;
+                    hints?: Awaited<ReturnType<typeof collaborationSessionService.getHints>>;
+                    hintsRemaining?: number;
+                    error?: string;
+                }) => void,
+            ) => {
+                if (!payload?.collaborationId) {
+                    ack?.({ ok: false, error: "collaborationId is required." });
                     return;
                 }
 
-                // Leave the socket room
-                socket.leave(collaborationRoom(payload.collaborationId));
+                try {
+                    const result = await collaborationSessionService.requestHint(
+                        payload.collaborationId,
+                        userId as string,
+                    );
 
-                // F4.8.1 - Notify other users that this user left intentionally
-                io.to(collaborationRoom(result.collaborationId)).emit(SOCKET_EVENTS.USER_LEFT, {
-                    collaborationId: result.collaborationId,
-                    userId: result.userId,
-                });
+                    ack?.({
+                        ok: true,
+                        hints: result.hints,
+                        hintsRemaining: result.hintsRemaining,
+                    });
 
-                // Broadcast updated presence
-                io.to(collaborationRoom(result.collaborationId)).emit(
-                    SOCKET_EVENTS.PRESENCE_UPDATED,
-                    {
-                        collaborationId: result.collaborationId,
-                        participants: result.participants,
-                    },
-                );
-
-                // F4.8.2 - If session ended (both left), notify all
-                if (result.sessionEnded) {
-                    io.to(collaborationRoom(result.collaborationId)).emit(
-                        SOCKET_EVENTS.SESSION_ENDED,
+                    // Broadcast updated hints to all users in the room
+                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                        SOCKET_EVENTS.HINT_UPDATED,
                         {
-                            collaborationId: result.collaborationId,
-                            reason: "both_users_left",
+                            collaborationId: payload.collaborationId,
+                            hints: result.hints,
+                            requestedBy: userId,
                         },
                     );
 
                     logger.info(
-                        { collaborationId: result.collaborationId },
-                        "Session ended - both users left",
+                        {
+                            socketId: socket.id,
+                            userId,
+                            collaborationId: payload.collaborationId,
+                            hintsRemaining: result.hintsRemaining,
+                            totalHints: result.hints.length,
+                        },
+                        "AI hint generated",
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof AppError ? error.message : "Failed to generate hint.";
+                    ack?.({ ok: false, error: message });
+
+                    logger.error(
+                        { err: error, collaborationId: payload.collaborationId, userId },
+                        "AI hint request failed",
                     );
                 }
-
-                logger.info(
-                    {
-                        socketId: socket.id,
-                        userId,
-                        collaborationId: result.collaborationId,
-                        sessionEnded: result.sessionEnded,
-                    },
-                    "User intentionally left collaboration session",
-                );
-
-                ack?.({ ok: true });
             },
         );
 
         /**
          * Code execution - Run code against test cases (no attempt recorded)
+         * Publishes to RabbitMQ exec_req_queue; results arrive via the response consumer.
          */
         socket.on(
             SOCKET_EVENTS.CODE_RUN,
@@ -335,48 +423,92 @@ export function registerSocketHandlers(io: Server): void {
                         return;
                     }
 
-                    const result = await codeExecutionService.execute(
-                        execData.code,
-                        execData.session.language,
-                        execData.functionName,
-                        execData.testCases,
-                    );
+                    const correlationId = randomUUID();
+                    const message: ExecutionRequestMessage = {
+                        correlationId,
+                        collaborationId: payload.collaborationId,
+                        userId: userId!,
+                        type: "run",
+                        code: execData.code,
+                        language: execData.session.language,
+                        functionName: execData.functionName,
+                        testCases: execData.testCases,
+                        questionId: execData.session.questionId,
+                        questionTitle: execData.questionTitle,
+                        difficulty: execData.session.difficulty,
+                        sessionCreatedAt: execData.session.createdAt,
+                    };
 
-                    // Store structured results in Redis
-                    await collaborationSessionService.updateOutput(
-                        payload.collaborationId,
-                        JSON.stringify(result),
-                    );
+                    // Set the pending key before publishing so a Redis failure
+                    // doesn't cause a false error after the message is already enqueued.
+                    const redis = getRedisClient();
+                    let hasTimeoutSafety = false;
+                    try {
+                        await redis.set(`exec:pending:${correlationId}`, payload.collaborationId, "EX", 65);
+                        hasTimeoutSafety = true;
+                    } catch (redisErr) {
+                        logger.warn(
+                            { err: redisErr, correlationId, collaborationId: payload.collaborationId },
+                            "Failed to set exec:pending key (timeout safety net unavailable)",
+                        );
+                    }
 
-                    // Broadcast results to all users in the room
-                    io.to(collaborationRoom(payload.collaborationId)).emit(
-                        SOCKET_EVENTS.OUTPUT_UPDATED,
-                        {
-                            collaborationId: payload.collaborationId,
-                            output: result,
-                        },
-                    );
+                    const published = RabbitMQManager.getInstance().publishExecutionRequest(message);
+                    if (!published) {
+                        // Clean up the pending key if we managed to set it
+                        if (hasTimeoutSafety) {
+                            redis.del(`exec:pending:${correlationId}`).catch(() => {});
+                        }
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.OUTPUT_UPDATED,
+                            { collaborationId: payload.collaborationId, output: { error: "Execution service unavailable." } },
+                        );
+                        ack?.({ ok: false, error: "Execution service unavailable." });
+                        return;
+                    }
+
+                    // Schedule a timeout to stop spinners if no response arrives
+                    if (hasTimeoutSafety) {
+                        setTimeout(async () => {
+                            try {
+                                const pending = await redis.get(`exec:pending:${correlationId}`);
+                                if (pending) {
+                                    await redis.del(`exec:pending:${correlationId}`);
+                                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                                        {
+                                            collaborationId: payload.collaborationId,
+                                            output: { error: "Code execution timed out." },
+                                        },
+                                    );
+                                }
+                            } catch (timeoutErr) {
+                                logger.error(
+                                    { err: timeoutErr, correlationId, collaborationId: payload.collaborationId },
+                                    "Error in execution timeout handler",
+                                );
+                            }
+                        }, 65_000);
+                    }
 
                     ack?.({ ok: true });
 
                     logger.info(
                         {
+                            correlationId,
                             collaborationId: payload.collaborationId,
                             userId,
-                            testCasesPassed: result.testCasesPassed,
-                            totalTestCases: result.totalTestCases,
                         },
-                        "Code execution completed",
+                        "Code execution request published to queue",
                     );
                 } catch (error) {
                     const message =
                         error instanceof Error ? error.message : "Code execution failed.";
                     logger.error(
                         { err: error, collaborationId: payload.collaborationId },
-                        "Code execution failed",
+                        "Failed to publish code execution request",
                     );
 
-                    // Broadcast error to all users so their spinners stop
                     io.to(collaborationRoom(payload.collaborationId)).emit(
                         SOCKET_EVENTS.OUTPUT_UPDATED,
                         {
@@ -391,7 +523,9 @@ export function registerSocketHandlers(io: Server): void {
         );
 
         /**
-         * Code submission - Run code + record attempt for both users
+         * Code submission - Run code + record attempt for the submitting user.
+         * Publishes to RabbitMQ exec_req_queue; results and attempt recording
+         * are handled by the response consumer.
          */
         socket.on(
             SOCKET_EVENTS.CODE_SUBMIT,
@@ -420,91 +554,92 @@ export function registerSocketHandlers(io: Server): void {
                         return;
                     }
 
-                    // Execute code against test cases
-                    const result = await codeExecutionService.execute(
-                        execData.code,
-                        execData.session.language,
-                        execData.functionName,
-                        execData.testCases,
-                    );
+                    const correlationId = randomUUID();
+                    const message: ExecutionRequestMessage = {
+                        correlationId,
+                        collaborationId: payload.collaborationId,
+                        userId: userId!,
+                        type: "submit",
+                        code: execData.code,
+                        language: execData.session.language,
+                        functionName: execData.functionName,
+                        testCases: execData.testCases,
+                        questionId: execData.session.questionId,
+                        questionTitle: execData.questionTitle,
+                        difficulty: execData.session.difficulty,
+                        sessionCreatedAt: execData.session.createdAt,
+                    };
 
-                    // Store results
-                    await collaborationSessionService.updateOutput(
-                        payload.collaborationId,
-                        JSON.stringify(result),
-                    );
-
-                    // Broadcast execution results
-                    io.to(collaborationRoom(payload.collaborationId)).emit(
-                        SOCKET_EVENTS.OUTPUT_UPDATED,
-                        {
-                            collaborationId: payload.collaborationId,
-                            output: result,
-                        },
-                    );
-
-                    // Record attempt for the submitting user only
-                    const session = execData.session;
-                    const duration = Math.round(
-                        (Date.now() - new Date(session.createdAt).getTime()) / 1000,
-                    );
-                    const success =
-                        result.testCasesPassed === result.totalTestCases &&
-                        result.totalTestCases > 0;
-
+                    // Set the pending key before publishing so a Redis failure
+                    // doesn't cause a false error after the message is already enqueued.
+                    const redis = getRedisClient();
+                    let hasTimeoutSafety = false;
                     try {
-                        await attemptRecordingService.recordAttempt({
-                            userId,
-                            collaborationId: payload.collaborationId,
-                            questionId: session.questionId,
-                            questionTitle: execData.questionTitle,
-                            language: session.language,
-                            difficulty: session.difficulty,
-                            success,
-                            duration,
-                            totalTestCases: result.totalTestCases,
-                            testCasesPassed: result.testCasesPassed,
-                        });
-
-                        // Send submission confirmation to the submitter only
-                        socket.emit(
-                            SOCKET_EVENTS.SUBMISSION_COMPLETE,
-                            {
-                                collaborationId: payload.collaborationId,
-                                success,
-                                totalTestCases: result.totalTestCases,
-                                testCasesPassed: result.testCasesPassed,
-                            },
+                        await redis.set(`exec:pending:${correlationId}`, payload.collaborationId, "EX", 65);
+                        hasTimeoutSafety = true;
+                    } catch (redisErr) {
+                        logger.warn(
+                            { err: redisErr, correlationId, collaborationId: payload.collaborationId },
+                            "Failed to set exec:pending key (timeout safety net unavailable)",
                         );
-
-                        ack?.({ ok: true });
-                    } catch (attemptError) {
-                        logger.error(
-                            { err: attemptError, collaborationId: payload.collaborationId },
-                            "Failed to record attempt",
-                        );
-                        ack?.({ ok: false, error: "Code executed but failed to record attempt." });
                     }
+
+                    const published = RabbitMQManager.getInstance().publishExecutionRequest(message);
+                    if (!published) {
+                        // Clean up the pending key if we managed to set it
+                        if (hasTimeoutSafety) {
+                            redis.del(`exec:pending:${correlationId}`).catch(() => {});
+                        }
+                        io.to(collaborationRoom(payload.collaborationId)).emit(
+                            SOCKET_EVENTS.OUTPUT_UPDATED,
+                            { collaborationId: payload.collaborationId, output: { error: "Execution service unavailable." } },
+                        );
+                        ack?.({ ok: false, error: "Execution service unavailable." });
+                        return;
+                    }
+
+                    // Schedule a timeout to stop spinners if no response arrives
+                    if (hasTimeoutSafety) {
+                        setTimeout(async () => {
+                            try {
+                                const pending = await redis.get(`exec:pending:${correlationId}`);
+                                if (pending) {
+                                    await redis.del(`exec:pending:${correlationId}`);
+                                    io.to(collaborationRoom(payload.collaborationId)).emit(
+                                        SOCKET_EVENTS.OUTPUT_UPDATED,
+                                        {
+                                            collaborationId: payload.collaborationId,
+                                            output: { error: "Code execution timed out." },
+                                        },
+                                    );
+                                }
+                            } catch (timeoutErr) {
+                                logger.error(
+                                    { err: timeoutErr, correlationId, collaborationId: payload.collaborationId },
+                                    "Error in submission timeout handler",
+                                );
+                            }
+                        }, 65_000);
+                    }
+
+                    ack?.({ ok: true });
 
                     logger.info(
                         {
+                            correlationId,
                             collaborationId: payload.collaborationId,
                             userId,
-                            success,
-                            testCasesPassed: result.testCasesPassed,
-                            totalTestCases: result.totalTestCases,
                         },
-                        "Code submitted and attempt recorded",
+                        "Code submission request published to queue",
                     );
                 } catch (error) {
                     const message =
                         error instanceof Error ? error.message : "Code submission failed.";
                     logger.error(
                         { err: error, collaborationId: payload.collaborationId },
-                        "Code submission failed",
+                        "Failed to publish code submission request",
                     );
 
-                    // Broadcast error to all users so their spinners stop
                     io.to(collaborationRoom(payload.collaborationId)).emit(
                         SOCKET_EVENTS.OUTPUT_UPDATED,
                         {

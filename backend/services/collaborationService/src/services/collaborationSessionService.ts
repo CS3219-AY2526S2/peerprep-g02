@@ -1,6 +1,6 @@
 import type { UUID } from "node:crypto";
 
-import { ERROR_CODES, HTTP_STATUS } from "@/config/constants.js";
+import { DEFAULTS, ERROR_CODES, HTTP_STATUS } from "@/config/constants.js";
 import { env } from "@/config/env.js";
 import type {
     CollaborationSession,
@@ -9,11 +9,13 @@ import type {
     RoomState,
     SessionJoinState,
 } from "@/models/session.js";
+import { RedisHintRepository, type StoredHint } from "@/repositories/redisHintRepository.js";
 import { RedisOTRepository } from "@/repositories/redisOTRepository.js";
 import { RedisOutputRepository } from "@/repositories/redisOutputRepository.js";
 import { RedisPresenceRepository } from "@/repositories/redisPresenceRepository.js";
 import { RedisSessionRepository } from "@/repositories/redisSessionRepository.js";
 import { SessionCacheRepository } from "@/repositories/sessionCacheRepository.js";
+import { AiHintService } from "@/services/aiHintService.js";
 import { OTDocumentManager } from "@/services/otService.js";
 import { QuestionSelectionService } from "@/services/questionSelectionService.js";
 import { UserValidationService } from "@/services/userValidationService.js";
@@ -65,6 +67,7 @@ export type LeaveSessionResult = {
     participants: SessionJoinState["participants"];
     sessionEnded: boolean;
     removedSocketIds: string[];
+    isLastSocket: boolean;
 } | null;
 
 export type EndSessionResult = {
@@ -101,6 +104,8 @@ export class CollaborationSessionService {
         private readonly sessionCacheRepository: SessionCacheRepository,
         private readonly userValidationService: UserValidationService,
         private readonly questionSelectionService: QuestionSelectionService,
+        private readonly redisHintRepository: RedisHintRepository,
+        private readonly aiHintService: AiHintService,
     ) {
         this.otManager = new OTDocumentManager(redisOTRepository);
     }
@@ -113,12 +118,39 @@ export class CollaborationSessionService {
             return null;
         }
 
+        // Session was already ended / marked inactive — clean up stale index
+        if (session.status !== "active") {
+            logger.info(
+                { userId, collaborationId: session.collaborationId, status: session.status },
+                "Clearing stale active-session index (session no longer active)",
+            );
+            await this.redisSessionRepository.clearUserActiveSession(userId);
+            return null;
+        }
+
         // Check if user has intentionally left
         const hasLeft = await this.redisPresenceRepository.hasUserLeft(
             session.collaborationId,
             userId,
         );
         if (hasLeft) {
+            logger.info(
+                { userId, collaborationId: session.collaborationId },
+                "User has left session — clearing active-session index",
+            );
+            await this.redisSessionRepository.clearUserActiveSession(userId);
+            return null;
+        }
+
+        // Check if rejoin grace period has expired for disconnected users
+        const rejoinCheck = await this.redisPresenceRepository.canRejoinWithinGracePeriod(
+            session.collaborationId,
+            userId,
+            env.disconnectGraceMs,
+        );
+        if (!rejoinCheck.canRejoin) {
+            // Grace period expired — clean up stale active-session index
+            await this.redisSessionRepository.clearUserActiveSession(userId);
             return null;
         }
 
@@ -127,6 +159,24 @@ export class CollaborationSessionService {
             topic: session.topic,
             difficulty: session.difficulty,
         };
+    }
+
+    async getUserNames(userIds: string[]): Promise<Record<string, string>> {
+        try {
+            const users = await this.userValidationService.validateUsers(userIds);
+            const names: Record<string, string> = {};
+            for (const user of users) {
+                names[user.userId] = user.name ?? user.userId;
+            }
+            return names;
+        } catch {
+            // Non-fatal: fall back to user IDs
+            const names: Record<string, string> = {};
+            for (const id of userIds) {
+                names[id] = id;
+            }
+            return names;
+        }
     }
 
     async createSession(payload: CreateSessionRequest): Promise<CreateSessionResponse> {
@@ -291,6 +341,7 @@ export class CollaborationSessionService {
             try {
                 await this.redisSessionRepository.storeQuestionDetails(input.collaborationId, {
                     questionTitle: question.title,
+                    questionDescription: question.description,
                     testCases: JSON.stringify(question.testCase),
                     functionName: question.functionName,
                 });
@@ -443,17 +494,23 @@ export class CollaborationSessionService {
             return null;
         }
 
-        // Mark user as intentionally left
-        await this.redisPresenceRepository.markUserAsLeft(binding.collaborationId, userId);
+        // Remove only the leaving socket (not all tabs)
+        await this.redisPresenceRepository.removeSocketConnection(socketId);
 
-        // Clear user → active session index so they won't see a stale rejoin prompt
-        await this.redisSessionRepository.clearUserActiveSession(userId);
-
-        // Remove ALL socket connections for this user (they may have multiple tabs)
-        const removedSocketIds = await this.redisPresenceRepository.removeAllUserSocketConnections(
+        // Check if the user has any remaining sockets open
+        const remainingSockets = await this.redisPresenceRepository.getUserSocketIds(
             binding.collaborationId,
             userId,
         );
+
+        const removedSocketIds = [socketId];
+        const isLastSocket = remainingSockets.length === 0;
+
+        if (isLastSocket) {
+            // Only mark user as "left" when their last tab closes
+            await this.redisPresenceRepository.markUserAsLeft(binding.collaborationId, userId);
+            await this.redisSessionRepository.clearUserActiveSession(userId);
+        }
 
         const assignedUserIds = [session.userAId, session.userBId];
         const participants = await this.redisPresenceRepository.getParticipants(
@@ -461,22 +518,25 @@ export class CollaborationSessionService {
             assignedUserIds,
         );
 
-        // F4.8.2 - Check if both users have left
-        let sessionEnded = await this.redisPresenceRepository.haveBothUsersLeft(
-            binding.collaborationId,
-            assignedUserIds,
-        );
+        // F4.8.2 - Check if both users have left (only possible when last socket closed)
+        let sessionEnded = false;
+        if (isLastSocket) {
+            sessionEnded = await this.redisPresenceRepository.haveBothUsersLeft(
+                binding.collaborationId,
+                assignedUserIds,
+            );
 
-        // Also end if this user left and the other is disconnected (not coming back)
-        if (!sessionEnded) {
-            const otherUserId = assignedUserIds.find((id) => id !== userId);
-            if (otherUserId) {
-                const otherStatus = await this.redisPresenceRepository.getUserPresenceStatus(
-                    binding.collaborationId,
-                    otherUserId,
-                );
-                if (otherStatus === "disconnected") {
-                    sessionEnded = true;
+            // Also end if this user left and the other is disconnected (not coming back)
+            if (!sessionEnded) {
+                const otherUserId = assignedUserIds.find((id) => id !== userId);
+                if (otherUserId) {
+                    const otherStatus = await this.redisPresenceRepository.getUserPresenceStatus(
+                        binding.collaborationId,
+                        otherUserId,
+                    );
+                    if (otherStatus === "disconnected") {
+                        sessionEnded = true;
+                    }
                 }
             }
         }
@@ -491,12 +551,85 @@ export class CollaborationSessionService {
             participants,
             sessionEnded,
             removedSocketIds,
+            isLastSocket,
         };
     }
 
     /**
      * F4.8.2, F4.8.3, F4.9 - End a collaboration session
      */
+    async getHints(collaborationId: string): Promise<StoredHint[]> {
+        return this.redisHintRepository.getHints(collaborationId);
+    }
+
+    async getHintsRemaining(collaborationId: string, userId: string): Promise<number> {
+        return this.redisHintRepository.getHintsRemaining(collaborationId, userId);
+    }
+
+    async requestHint(
+        collaborationId: string,
+        userId: string,
+    ): Promise<{ hints: StoredHint[]; hintsRemaining: number }> {
+        // Validate session and access first (cheap checks before AI call)
+        const session =
+            await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
+        if (!session || session.status !== "active") {
+            throw new AppError("Session not found or inactive.", HTTP_STATUS.NOT_FOUND, ERROR_CODES.SESSION_NOT_FOUND);
+        }
+
+        if (session.userAId !== userId && session.userBId !== userId) {
+            throw new AppError("Access denied.", HTTP_STATUS.FORBIDDEN, ERROR_CODES.SESSION_ACCESS_DENIED);
+        }
+
+        const hasLeft = await this.redisPresenceRepository.hasUserLeft(collaborationId, userId);
+        if (hasLeft) {
+            throw new AppError("You have left this session.", HTTP_STATUS.FORBIDDEN, ERROR_CODES.SESSION_ACCESS_DENIED);
+        }
+
+        // Pre-check remaining hints (non-atomic, but avoids expensive AI call when clearly at limit)
+        const remaining = await this.redisHintRepository.getHintsRemaining(collaborationId, userId);
+        if (remaining <= 0) {
+            throw new AppError(
+                `You have used all ${DEFAULTS.MAX_HINTS_PER_USER} AI hints for this session.`,
+                HTTP_STATUS.BAD_REQUEST,
+                ERROR_CODES.HINT_LIMIT_REACHED,
+            );
+        }
+
+        const code = await this.otManager.getContent(collaborationId);
+        const questionDetails =
+            await this.redisSessionRepository.getQuestionDetails(collaborationId);
+
+        const previousHints = await this.redisHintRepository.getHints(collaborationId);
+
+        // Generate hint via Gemini
+        const hintText = await this.aiHintService.generateHint({
+            questionTitle: questionDetails?.questionTitle ?? session.topic,
+            questionDescription: questionDetails?.questionDescription ?? "",
+            difficulty: session.difficulty,
+            language: session.language,
+            currentCode: code,
+            previousHints: previousHints.map((h) => h.hint),
+        });
+
+        // Atomically reserve a slot and store the hint
+        const result = await this.redisHintRepository.tryAddHint(collaborationId, userId, hintText);
+        if (!result) {
+            throw new AppError(
+                `You have used all ${DEFAULTS.MAX_HINTS_PER_USER} AI hints for this session.`,
+                HTTP_STATUS.BAD_REQUEST,
+                ERROR_CODES.HINT_LIMIT_REACHED,
+            );
+        }
+
+        logger.info(
+            { collaborationId, userId, hintsRemaining: result.hintsRemaining },
+            "AI hint generated and stored",
+        );
+
+        return result;
+    }
+
     async endSession(
         collaborationId: string,
         reason: EndSessionResult["reason"],
@@ -526,6 +659,7 @@ export class CollaborationSessionService {
         await this.redisPresenceRepository.cleanupSession(collaborationId, assignedUserIds);
         await this.otManager.deleteDocument(collaborationId);
         await this.redisOutputRepository.deleteOutput(collaborationId);
+        await this.redisHintRepository.deleteHints(collaborationId, assignedUserIds);
 
         logger.info(
             {
@@ -677,6 +811,8 @@ const redisOutputRepository = new RedisOutputRepository();
 const sessionCacheRepository = new SessionCacheRepository();
 const userValidationService = new UserValidationService();
 const questionSelectionService = new QuestionSelectionService();
+const redisHintRepository = new RedisHintRepository();
+const aiHintService = new AiHintService();
 
 export const collaborationSessionService = new CollaborationSessionService(
     redisSessionRepository,
@@ -686,4 +822,6 @@ export const collaborationSessionService = new CollaborationSessionService(
     sessionCacheRepository,
     userValidationService,
     questionSelectionService,
+    redisHintRepository,
+    aiHintService,
 );

@@ -18,18 +18,22 @@
     "license": "ISC",
     "description": "",
     "dependencies": {
+        "@google-cloud/storage": "^7.19.0",
         "cors": "^2.8.6",
         "dotenv": "^17.3.1",
         "express": "^5.2.1",
+        "multer": "^2.1.1",
         "pg": "^8.19.0",
-        "prettier": "^3.8.1"
+        "prettier": "^3.8.1",
+        "vitest": "^4.1.2"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@trivago/prettier-plugin-sort-imports": "^6.0.2",
         "@types/cors": "^2.8.19",
         "@types/express": "^5.0.6",
-        "@types/node": "^25.3.5",
+        "@types/multer": "^2.1.0",
+        "@types/node": "^25.5.0",
         "@types/pg": "^8.18.0",
         "eslint": "^10.1.0",
         "eslint-config-prettier": "^10.1.8",

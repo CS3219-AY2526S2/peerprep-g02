@@ -1,15 +1,12 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useUser } from "@clerk/clerk-react";
 
 import { Card } from "@/components/ui/card";
 
-import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { collaborationRoute } from "@/constants/routes";
-import { apiFetch } from "@/utils/apiClient";
 import { getRelaxedDifficulties } from "@/utils/matching/matchingUtils";
-import { pushToast } from "@/utils/toast";
 import { Language, LANGUAGE_OPTIONS } from "@/models/matching/matchingDetailsType";
 import { ActiveSession } from "@/models/matching/rejoinSessionType";
 import { Difficulty } from "@/models/question/questionType";
@@ -18,6 +15,7 @@ import MatchFormView from "@/views/matching/MatchFormView";
 import MatchSearchingView from "@/views/matching/MatchSearchingView";
 import { RejoinSessionView } from "@/views/matching/RejoinSessionView";
 
+import { useTopics } from "@/context/useTopic";
 import { collaborationService } from "@/services/collaboration/collaborationService";
 import { useMatchingQueue } from "@/services/matching/useMatchingQueue";
 
@@ -25,8 +23,18 @@ export function MatchingView() {
     const navigate = useNavigate();
     const { isLoaded, user } = useUser();
 
-    const [topicOptions, setTopicOptions] = useState<string[]>([]);
-    const [topics, setTopics] = useState<string[]>([]);
+    const { topics: topicMap } = useTopics();
+    const topicOptions = useMemo(() => {
+        return topicMap ? Object.values(topicMap) : [];
+    }, [topicMap]);
+
+    const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+    const topics = useMemo(() => {
+        if (selectedTopics.length > 0) return selectedTopics;
+        if (topicOptions.length > 0) return [topicOptions[0]];
+        return [];
+    }, [selectedTopics, topicOptions]);
+
     const [languages, setLanguages] = useState<Language[]>([LANGUAGE_OPTIONS[0]]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
@@ -67,37 +75,6 @@ export function MatchingView() {
             );
         }
     }, [isLoaded, user]);
-
-    useEffect(() => {
-        const fetchTopics = async () => {
-            try {
-                const response = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS);
-                if (!response.ok) {
-                    pushToast({
-                        tone: "error",
-                        message: "Failed to fetch topics.",
-                    });
-                    return;
-                }
-
-                const data = await response.json();
-                const topicStrings: string[] = data.body.map(
-                    (item: { topic: string }) => item.topic,
-                );
-
-                setTopicOptions(topicStrings);
-                if (topicStrings.length > 0) {
-                    setTopics((prev) => (prev.length > 0 ? prev : [topicStrings[0]]));
-                }
-            } catch {
-                pushToast({
-                    tone: "error",
-                    message: "An error occurred while fetching topics.",
-                });
-            }
-        };
-        fetchTopics();
-    }, []);
 
     const handleNavigation = (id: string) => {
         startTransition(() => {
@@ -141,7 +118,7 @@ export function MatchingView() {
                         topicOptions={topicOptions}
                         languageOptions={LANGUAGE_OPTIONS}
                         topics={topics}
-                        setTopics={setTopics}
+                        setTopics={setSelectedTopics}
                         userScore={userScore}
                         languages={languages}
                         setLanguages={setLanguages}

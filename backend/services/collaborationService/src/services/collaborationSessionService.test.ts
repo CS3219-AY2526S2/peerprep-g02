@@ -80,6 +80,8 @@ describe("CollaborationSessionService", () => {
                     difficulty: payload.difficulty,
                 }),
             } as never,
+            {} as never,
+            {} as never,
         );
 
         const result = await service.createSession(payload);
@@ -139,6 +141,8 @@ describe("CollaborationSessionService", () => {
                     difficulty: payload.difficulty,
                 }),
             } as never,
+            {} as never,
+            {} as never,
         );
 
         const result = await service.createSession(payload);
