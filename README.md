@@ -653,7 +653,7 @@ The score range is widened by the **client**, not by a server-side timer:
 Client (Frontend)                         Server (Matching Service)
   ================                         ========================
       |                                        |
-      | T=0s: join_queue {range: 0,            |
+      | T=0s: join_queue {range: 50,           |
       |   diff: ["Easy"], isUpdate: false}     |
       +--------------------------------------->| 1. attemptRejoin (guard)
       |                                        | 2. FIND_MATCH (Exact, "Easy")
@@ -662,30 +662,30 @@ Client (Frontend)                         Server (Matching Service)
       |                                        |
       | (12s: Tier 1 - Expand Range)           |
       |                                        |
-      | join_queue {range: 50,                 |
-      |   diff: ["Easy"], isUpdate: true}      |
-      +--------------------------------------->| 3. FIND_MATCH (±50, "Easy")
-      |<---------------------------------------+
-      |                                        |
-      | (24s: Tier 2 - Max Range)              |
-      |                                        |
       | join_queue {range: 100,                |
       |   diff: ["Easy"], isUpdate: true}      |
-      +--------------------------------------->| 4. FIND_MATCH (±100, "Easy")
+      +--------------------------------------->| 3. FIND_MATCH (±100, "Easy")
+      |<---------------------------------------+
+      |                                        |
+      | (24s: Tier 2 - Expand Range)           |
+      |                                        |
+      | join_queue {range: 200,                |
+      |   diff: ["Easy"], isUpdate: true}      |
+      +--------------------------------------->| 4. FIND_MATCH (±200, "Easy")
       |<---------------------------------------+
       |                                        |
       | (36s: Tier 3 - Adjacent Difficulty)    |
       |                                        |
-      | join_queue {range: 150,                |
+      | join_queue {range: 300,                |
       |   diff: ["Easy", "Medium"], isUpd: T}  |
-      +--------------------------------------->| 5. FIND_MATCH (±150, "Easy"|"Med")
+      +--------------------------------------->| 5. FIND_MATCH (±300, "Easy"|"Med")
       |<---------------------------------------+
       |                                        |
       | (48s: Tier 4 - Full Relaxation)        |
       |                                        |
-      | join_queue {range: 200,                |
+      | join_queue {range: 400,                |
       |   diff: ["E", "M", "H"], isUpd: T}     |
-      +--------------------------------------->| 6. FIND_MATCH (±200, Any Diff)
+      +--------------------------------------->| 6. FIND_MATCH (±400, Any Diff)
       |<---------------------------------------+
       |                                        |
       | (60s: Max Timeout)                     |
