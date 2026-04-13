@@ -20,12 +20,8 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
 ## Table of Contents
 
 - [System Architecture](#system-architecture)
-- [System Architecture](#system-architecture)
 - [High-Level Overview](#high-level-overview)
 - [Network Isolation](#network-isolation)
-- [Quick Start](#quick-start-local-development)
-- [Authentication Architecture](#authentication-architecture)
-- [Microservices Documentation](#microservices-documentation)
 - [Quick Start](#quick-start-local-development)
 - [Authentication Architecture](#authentication-architecture)
 - [Microservices Documentation](#microservices-documentation)
