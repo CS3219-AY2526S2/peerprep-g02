@@ -1810,3 +1810,38 @@ GitHub Actions workflows run on every push and pull request to `main`:
 | **Logging** | Pino |
 | **Validation** | Zod |
 | **Testing** | Vitest |
+
+---
+
+## Declaration of Use of AI Tools
+
+This project made use of AI-assisted tooling during development. The following outlines the scope and boundaries of AI usage.
+
+### AI Use Summary
+
+**Tools:** GitHub Copilot, OpenAI Codex (ChatGPT), Claude Code (Anthropic)
+
+**Prohibited phases avoided:** Requirements elicitation; architecture/design decisions.
+
+**Allowed uses:**
+- **Generate:** Boilerplate for Express middleware, test scaffolding (Vitest), Redis command syntax in Lua scripts, language-specific code harness templates, and documentation (README).
+- **Refactor:** Suggested inline code improvements for data parsing, error handling utilities, and frontend component splitting. Suggestions were reviewed and selectively retained.
+- **Debug:** Copilot PR review comments flagged missing null checks, unused imports, and inconsistent error handling across pull requests.
+- **Explain:** Used to understand Clerk webhook signature verification and Piston API response formats.
+
+**How each tool was used:**
+
+| Tool | Mode | Scope |
+|------|------|-------|
+| GitHub Copilot | Generate, Refactor, Debug | Inline autocomplete for boilerplate code, CSS utility classes, test case structures. Automated first-layer PR reviewer on all pull requests (see [closed PRs](https://github.com/CS3219-AY2526S2/peerprep-g02/pulls?q=is%3Apr+is%3Aclosed)). Team members always conduct a manual review after Copilot. |
+| OpenAI Codex (ChatGPT) | Generate, Refactor | Frontend component splitting, test harness generation, implementation-level code snippets. |
+| Claude Code (Anthropic) | Generate, Explain | Documentation and README generation, code exploration, Lua syntax assistance. |
+
+**What AI was NOT used for:**
+- Architecture/design decisions -- all system design choices (microservices decomposition, communication patterns, database selection, OT strategy, message queue topology, network isolation, distributed locking) were made by the team
+- Core algorithm design -- matchmaking logic, operational transformation, session lifecycle state machines, and scoring systems were designed and implemented by team members
+- Requirements elicitation -- all feature requirements were derived from the project brief and team discussions
+
+**Verification:** All AI outputs were reviewed, edited, and tested by the authors. No AI-generated code was accepted as-is; every suggestion was modified to fit the project's patterns and verified through testing.
+
+**Prompts & Key Exchanges:** See [`/ai/usage-log.md`](ai/usage-log.md) for the full timestamped log of AI interactions, prompts, outputs, and author notes on modifications.
