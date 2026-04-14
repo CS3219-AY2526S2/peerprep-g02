@@ -30,7 +30,7 @@ export function MatchingView() {
     }, [topicMap]);
 
     const [selectedTopicNames, setSelectedTopicNames] = useState<string[]>([]);
-    
+
     const topicsForQueue = useMemo(() => {
         if (!topicMap) return [];
 
@@ -82,6 +82,7 @@ export function MatchingView() {
         const defaultLang = metadata.defaultLanguage as Language;
 
         if (defaultLang && (LANGUAGE_OPTIONS as readonly string[]).includes(defaultLang)) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLanguages((prev) =>
                 prev.length === 1 && prev[0] === defaultLang ? prev : [defaultLang],
             );
@@ -118,7 +119,7 @@ export function MatchingView() {
                 {isSearching || isPreparing ? (
                     <MatchSearchingView
                         isPreparing={isPreparing}
-                        topics={selectedTopicNames} 
+                        topics={selectedTopicNames}
                         languages={languages}
                         difficulties={getRelaxedDifficulties(difficulty, activeTier)}
                         relaxationTier={activeTier}
