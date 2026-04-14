@@ -1061,28 +1061,60 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
 #### Presence & Disconnection
 
 ```
-  User Presence State Machine
-  ============================
+  User Presence State Machine (with multi-tab)
+  ==============================================
 
-              +-----------+    all sockets drop    +--------------+
-   join ----->| CONNECTED |----------------------->| DISCONNECTED |
-              +-----------+                        +------+-------+
-                ^       |                                 |
-                |       |                    rejoin within |  grace period
-                |       |                    30 seconds    |  expires
-                |       |                                 v
-                |  +----+                          +-------------+
-                |  |  user clicks "Leave"          | Cannot rejoin|
-                |  v                               +-------------+
-              +-----------+
-              |   LEFT    |--- permanent, cannot rejoin
-              +-----------+
-                    |
-                    | if other user is also LEFT or DISCONNECTED:
-                    v
-              +-----------+
-              |SESSION END|
-              +-----------+
+  Each tab = 1 Socket.IO connection. Redis tracks socketCount per user.
+  State transitions depend on whether sockets remain open.
+
+                        session:join
+                        (any tab)
+                            |
+                            v
+                    +---------------+
+                    |   CONNECTED   |  socketCount >= 1
+                    |               |  (each new tab increments count)
+                    +-------+-------+
+                      ^     |     |
+                      |     |     |  user clicks "Leave" on a tab:
+          tab opens   |     |     |  - that socket is removed
+         (new socket  |     |     |  - if socketCount > 0: still CONNECTED
+          joins room) |     |     |  - if socketCount == 0: transitions to LEFT
+                      |     |     |
+                      |     |     +---------------------------+
+                      |     |                                 |
+                      |     |  tab closes / network drop:     |
+                      |     |  - that socket is removed        |
+                      |     |  - if socketCount > 0:           |
+                      |     |    still CONNECTED (no event)    |
+                      |     |  - if socketCount == 0:          |
+                      |     |    transitions to DISCONNECTED   |
+                      |     |                                 |
+                      |     v                                 v
+                +---------------+                     +-----------+
+                | DISCONNECTED  |                     |   LEFT    |
+                | socketCount=0 |                     | permanent |
+                +-------+-------+                     +-----+-----+
+                  ^     |                                   |
+                  |     |  rejoin within 30s                |
+                  |     |  (new tab connects):              |
+                  |     |  -> back to CONNECTED             |
+                  |     |                                   |
+                  |     |  grace period expires:            |
+                  |     |  -> cannot rejoin                 |
+                  |     v                                   |
+                  |  +-------------+                        |
+                  |  | Cannot      |                        |
+                  |  | rejoin      |                        |
+                  |  +-------------+                        |
+                  |                                         |
+                  +----- if other user is also              |
+                         LEFT or DISCONNECTED: -------------+
+                                    |
+                                    v
+                              +-----------+
+                              |SESSION END|
+                              +-----------+
 ```
 
 | Aspect | DISCONNECTED | LEFT |
