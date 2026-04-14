@@ -70,6 +70,40 @@ export function calculateScoreDelta(difficulty: AttemptDifficulty, success: bool
     return 50;
 }
 
+function getAttemptTimestamp(attempt: AttemptRecord): number {
+    return attempt.attemptedAt.getTime();
+}
+
+function calculateAppliedDeltaFromHistory(
+    attempts: AttemptRecord[],
+    targetAttemptId: string,
+): number | null {
+    const orderedAttempts = [...attempts].sort((left, right) => {
+        const attemptedAtDiff = getAttemptTimestamp(left) - getAttemptTimestamp(right);
+        if (attemptedAtDiff !== 0) {
+            return attemptedAtDiff;
+        }
+
+        return left.createdAt.getTime() - right.createdAt.getTime();
+    });
+
+    let score = 0;
+
+    for (const attempt of orderedAttempts) {
+        const theoreticalDelta = calculateScoreDelta(attempt.difficulty, attempt.success);
+        const nextScore = Math.max(0, score + theoreticalDelta);
+        const appliedDelta = nextScore - score;
+
+        if (attempt.id === targetAttemptId) {
+            return appliedDelta;
+        }
+
+        score = nextScore;
+    }
+
+    return null;
+}
+
 export class AttemptService {
     private readonly userScoreService = new UserScoreService();
     private readonly qnPopularScoreService = new QuestionPopularityService();
@@ -116,7 +150,11 @@ export class AttemptService {
         let netDelta = newDelta;
 
         if (existing) {
-            const oldDelta = calculateScoreDelta(existing.difficulty, existing.success);
+            const attempts = await attemptRepository.listByClerkUserId(userId);
+            const oldDelta =
+                calculateAppliedDeltaFromHistory(attempts, existing.id) ??
+                calculateScoreDelta(existing.difficulty, existing.success);
+
             netDelta = newDelta - oldDelta;
             await attemptRepository.deleteByIds([existing.id]);
         }

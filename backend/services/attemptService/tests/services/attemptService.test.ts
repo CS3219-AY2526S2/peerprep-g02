@@ -166,6 +166,118 @@ describe("AttemptService", () => {
         expect(deleteByIdsSpy).toHaveBeenCalledWith(["attempt-1"]);
     });
 
+    it("reverses only the applied contribution of a failed attempt when later attempts increased the score", async () => {
+        vi.spyOn(attemptRepository, "findByUserAndCollaboration").mockResolvedValue({
+            id: "attempt-1",
+            clerkUserId: "user_1",
+            questionId: "question-1",
+            questionTitle: "Two Sum",
+            collaborationId: "collab-1",
+            language: "typescript",
+            difficulty: "Hard",
+            success: false,
+            duration: 1200,
+            totalTestCases: 5,
+            testCasesPassed: 0,
+            attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+            createdAt: new Date("2026-03-24T00:00:00.000Z"),
+        });
+        vi.spyOn(attemptRepository, "listByClerkUserId").mockResolvedValue([
+            {
+                id: "attempt-3",
+                clerkUserId: "user_1",
+                questionId: "question-3",
+                questionTitle: "Medium Problem",
+                collaborationId: "collab-3",
+                language: "typescript",
+                difficulty: "Medium",
+                success: true,
+                duration: 1200,
+                totalTestCases: 5,
+                testCasesPassed: 5,
+                attemptedAt: new Date("2026-03-25T00:00:00.000Z"),
+                createdAt: new Date("2026-03-25T00:00:00.000Z"),
+            },
+            {
+                id: "attempt-4",
+                clerkUserId: "user_1",
+                questionId: "question-4",
+                questionTitle: "Easy Problem",
+                collaborationId: "collab-4",
+                language: "typescript",
+                difficulty: "Easy",
+                success: true,
+                duration: 1200,
+                totalTestCases: 5,
+                testCasesPassed: 5,
+                attemptedAt: new Date("2026-03-26T00:00:00.000Z"),
+                createdAt: new Date("2026-03-26T00:00:00.000Z"),
+            },
+            {
+                id: "attempt-1",
+                clerkUserId: "user_1",
+                questionId: "question-1",
+                questionTitle: "Two Sum",
+                collaborationId: "collab-1",
+                language: "typescript",
+                difficulty: "Hard",
+                success: false,
+                duration: 1200,
+                totalTestCases: 5,
+                testCasesPassed: 0,
+                attemptedAt: new Date("2026-03-24T00:00:00.000Z"),
+                createdAt: new Date("2026-03-24T00:00:00.000Z"),
+            },
+        ]);
+        vi.spyOn(attemptRepository, "deleteByIds").mockResolvedValue();
+        vi.spyOn(attemptRepository, "insert").mockResolvedValue({
+            id: "attempt-2",
+            clerkUserId: "user_1",
+            questionId: "question-1",
+            questionTitle: "Two Sum",
+            collaborationId: "collab-1",
+            language: "typescript",
+            difficulty: "Hard",
+            success: true,
+            duration: 1200,
+            totalTestCases: 5,
+            testCasesPassed: 5,
+            attemptedAt: new Date("2026-03-25T00:00:00.000Z"),
+            createdAt: new Date("2026-03-25T00:00:00.000Z"),
+        });
+        const applyScoreDeltasSpy = vi
+            .spyOn(UserScoreService.prototype, "applyScoreDeltas")
+            .mockResolvedValue([
+                {
+                    clerkUserId: "user_1",
+                    previousScore: 40,
+                    newScore: 90,
+                    delta: 50,
+                },
+            ]);
+
+        const service = new AttemptService();
+        await service.recordAttempt({
+            userId: "user_1",
+            collaborationId: "collab-1",
+            questionId: "question-1",
+            questionTitle: "Two Sum",
+            language: "typescript",
+            difficulty: "Hard",
+            success: true,
+            duration: 1200,
+            totalTestCases: 5,
+            testCasesPassed: 5,
+        });
+
+        expect(applyScoreDeltasSpy).toHaveBeenCalledWith([
+            {
+                clerkUserId: "user_1",
+                delta: 50,
+            },
+        ]);
+    });
+
     it("returns attempt history from stored attempt records", async () => {
         vi.spyOn(attemptRepository, "listByClerkUserId").mockResolvedValue([
             {
