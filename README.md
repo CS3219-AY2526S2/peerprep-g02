@@ -286,6 +286,8 @@ PeerPrep uses [Clerk](https://clerk.com/) as its identity provider with a layere
 | Service -> Service    | `x-internal-service-key` shared secret | All internal calls       |
 | Clerk -> User Service | Webhook signatures                     | User lifecycle events    |
 
+On the frontend, protected REST requests go through a shared `apiFetch` wrapper. If a request returns `401 Unauthorized` or `403 Forbidden: account is not active.`, the client signs the user out and redirects them back to the login page.
+
 ---
 
 ## Microservices Documentation
@@ -425,7 +427,7 @@ Clerk sends webhook events when user accounts change. The webhook route is mount
 
 The `super_user` role acts as a safeguard -- exactly one super_user exists, seeded at migration time. They cannot be deleted, suspended, or have their role changed through the API.
 
-When an admin **suspends** a user, the service also calls `clerkClient.users.banUser()` and revokes all active Clerk sessions, immediately locking the user out. Unsuspending calls `clerkClient.users.unbanUser()`.
+When an admin **suspends** a user, the service also calls `clerkClient.users.banUser()` and revokes all active Clerk sessions. The frontend then signs the user out on the next protected REST request that returns `401` or `403 Forbidden: account is not active.`. Unsuspending calls `clerkClient.users.unbanUser()`.
 
 #### Account Deletion
 
@@ -1604,7 +1606,8 @@ When a user clicks "Submit" in the collaboration workspace, the Collaboration Se
         |                                with same (userId, collabId)      |
         |                                                                  |
         |                             IF DUPLICATE (re-submit):            |
-        |                               Calculate old score delta          |
+        |                               Reconstruct the old attempt's      |
+        |                               applied score contribution         |
         |                               Delete old attempt row             |
         |                               netDelta = newDelta - oldDelta     |
         |                             ELSE (first submit):                 |
@@ -1646,9 +1649,13 @@ The service calculates a **proficiency score delta** for each attempt based on d
 
   On re-submit (same user + collaborationId):
   - Old attempt is deleted
-  - Net delta = new delta - old delta
-  - Example: first submit failed (-10), re-submit passes Hard (+50)
-             net delta = +50 - (-10) = +60
+  - Attempt Service replays the user's attempt history to determine
+    the old attempt's actual applied contribution after score clamping
+  - Net delta = new delta - old applied delta
+  - Example: if a failed attempt happened while the user's score was 0,
+             that attempt contributed 0 rather than -10
+  - Re-submitting that same attempt with a Hard success applies +50,
+    not +60
 ```
 
 The score update is sent to the User Service via `POST /users/internal/deltas`, which applies it transactionally with row-level locking (`SELECT FOR UPDATE`) and `GREATEST(0, score + delta)` to prevent negative scores.
@@ -1660,12 +1667,12 @@ If the score update call fails (User Service down, timeout, etc.), the **inserte
 The `attempts` table has a **partial unique index** on `(clerk_user_id, collaboration_id) WHERE collaboration_id IS NOT NULL`. This means a user can only have one attempt per collaboration session. When a user re-submits:
 
 1. The existing attempt for that `(userId, collaborationId)` is found
-2. The old score delta is reversed
+2. The old attempt's applied score contribution is reconstructed from the user's attempt history
 3. The old row is deleted
 4. A new attempt is inserted with the updated results
 5. The net score delta is applied
 
-This allows users to improve their score within a session by fixing bugs and re-submitting.
+This allows users to improve their score within a session by fixing bugs and re-submitting, while correctly handling edge cases where earlier failed attempts were clamped at zero.
 
 #### Database Schema
 
