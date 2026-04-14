@@ -1,3 +1,4 @@
+import { type UUID } from "node:crypto";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -21,6 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ROUTES } from "@/constants/routes";
 
 import { useCollaborationSession } from "@/services/collaboration/useCollaborationSession";
+import { useTopics } from "@/context/useTopic";
 
 function formatElapsed(createdAt: string | undefined, now: number): string {
     if (!createdAt) return "00:00";
@@ -66,6 +68,7 @@ export default function CollaborationSessionView() {
         userNames,
     } = useCollaborationSession(collaborationId);
 
+    const { topics: topicMap } = useTopics();
     const session = joinState?.session;
     const elapsed = formatElapsed(session?.createdAt, now);
 
@@ -167,7 +170,7 @@ export default function CollaborationSessionView() {
                                     variant="outline"
                                     className="rounded-full border-white/10 bg-white/5 px-4 py-1 text-sm text-slate-300"
                                 >
-                                    {topic}
+                                    {topicMap?.[topic as UUID] ?? topic}
                                 </Badge>
                             ))}
                         </div>

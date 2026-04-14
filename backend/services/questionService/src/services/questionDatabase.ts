@@ -52,10 +52,7 @@ export async function GetPopularQuestions() {
 
 export async function GetQuestion(quid: UUID) {
     try {
-        const result = await pool.query(
-            "SELECT q.*, ARRAY(SELECT t.topic FROM topics t WHERE t.tid = ANY(q.topics)) AS topics FROM questions q WHERE q.quid = $1",
-            [quid],
-        );
+        const result = await pool.query("SELECT * FROM questions WHERE quid = $1", [quid]);
         if (result.rowCount == 0) return null;
 
         const question = result.rows[0];
@@ -226,7 +223,7 @@ export async function SearchQuestion(
     try {
         //Default random question
         const result = await pool.query(
-            "SELECT qt.quid FROM qn_topics qt JOIN topics t ON qt.tid = t.tid WHERE t.topic = $1 AND qt.difficulty = $2",
+            "SELECT q.quid FROM questions q JOIN topics t ON t.tid = ANY(q.topics) WHERE t.topic = $1 AND q.difficulty = $2",
             [topic, difficulty],
         );
         if (result == undefined || result.rows.length == 0) return null;
