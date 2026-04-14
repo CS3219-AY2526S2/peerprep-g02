@@ -73,12 +73,15 @@ function TestCases(info: ITestCase) {
                         required={true}
                         id="input"
                         name="input"
-                        placeholder="[0,1,2]"
+                        placeholder='e.g. [2, 7] or [[1,2,3]] for a single array arg'
                         value={info.input}
                         onChange={(e) => info.handleChange("input", e.target.value)}
                         rows={5}
                         className="w-full rounded-lg border-2 border-grey-200 pl-[10px]leading-[30px] placeholder:text-grey-400"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                        List of function arguments. For a single array arg, wrap it: [[1,2,3]]
+                    </p>
                 </Field>
             </div>
             <div className="m-8 bg-white flex-grow">

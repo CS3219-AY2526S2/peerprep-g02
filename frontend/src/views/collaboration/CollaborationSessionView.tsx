@@ -147,11 +147,6 @@ export default function CollaborationSessionView() {
         <div className="min-h-screen bg-[#0b1120] text-slate-100">
             <SessionHeader
                 title={question?.title ?? session?.topic ?? "Collaboration Session"}
-                subtitle={
-                    session
-                        ? `${session.difficulty} · ${session.topic}`
-                        : "Connecting to collaboration session"
-                }
                 elapsed={elapsed}
                 onExitClick={() => setShowLeaveConfirm(true)}
             />

@@ -4,14 +4,12 @@ import { Button } from "@/components/ui/button";
 
 interface SessionHeaderProps {
     title: string;
-    subtitle: string;
     elapsed: string;
     onExitClick: () => void;
 }
 
 export default function SessionHeader({
     title,
-    subtitle,
     elapsed,
     onExitClick,
 }: SessionHeaderProps) {
@@ -32,7 +30,6 @@ export default function SessionHeader({
                                 {title}
                             </span>
                         </div>
-                        <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
                     </div>
                 </div>
 

@@ -1,6 +1,5 @@
 import { ArrowRight, Radio } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -18,20 +17,6 @@ export function RejoinSessionView({ session, onRejoin }: RejoinSessionCardProps)
                         <p className="text-lg font-bold text-slate-900">
                             You have an active session
                         </p>
-                        <div className="mt-1 flex items-center gap-2">
-                            <Badge
-                                variant="outline"
-                                className="rounded-full border-indigo-200 bg-indigo-50 text-indigo-700"
-                            >
-                                {session.topic}
-                            </Badge>
-                            <Badge
-                                variant="outline"
-                                className="rounded-full border-indigo-200 bg-indigo-50 text-indigo-700"
-                            >
-                                {session.difficulty}
-                            </Badge>
-                        </div>
                     </div>
                 </div>
                 <Button
