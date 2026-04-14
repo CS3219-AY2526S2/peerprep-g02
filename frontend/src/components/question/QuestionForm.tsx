@@ -73,7 +73,7 @@ function TestCases(info: ITestCase) {
                         required={true}
                         id="input"
                         name="input"
-                        placeholder='e.g. [2, 7] or [[1,2,3]] for a single array arg'
+                        placeholder="e.g. [2, 7] or [[1,2,3]] for a single array arg"
                         value={info.input}
                         onChange={(e) => info.handleChange("input", e.target.value)}
                         rows={5}

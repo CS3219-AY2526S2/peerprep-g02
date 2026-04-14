@@ -1020,7 +1020,7 @@ Sockets authenticate on connection via middleware. The client sends a JWT (in `A
 On `session:join` with a `collaborationId`, the server:
 
 1. Validates session exists, is active, and user is assigned to it
-2. Checks user hasn't left, and if disconnected, that they're within the 30s reconnect grace period
+2. Checks user hasn't left, and if disconnected, that they're within the 3-minute reconnect grace period
 3. Registers the socket (supports multiple tabs per user)
 4. Returns full state: session metadata, question details, code snapshot + OT revision, participant presence, existing hints, user display names
 5. Broadcasts `user:joined` and `presence:updated` to the room
@@ -1096,7 +1096,7 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
                 | socketCount=0 |                     | permanent |
                 +-------+-------+                     +-----+-----+
                   ^     |                                   |
-                  |     |  rejoin within 30s                |
+                  |     |  rejoin within 3 min              |
                   |     |  (new tab connects):              |
                   |     |  -> back to CONNECTED             |
                   |     |                                   |
@@ -1120,7 +1120,7 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
 | Aspect | DISCONNECTED | LEFT |
 |---|---|---|
 | Trigger | Network drop, tab close, ping timeout | User clicks "Leave Session" |
-| Rejoin? | Yes (within 30s grace period) | No (permanent) |
+| Rejoin? | Yes (within 3 min grace period) | No (permanent) |
 | Active session index | Kept (user sees rejoin prompt) | Cleared |
 | Other user sees | `user:disconnected` | `user:left` |
 | Session ends? | No (stays active) | Yes, if partner is LEFT or DISCONNECTED |
@@ -1191,7 +1191,7 @@ Sessions end via: **both users left**, **inactivity timeout** (30min, checked ev
 | Setting | Default | Env Variable |
 |---|---|---|
 | Session TTL | 1 hour | `CS_SESSION_TTL_MS` |
-| Disconnect grace | 30 seconds | `CS_DISCONNECT_GRACE_MS` |
+| Disconnect grace | 3 minutes | `CS_DISCONNECT_GRACE_MS` |
 | Inactivity timeout | 30 minutes | `CS_SESSION_INACTIVITY_TIMEOUT_MS` |
 | Heartbeat interval | 25 seconds | `CS_HEARTBEAT_INTERVAL_MS` |
 | Heartbeat timeout | 20 seconds | `CS_HEARTBEAT_TIMEOUT_MS` |
