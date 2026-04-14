@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
+import { useAuth } from "@clerk/clerk-react";
 import { MessageSquareText, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Textarea } from "@/components/ui/textarea";
+
+import { getAuthToken } from "@/utils/apiClient";
 
 interface MessageInfo {
     type: string;
@@ -91,9 +94,8 @@ function UserMessage(prop: MessageInfoType) {
     );
 }
 
-const CollaborationChat: React.FC<{ collaborationId: string | undefined; userId: string }> = ({
+const CollaborationChat: React.FC<{ collaborationId: string | undefined }> = ({
     collaborationId,
-    userId,
 }) => {
     const [message, setMessage] = useState<string>("");
     const [chatMessages, setChatMessages] = useState<MessageInfo[]>([]);
@@ -102,56 +104,32 @@ const CollaborationChat: React.FC<{ collaborationId: string | undefined; userId:
     const [quoteMessage, setQuoted] = useState<MessageInfo | null>(null);
 
     const socket = useRef<WebSocket | null>(null);
-    // Establish WebSocket connection
-    useEffect(() => {
-        const ws = new WebSocket("ws://localhost:3019");
-        socket.current = ws;
+    const { userId, isLoaded } = useAuth();
 
-        ws.onopen = () => {
-            // Join the collaboration room with userId and collaborationId
-            ws.send(
-                JSON.stringify({
-                    type: "join",
-                    messageId: crypto.randomUUID(),
-                    collaborationId,
-                    userId,
-                    // testUser,
-                }),
-            );
-        };
+    function JoinRoom() {
+        if (!socket.current || !collaborationId || !userId) return;
 
-        ws.onmessage = (event) => {
-            const data: MessageInfo = JSON.parse(event.data);
-
-            if (data.type === "info") {
-                // console.log(data.message);
-            } else {
-                // console.log(event.data);
-                if (chatIds.has(data.messageId)) return;
-                setChatMessages((prevMessages) => [...prevMessages, data]);
-                setChatIds((prevId) => prevId.add(data.messageId));
-            }
-        };
-
-        // setSocket(ws);
-
-        return () => {
-            if (ws) {
-                ws.close();
-            }
-        };
-    }, [collaborationId, userId]);
+        socket.current.send(
+            JSON.stringify({
+                type: "join",
+                messageId: crypto.randomUUID(),
+                collaborationId,
+                userId,
+            }),
+        );
+    }
 
     // Send a message to the collaboration room
-    const sendMessage = () => {
-        if (socket && message) {
+    function SendMessage() {
+        if (socket.current && message && userId) {
+            if (message.trim().length == 0) return;
             const messageId = crypto.randomUUID();
             const stringed = JSON.stringify({
-                type: "private_message",
+                type: "message",
                 collaborationId,
                 userId,
                 // testUser,
-                text: message,
+                text: message.trim(),
                 replyMessage: quoteMessage == null ? null : quoteMessage.message,
                 messageId: messageId,
             });
@@ -160,18 +138,59 @@ const CollaborationChat: React.FC<{ collaborationId: string | undefined; userId:
             setChatMessages((prevMessages) => [
                 ...prevMessages,
                 {
-                    type: "private_message",
+                    type: "message",
                     messageId: messageId,
                     message: message,
                     replyMessage: quoteMessage == null ? null : quoteMessage.message,
                     from: userId.toString(),
-                    // from: testUser.toString(),
                 },
             ]);
 
             setQuoted(null);
         }
-    };
+    }
+
+    function ReceiveMessage(data: MessageInfo) {
+        if (chatIds.has(data.messageId)) return;
+
+        setChatMessages((prevMessages) => [...prevMessages, data]);
+        setChatIds((prevId) => prevId.add(data.messageId));
+    }
+
+    // Establish WebSocket connection
+    useEffect(() => {
+        const createSocketConnection = async () => {
+            if (!isLoaded || !userId || !collaborationId) {
+                return;
+            }
+
+            const token = await getAuthToken();
+            if (!token) return;
+            const ws = new WebSocket("ws://localhost:3019", [token]);
+            socket.current = ws;
+
+            ws.onmessage = (event) => {
+                const data: MessageInfo = JSON.parse(event.data);
+
+                if (data.type == "info") {
+                    // For logging during testing
+                    console.log(data.message);
+                } else if (data.type == "auth") {
+                    JoinRoom();
+                } else {
+                    ReceiveMessage(data);
+                }
+            };
+        };
+
+        createSocketConnection();
+
+        return () => {
+            if (socket.current) {
+                socket.current.close();
+            }
+        };
+    }, [collaborationId, isLoaded, userId]);
 
     const quotingMessage = (message: MessageInfo) => {
         setQuoted(message);
@@ -179,13 +198,13 @@ const CollaborationChat: React.FC<{ collaborationId: string | undefined; userId:
 
     const handleEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault(); // stop newline
-            sendMessage();
+            e.preventDefault();
+            SendMessage();
         }
     };
 
     return (
-        <div className="bg-[#0b1120] flex flex-col">
+        <div className="bg-[#0b1120] flex flex-col rounded-md">
             {/* Title */}
             <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 w-full">
                 <div className="flex items-center gap-3">
@@ -204,7 +223,7 @@ const CollaborationChat: React.FC<{ collaborationId: string | undefined; userId:
                         messageId={msg.messageId}
                         replyMessage={msg.replyMessage}
                         quote={() => quotingMessage(msg)}
-                        isSelf={msg.from == userId.toString()}
+                        isSelf={msg.from == userId!.toString()}
                     />
                 ))}
             </div>
@@ -240,7 +259,7 @@ const CollaborationChat: React.FC<{ collaborationId: string | undefined; userId:
                 <Button
                     size="icon-lg"
                     className="rounded-2xl bg-blue-500 text-white hover:bg-blue-400"
-                    onClick={sendMessage}
+                    onClick={SendMessage}
                 >
                     <Send className="size-4" />
                 </Button>

@@ -325,8 +325,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-
-  # Questions Service
   message-service:
     build: ./backend/services/messageService
     container_name: message-service

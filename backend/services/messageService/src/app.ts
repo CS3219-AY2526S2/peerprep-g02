@@ -1,13 +1,27 @@
 import cors from "cors";
 import express from "express";
 import http from "http";
-import WebSocket, { Server as WebSocketServer } from "ws";
 import Redis from "ioredis";
+import WebSocket, { Server as WebSocketServer } from "ws";
+import { socketAuthMiddleware } from "./middleware/socketAuth";
 
+// App setup
 const app = express();
-const server = http.createServer(app);
-const port = 3019;
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : [];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
+app.use(express.json());
+
+//Redis setup
 const redis = new Redis({
   host: "message-redis",
   port: 6379,
@@ -21,101 +35,39 @@ redis.on("error", (err) => {
   console.error("Redis connection error:", err);
 });
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3001",
-      "http://localhost:5173",
-      "http://localhost:3005",
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-  }),
-);
-app.use(express.json());
+// Server setup
+const server = http.createServer(app);
+const port = 3019;
 
 const wss = new WebSocketServer({ server });
 
 const collaborationRooms: Map<string, Set<WebSocket>> = new Map();
 
-wss.on("connection", (ws: WebSocket) => {
-  console.log("New WebSocket connection established");
-  console.log("Current connections:", wss.clients.size);
-  console.log("Clients", wss.clients.entries.name);
+wss.on("connection", async (ws: WebSocket, req: http.IncomingMessage) => {
+  try {
+    const user = await socketAuthMiddleware(req);
 
-  ws.on("message", async (message: WebSocket.Data) => {
-    console.log(message.toString());
-    const { collaborationId, testUser, type, text, messageId, replyMessage } =
-      JSON.parse(message.toString());
-
-    // Join collaboration room by collaborationId and add user to collaboration room
-    if (type === "join") {
-      if (!collaborationRooms.has(collaborationId)) {
-        collaborationRooms.set(collaborationId, new Set());
-      }
-
-      const room = collaborationRooms.get(collaborationId);
-      room?.add(ws);
-
-      console.log(
-        `User ${testUser} joined collaboration room ${collaborationId}`,
-      );
-      ws.send(
-        JSON.stringify({
-          type: "info",
-          message: `Welcome to collaboration ${collaborationId}`,
-        }),
-      );
-
-      //Send previous messages
-      await sendPreviousMessages(collaborationId, ws);
+    if (!user || user == null) {
+      console.log("Authentication failed: Invalid token");
+      ws.close(1008, "Invalid token");
+      return;
     }
 
-    // Send message within the collaboration room
-    if (type === "private_message") {
-      const room = collaborationRooms.get(collaborationId);
+    console.log("Authentication successful for user:", user.data.clerkUserId);
+    ws.send(
+      JSON.stringify({
+        type: "auth",
+        message: `Successfully authenticated`,
+      }),
+    );
 
-      const messageData = JSON.stringify({
-        from: testUser,
-        message: text,
-        replyMessage: replyMessage,
-      });
-      await redis.rpush(
-        `collaborationRoom:${collaborationId}:messages`,
-        messageData,
-      );
-
-      await redis.expire(`collaborationRoom:${collaborationId}:messages`, 7200); //Assume session max time is 2 hours
-
-      if (room) {
-        room.forEach((client) => {
-          if (client !== ws && client.readyState === WebSocket.OPEN) {
-            client.send(
-              JSON.stringify({
-                from: testUser,
-                message: text,
-                replyMessage: replyMessage,
-                messageId: messageId,
-              }),
-            );
-          }
-        });
-      }
-    }
-  });
-
-  // User disconnect
-  ws.on("close", () => {
-    collaborationRooms.forEach((room, collaborationId) => {
-      room.delete(ws);
-      if (room.size === 0) {
-        resetMessageTimings(collaborationId);
-        collaborationRooms.delete(collaborationId);
-      }
-    });
-    console.log("User disconnected");
-  });
+    handleChat(ws);
+  } catch (err) {
+    console.error("Error during authentication:", err);
+    ws.close(1008, "Error during authentication");
+  }
 });
+
 
 async function resetMessageTimings(collaborationId: string) {
   await redis.expire(`collaborationRoom:${collaborationId}:messages`, 300);
@@ -134,6 +86,101 @@ async function sendPreviousMessages(collaborationId: string, ws: WebSocket) {
   });
 }
 
+function handleChat(ws: WebSocket) {
+  console.log("User authenticated. Handle chat.");
+
+  ws.on("message", async (message: WebSocket.Data) => {
+    console.log(message.toString());
+
+    try {
+      const { collaborationId, type, text, messageId, replyMessage, userId } =
+        JSON.parse(message.toString());
+
+      // Join collaboration room by collaborationId and add user to collaboration room
+      if (type === "join") {
+        if (!collaborationRooms.has(collaborationId)) {
+          collaborationRooms.set(collaborationId, new Set());
+        }
+
+        const room = collaborationRooms.get(collaborationId);
+        if (room && !room.has(ws)) {
+          room.add(ws);
+
+          console.log(
+            `User ${userId} joined collaboration room ${collaborationId}`,
+          );
+          ws.send(
+            JSON.stringify({
+              type: "info",
+              message: `Welcome to collaboration ${collaborationId}`,
+            }),
+          );
+          //Send previous messages
+          await sendPreviousMessages(collaborationId, ws);
+        } else {
+          ws.send(
+            JSON.stringify({
+              type: "info",
+              message: `User ${userId} is already in collaboration room ${collaborationId}`,
+            }),
+          );
+        }
+      }
+
+      // Send message within the collaboration room
+      if (type === "message") {
+        const room = collaborationRooms.get(collaborationId);
+
+        const messageData = JSON.stringify({
+          from: userId,
+          message: text,
+          replyMessage: replyMessage,
+          messageId: messageId,
+        });
+        await redis.rpush(
+          `collaborationRoom:${collaborationId}:messages`,
+          messageData,
+        );
+
+        await redis.expire(
+          `collaborationRoom:${collaborationId}:messages`,
+          7200,
+        ); //Assume session max time is 2 hours
+
+        if (room) {
+          room.forEach((client) => {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
+              client.send(
+                JSON.stringify({
+                  from: userId,
+                  message: text,
+                  replyMessage: replyMessage,
+                  messageId: messageId,
+                }),
+              );
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.log("Error: ", e);
+    }
+  });
+
+  // User disconnect
+  ws.on("close", () => {
+    collaborationRooms.forEach((room, collaborationId) => {
+      room.delete(ws);
+      if (room.size === 0) {
+        resetMessageTimings(collaborationId);
+        collaborationRooms.delete(collaborationId);
+      }
+    });
+    console.log("User disconnected");
+  });
+}
+
+
 server.listen(port, () => {
-  console.log("Server listening on http://localhost:3000");
+  console.log(`Server listening on http://localhost:${port}`);
 });
