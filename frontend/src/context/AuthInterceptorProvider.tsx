@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
 
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useClerk } from "@clerk/clerk-react";
 
-import { injectAuthInterceptor } from "@/utils/apiClient";
+import { injectAuthFailureHandler, injectAuthInterceptor } from "@/utils/apiClient";
+import { pushToast } from "@/utils/toast";
 
 type Props = {
     children: React.ReactNode;
@@ -10,6 +11,7 @@ type Props = {
 
 export function AuthInterceptorProvider({ children }: Props) {
     const { getToken, isLoaded, isSignedIn } = useAuth();
+    const { signOut } = useClerk();
 
     useEffect(() => {
         if (!isLoaded) {
@@ -24,6 +26,36 @@ export function AuthInterceptorProvider({ children }: Props) {
             injectAuthInterceptor(undefined);
         }
     }, [getToken, isLoaded, isSignedIn]);
+
+    useEffect(() => {
+        if (!isLoaded) {
+            return;
+        }
+
+        let hasHandledAuthFailure = false;
+
+        injectAuthFailureHandler((reason) => {
+            if (hasHandledAuthFailure || !isSignedIn) {
+                return;
+            }
+
+            hasHandledAuthFailure = true;
+
+            pushToast({
+                tone: "error",
+                message:
+                    reason === "inactive"
+                        ? "Your account has been suspended. Signing you out."
+                        : "Your session has expired. Signing you out.",
+            });
+
+            void signOut({ redirectUrl: "/account/login" });
+        });
+
+        return () => {
+            injectAuthFailureHandler(undefined);
+        };
+    }, [isLoaded, isSignedIn, signOut]);
 
     if (!isLoaded) {
         return null;
