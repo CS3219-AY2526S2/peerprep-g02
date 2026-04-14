@@ -84,7 +84,7 @@ export const registerSocketHandlers = (io: Server) => {
 
                 if (matchResult.matchFound) {
                     socketLogger.info(
-                        `Match Found: ${userId} & ${matchResult.partnerId} on ${matchResult.matchedTopic} (${matchResult.matchedDifficulty}, ${matchResult.matchedLanguage})`,
+                        `Match Found: ${userId} & ${matchResult.partnerId} on ${matchResult.matchedTopic.name} (${matchResult.matchedDifficulty}, ${matchResult.matchedLanguage})`,
                     );
                     const sharedData = {
                         matchFound: matchResult.matchFound,
@@ -104,8 +104,9 @@ export const registerSocketHandlers = (io: Server) => {
                         partnerId: userId,
                     });
                 } else {
+                    const topicNames = matchRequest.topics.map((t) => t.name).join(", ");
                     socketLogger.info(
-                        `User ${userId} added to queue for ${matchRequest.topics.join(", ")} for ${matchRequest.difficulties.join(", ")} in ${matchRequest.languages.join(", ")}.`,
+                        `User ${userId} added to queue for ${topicNames} for ${matchRequest.difficulties.join(", ")} in ${matchRequest.languages.join(", ")}.`,
                     );
                     io.to(userId).emit("match_waiting", {
                         message: "Added to queue, waiting for a match...",

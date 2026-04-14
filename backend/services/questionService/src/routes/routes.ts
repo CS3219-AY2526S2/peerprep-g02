@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { UUID } from "node:crypto";
 
+import { generateUploadUrl, getSignedImageUrl } from "@/services/questionImage";
+
 import { requireAdminAuth } from "../middlewares/requireAdminAuth";
-import { getLeetCode } from "../services/leetcodeQueries";
+import { getLeetCode, getLeetCodeAuto } from "../services/leetcodeQueries";
 import {
     CreateQuestion,
     DeleteQuestion,
@@ -11,8 +13,9 @@ import {
     GetQuestion,
     GetQuestions,
     SearchQuestion,
+    SearchQuestionDatabase,
 } from "../services/questionDatabase";
-import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicsDatabase";
+import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDatabase";
 
 const router = Router();
 
@@ -97,15 +100,35 @@ router.get("/topics", async (req, res) => {
     });
 });
 
+router.get("/leetcode", async (req, res) => {
+    const result = await getLeetCodeAuto();
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to retrieve leetcode questions.",
+        });
+    }
+    return res.status(200).json({
+        message: "Get leetcode questions success.",
+        body: result,
+    });
+});
 
 // --- ADMIN ONLY ROUTES (Middleware applied here) ---
 
 router.use(requireAdminAuth);
 
+router.get("/image-upload", async (req, res) => {
+    const { file } = req.query;
+    const url = await getSignedImageUrl(file as string);
+    res.json({ url });
+});
+
 //Save question
 router.post("", async (req, res) => {
     const result = await CreateQuestion(req.body);
-    if (!result) {
+
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to add question to the database.",
         });
@@ -120,9 +143,13 @@ router.post("", async (req, res) => {
 router.put("", async (req, res) => {
     const result = await EditQuestion(req.body);
 
-    if (!result) {
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to update question in database.",
+        });
+    } else if (result == -1) {
+        return res.status(500).json({
+            message: "Question version conflict.",
         });
     }
 
@@ -135,7 +162,7 @@ router.put("", async (req, res) => {
 router.delete("/:id", async (req, res) => {
     const result = await DeleteQuestion(req.params.id as UUID);
 
-    if (!result) {
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to delete question from database.",
         });
@@ -143,6 +170,22 @@ router.delete("/:id", async (req, res) => {
 
     return res.status(200).json({
         message: "Question successfully deleted from the database.",
+    });
+});
+
+//Search for matching question in question database
+router.post("/search-database", async (req, res) => {
+    const result = await SearchQuestionDatabase(req.body.title);
+
+    if (!result) {
+        return res.status(400).json({
+            message: "Unable to find matching questions in the database.",
+        });
+    }
+
+    return res.status(200).json({
+        message: "Get matching questions success.",
+        body: result,
     });
 });
 
@@ -163,8 +206,9 @@ router.post("/leetcode", async (req, res) => {
 
 //Save topic
 router.post("/topics", async (req, res) => {
-    const result = await AddTopic(req.body.topic);
-    if (!result) {
+    const result = await AddTopic(req.body);
+
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to add topic to the database.",
         });
@@ -177,7 +221,7 @@ router.post("/topics", async (req, res) => {
 
 //Edit topic
 router.put("/topics", async (req, res) => {
-    const result = await EditTopic(req.body.tid, req.body.topic);
+    const result = await EditTopic(req.body);
 
     if (!result) {
         return res.status(400).json({
@@ -194,7 +238,7 @@ router.put("/topics", async (req, res) => {
 router.delete("/topics/:id", async (req, res) => {
     const result = await DeleteTopic(req.params.id as UUID);
 
-    if (!result) {
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to delete topic from database.",
         });
@@ -203,6 +247,18 @@ router.delete("/topics/:id", async (req, res) => {
     return res.status(200).json({
         message: "Topic successfully deleted from the database.",
     });
+});
+
+// Route to generate signed URL for uploading files
+router.post("/image-upload", async (req, res) => {
+    try {
+        const { fileName, contentType } = req.body;
+        const uniqueName = `uploads/${Date.now()}-${fileName}`;
+        const data = await generateUploadUrl(uniqueName, contentType);
+        res.json(data);
+    } catch {
+        res.status(500).json({ error: "Failed to generate URL" });
+    }
 });
 
 export default router;

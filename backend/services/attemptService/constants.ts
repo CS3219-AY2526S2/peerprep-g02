@@ -27,4 +27,5 @@ export const AppConstants = {
     INTERNAL_SERVICE_API_KEY: process.env.INTERNAL_SERVICE_API_KEY ?? "",
     USER_SERVICE_URL: trimTrailingSlash(process.env.USER_SERVICE_URL) || "http://user-service:3001",
     DEPENDENCY_TIMEOUT_MS: readNumber(process.env.DEPENDENCY_TIMEOUT_MS, 5000),
+    QUESTION_SERVICE_URL: "http://question-service:3005"
 };

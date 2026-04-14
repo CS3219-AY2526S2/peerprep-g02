@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "@clerk/clerk-react";
 import { LoaderCircle, UsersRound, Wifi, WifiOff } from "lucide-react";
+import { type UUID } from "node:crypto";
 
 import AiHintsPanel from "@/components/collaboration/AiHintsPanel";
 import CodeEditor from "@/components/collaboration/CodeEditor";
@@ -20,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { ROUTES } from "@/constants/routes";
 
+import { useTopics } from "@/context/useTopic";
 import { useCollaborationSession } from "@/services/collaboration/useCollaborationSession";
 
 function formatElapsed(createdAt: string | undefined, now: number): string {
@@ -66,6 +68,7 @@ export default function CollaborationSessionView() {
         userNames,
     } = useCollaborationSession(collaborationId);
 
+    const { topics: topicMap } = useTopics();
     const session = joinState?.session;
     const elapsed = formatElapsed(session?.createdAt, now);
 
@@ -167,7 +170,7 @@ export default function CollaborationSessionView() {
                                     variant="outline"
                                     className="rounded-full border-white/10 bg-white/5 px-4 py-1 text-sm text-slate-300"
                                 >
-                                    {topic}
+                                    {topicMap?.[topic as UUID] ?? topic}
                                 </Badge>
                             ))}
                         </div>

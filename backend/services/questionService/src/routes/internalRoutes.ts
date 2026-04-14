@@ -2,7 +2,11 @@ import { Router } from "express";
 import type { UUID } from "node:crypto";
 
 import { requireInternalAuth } from "../middlewares/requireInternalAuth";
-import { GetQuestion, SearchQuestion } from "../services/questionDatabase";
+import {
+    GetQuestion,
+    SearchQuestion,
+    UpdateQuestionPopularityScore,
+} from "../services/questionDatabase";
 
 const router = Router();
 
@@ -95,6 +99,12 @@ router.post("/select", async (req, res) => {
             },
         },
     });
+});
+
+router.post("/popularity", async (req, res) => {
+    const { quid } = req.body;
+    const result = await UpdateQuestionPopularityScore(quid);
+    return res.status(result);
 });
 
 export default router;

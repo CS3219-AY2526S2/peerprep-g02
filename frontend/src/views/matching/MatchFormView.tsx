@@ -17,8 +17,9 @@ import {
 import { Label } from "@/components/ui/label";
 
 import { cn } from "@/lib/utils";
+import { Language } from "@/models/matching/matchingDetailsType";
 import { MatchFormViewProps } from "@/models/matching/matchingViewType";
-import { Difficulty, Language } from "@/models/question/questionType";
+import { Difficulty } from "@/models/question/questionType";
 
 const difficultyOptions = [
     {
