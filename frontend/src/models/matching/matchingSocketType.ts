@@ -13,7 +13,7 @@ export const SocketEvents = {
 export interface MatchResultPreparing {
     matchFound: true;
     matchId: string;
-    matchedTopic: string;
+    matchedTopic: { id: string; name: string };
     matchedDifficulty: Difficulty;
     matchedLanguage: string;
     userId: string;
@@ -45,7 +45,7 @@ export type MatchSuccessPayload = {
     userBId: string;
     difficulty: Difficulty;
     language: string;
-    topic: string;
+    topicId: string;
     questionId: string;
     status: string;
     createdAt: string;

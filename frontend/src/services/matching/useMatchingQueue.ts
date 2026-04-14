@@ -20,7 +20,7 @@ import { Difficulty } from "@/models/question/questionType";
 import { matchingService } from "@/services/matching/matchingService";
 
 export function useMatchingQueue(
-    topics: string[],
+    topics: { id: string; name: string }[],
     languages: string[],
     difficulty: Difficulty,
     onMatchFound?: (payload: MatchSuccessPayload) => void,

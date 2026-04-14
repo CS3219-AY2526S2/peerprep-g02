@@ -20,7 +20,7 @@ export function validateCreateSessionPayload(payload: unknown): ValidationResult
     }
 
     const candidate = payload as Record<string, unknown>;
-    const { matchId, userAId, userBId, difficulty, language, topic } = candidate;
+    const { matchId, userAId, userBId, difficulty, language, topicId } = candidate;
 
     if (matchId !== undefined && !isNonEmptyString(matchId)) {
         return { valid: false, error: "matchId must be a non-empty string when provided." };
@@ -49,7 +49,7 @@ export function validateCreateSessionPayload(payload: unknown): ValidationResult
         return { valid: false, error: "language is required." };
     }
 
-    if (!isNonEmptyString(topic)) {
+    if (!isNonEmptyString(topicId)) {
         return { valid: false, error: "topic is required." };
     }
 
@@ -61,7 +61,7 @@ export function validateCreateSessionPayload(payload: unknown): ValidationResult
             userBId: userBId.trim() as UUID,
             difficulty,
             language: language.trim(),
-            topic: topic.trim(),
+            topic: topicId.trim(),
         },
     };
 }

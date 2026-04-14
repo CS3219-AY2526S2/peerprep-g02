@@ -24,7 +24,7 @@ CREATE TABLE qn_topics (
 
     PRIMARY KEY (quid, tid),
 
-    FOREIGN KEY (quid) REFERENCES questions(quid),
+    FOREIGN KEY (quid) REFERENCES questions(quid) ON DELETE CASCADE,
     FOREIGN KEY (tid) REFERENCES topics(tid)
 );
 
