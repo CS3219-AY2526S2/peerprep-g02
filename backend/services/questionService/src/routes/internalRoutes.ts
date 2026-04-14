@@ -92,6 +92,10 @@ router.post("/select", async (req, res) => {
                     typeof questionRecord.difficulty === "string"
                         ? questionRecord.difficulty
                         : difficulty.trim(),
+                functionName:
+                    typeof questionRecord.function_name === "string"
+                        ? questionRecord.function_name
+                        : undefined,
             },
         },
     });

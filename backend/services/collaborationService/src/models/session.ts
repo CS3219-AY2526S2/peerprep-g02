@@ -28,6 +28,7 @@ export type SelectedQuestion = {
     topic: string;
     difficulty: SessionDifficulty;
     title?: string;
+    functionName?: string;
 };
 
 export type QuestionDetails = {

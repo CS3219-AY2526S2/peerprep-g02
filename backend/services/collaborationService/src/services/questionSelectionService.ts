@@ -12,6 +12,7 @@ type QuestionSelectionResponse = {
             title?: string;
             topic?: string;
             difficulty?: CreateSessionRequest["difficulty"];
+            functionName?: string;
         };
     };
     body?: {
@@ -20,6 +21,7 @@ type QuestionSelectionResponse = {
         title?: string;
         topic?: string;
         difficulty?: CreateSessionRequest["difficulty"];
+        functionName?: string;
     };
 };
 
@@ -93,6 +95,7 @@ export class QuestionSelectionService {
                 topic: question?.topic ?? request.topic,
                 difficulty: question?.difficulty ?? request.difficulty,
                 title: question?.title,
+                functionName: question?.functionName,
             };
         } catch (error) {
             if (error instanceof AppError) {

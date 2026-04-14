@@ -201,23 +201,9 @@ export class CollaborationSessionService {
 
         // If this is a new session, initialize OT document with a code template
         if (result.created) {
-            let initialCode = "";
-            try {
-                const questionDetails = await this.questionSelectionService.getQuestionDetails(
-                    result.session.questionId,
-                );
-                if (questionDetails?.functionName) {
-                    initialCode = generateCodeTemplate(
-                        result.session.language,
-                        questionDetails.functionName,
-                    );
-                }
-            } catch (error) {
-                logger.warn(
-                    { err: error, collaborationId: result.session.collaborationId },
-                    "Failed to fetch question details for code template",
-                );
-            }
+            const initialCode = selectedQuestion.functionName
+                ? generateCodeTemplate(result.session.language, selectedQuestion.functionName)
+                : "";
             await this.otManager.initializeDocument(result.session.collaborationId, initialCode);
         }
 
