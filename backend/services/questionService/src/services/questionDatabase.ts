@@ -223,7 +223,7 @@ export async function SearchQuestion(
     try {
         //Default random question
         const result = await pool.query(
-            "SELECT q.quid FROM questions q JOIN topics t ON t.tid = ANY(q.topics) WHERE t.topic = $1 AND q.difficulty = $2",
+            "SELECT qt.quid FROM qn_topics qt WHERE qt.tid = $1 AND qt.difficulty = $2",
             [topic, difficulty],
         );
         if (result == undefined || result.rows.length == 0) return null;
