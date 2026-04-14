@@ -70,26 +70,16 @@ export function calculateScoreDelta(difficulty: AttemptDifficulty, success: bool
     return 50;
 }
 
-function getAttemptTimestamp(attempt: AttemptRecord): number {
-    return attempt.attemptedAt.getTime();
-}
-
 function calculateAppliedDeltaFromHistory(
     attempts: AttemptRecord[],
     targetAttemptId: string,
 ): number | null {
-    const orderedAttempts = [...attempts].sort((left, right) => {
-        const attemptedAtDiff = getAttemptTimestamp(left) - getAttemptTimestamp(right);
-        if (attemptedAtDiff !== 0) {
-            return attemptedAtDiff;
-        }
-
-        return left.createdAt.getTime() - right.createdAt.getTime();
-    });
-
     let score = 0;
 
-    for (const attempt of orderedAttempts) {
+    // listByClerkUserId returns newest-first, so replay from the tail to preserve
+    // the original score progression without re-sorting the full history.
+    for (let index = attempts.length - 1; index >= 0; index -= 1) {
+        const attempt = attempts[index];
         const theoreticalDelta = calculateScoreDelta(attempt.difficulty, attempt.success);
         const nextScore = Math.max(0, score + theoreticalDelta);
         const appliedDelta = nextScore - score;
