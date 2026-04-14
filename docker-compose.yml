@@ -41,7 +41,7 @@ services:
       - gateway
     env_file:
       - ./.env
-    command: http --url=nonjuridical-unflaunting-hudson.ngrok-free.dev --pooling-enabled=true gateway:8080
+    command: http --url=nonjuridical-unflaunting-hudson.ngrok-free.dev gateway:8080
     ports:
       - "4040:4040"
     networks:
@@ -174,7 +174,6 @@ services:
       - questions-db-network
     restart: unless-stopped
 
-
   questions-db:
     image: postgres:16-alpine
     container_name: questions-db
@@ -184,10 +183,10 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: questions
-      
+
     volumes:
       - questions_data:/var/lib/postgresql
-      
+
     networks:
       - questions-db-network
     restart: unless-stopped
@@ -206,7 +205,7 @@ services:
       - questions-db-network
     # ports:
     #   - "5432:5432"
-      
+
   # Collaboration Service
   collaboration-service:
     build: ./backend/services/collaborationService
@@ -332,7 +331,7 @@ services:
     image: rabbitmq:4.2-management
     container_name: peerprep-rabbitmq
     ports:
-      - "5672:5672"   # AMQP protocol port (for your Node app)
+      - "5672:5672" # AMQP protocol port (for your Node app)
       - "15672:15672" # Management UI (username: guest / password: guest)
     healthcheck:
       test: rabbitmq-diagnostics -q ping
