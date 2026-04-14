@@ -1,7 +1,7 @@
 import { Difficulty } from "@/models/question/questionType";
 
 export type MatchDetails = {
-    topics: string[];
+    topics: { id: string; name: string }[];
     difficulties: Difficulty[];
     languages: string[];
     userScore: number;
