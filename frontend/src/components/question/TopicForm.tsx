@@ -98,7 +98,7 @@ export function TopicEdit() {
         if (newTopics.length > 0) {
             await createTopic(newTopics);
         }
-        
+
         updateTopicInfos(validTopics);
 
         refresh();

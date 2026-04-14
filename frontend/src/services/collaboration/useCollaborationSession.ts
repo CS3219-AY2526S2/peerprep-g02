@@ -353,9 +353,15 @@ export function useCollaborationSession(collaborationId: string | undefined) {
             setTimeout(() => seenJoinEvents.delete(key), 2000);
 
             if (payload.wasDisconnected) {
-                pushToast({ tone: "success", message: `${displayName(payload.userId)} has reconnected` });
+                pushToast({
+                    tone: "success",
+                    message: `${displayName(payload.userId)} has reconnected`,
+                });
             } else {
-                pushToast({ tone: "success", message: `${displayName(payload.userId)} has joined the session` });
+                pushToast({
+                    tone: "success",
+                    message: `${displayName(payload.userId)} has joined the session`,
+                });
             }
         };
 
@@ -534,7 +540,6 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.SESSION_ENDED, handleSessionEnded);
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.HINT_UPDATED, handleHintUpdated);
             }
-
         };
     }, [collaborationId]);
 

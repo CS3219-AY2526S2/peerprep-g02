@@ -542,7 +542,6 @@ function QuestionForm(props: FormProp): JSX.Element {
                                     <Button
                                         type="button"
                                         className="bg-transparent text-red-500 text-lg"
-                                        
                                         onClick={() => setRemoveOldImage(true)}
                                     >
                                         x
