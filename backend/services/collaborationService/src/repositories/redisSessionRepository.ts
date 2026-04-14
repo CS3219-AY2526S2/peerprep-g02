@@ -24,6 +24,7 @@ function buildIdempotencyKey(payload: CreateSessionRequest): string {
 
 type CreateSessionInput = CreateSessionRequest & {
     questionId: UUID;
+    functionName?: string;
 };
 
 type CreateSessionResult =
@@ -144,6 +145,7 @@ export class RedisSessionRepository {
             questionId: session.questionId,
             status: session.status,
             createdAt: session.createdAt,
+            ...(input.functionName ? { functionName: input.functionName } : {}),
         });
         pipeline.pexpire(sessionKey, this.ttlMs);
 

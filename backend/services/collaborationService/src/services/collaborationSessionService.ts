@@ -186,6 +186,7 @@ export class CollaborationSessionService {
         const result = await this.redisSessionRepository.createActiveSession({
             ...payload,
             questionId: selectedQuestion.questionId as UUID,
+            functionName: selectedQuestion.functionName,
         });
 
         if (result.conflict) {
