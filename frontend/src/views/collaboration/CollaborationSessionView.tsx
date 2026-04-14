@@ -1,9 +1,9 @@
-import { type UUID } from "node:crypto";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "@clerk/clerk-react";
 import { LoaderCircle, UsersRound, Wifi, WifiOff } from "lucide-react";
+import { type UUID } from "node:crypto";
 
 import AiHintsPanel from "@/components/collaboration/AiHintsPanel";
 import CodeEditor from "@/components/collaboration/CodeEditor";
@@ -21,8 +21,8 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { ROUTES } from "@/constants/routes";
 
-import { useCollaborationSession } from "@/services/collaboration/useCollaborationSession";
 import { useTopics } from "@/context/useTopic";
+import { useCollaborationSession } from "@/services/collaboration/useCollaborationSession";
 
 function formatElapsed(createdAt: string | undefined, now: number): string {
     if (!createdAt) return "00:00";

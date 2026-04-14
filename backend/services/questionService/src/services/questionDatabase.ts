@@ -14,7 +14,7 @@ type QuestionData = {
     testCase: TestCase[];
     difficulty: string;
     qnTopics: UUID[];
-    qnImage?: File | null;
+    qnImage?: string | null;
 };
 
 type QuestionEdit = {
@@ -24,13 +24,13 @@ type QuestionEdit = {
     testCase: TestCase[];
     difficulty: string;
     qnTopics: UUID[];
-    qnImage?: File | null;
-    qnVersion: number;
+    qnImage?: string | null;
+    version: number;
 };
 
 export async function GetQuestions() {
     try {
-        const result = await pool.query("SELECT * FROM questions LIMIT 5");
+        const result = await pool.query("SELECT * FROM questions ORDER BY updated_at DESC LIMIT 5");
         return result.rows;
     } catch (e) {
         console.log(e);
@@ -60,7 +60,7 @@ export async function GetQuestion(quid: UUID) {
             const link = await getSignedImageUrl(question.image);
             return [{ ...question, qnImage: link }];
         } else {
-            return result.rows;
+            return [{ ...question, qnImage: null }];
         }
     } catch (e) {
         console.log(e);
@@ -94,7 +94,11 @@ export async function CreateQuestion(data: QuestionData) {
     const topics = data.qnTopics.map((topic) => topic as UUID);
     const functionName = data.qnTitle
         .split(/\s+/)
-        .map((word, i) => i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .map((word, i) =>
+            i === 0
+                ? word.toLowerCase()
+                : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+        )
         .join("");
 
     const cases = parseTestCases(data.testCase);
@@ -107,37 +111,44 @@ export async function CreateQuestion(data: QuestionData) {
         data.qnImage,
         functionName,
     ];
+    const client = await pool.connect();
+
     try {
-        await pool.query("BEGIN");
-        const result = await pool.query(insertQuestion, insertQuestionValues);
+        await client.query("BEGIN");
+        const result = await client.query(insertQuestion, insertQuestionValues);
         if (result.rowCount == 0) {
-            await pool.query("ROLLBACK");
-            return 0;
+            throw new Error("Failed to insert question.");
         }
         const quid = result.rows[0].quid;
 
         for (const topicId of topics) {
-            await pool.query("INSERT INTO qn_topics (quid, tid, difficulty) VALUES ($1, $2, $3)", [
-                quid,
-                topicId,
-                data.difficulty,
-            ]);
+            await client.query(
+                "INSERT INTO qn_topics (quid, tid, difficulty) VALUES ($1, $2, $3)",
+                [quid, topicId, data.difficulty],
+            );
         }
 
-        await pool.query("COMMIT");
+        await client.query("COMMIT");
 
         return result.rowCount;
     } catch (err) {
-        await pool.query("ROLLBACK");
+        await client.query("ROLLBACK");
+        if (data.qnImage !== undefined && data.qnImage !== null) {
+            // Image was already uploaded in frontend, need to delete since the creation did not go through
+            await deleteImage(data.qnImage).catch((e) => console.log(e));
+        }
         console.error("Insert failed:", err);
+    } finally {
+        client.release();
     }
 
     return 0;
 }
 
 export async function EditQuestion(data: QuestionEdit) {
+    console.log(data);
     const updateQuestion = `UPDATE questions 
-            SET title = $2, description = $3,test_case = $4, difficulty = $5, topics = $6, image = $7 
+            SET title = $2, description = $3,test_case = $4, difficulty = $5, topics = $6, image = $7, updated_at = NOW(), version = version + 1 
             WHERE quid = $1 RETURNING quid`;
     const topics = data.qnTopics.map((topic) => topic as UUID);
 
@@ -152,37 +163,63 @@ export async function EditQuestion(data: QuestionEdit) {
         data.qnImage,
     ];
 
+    const client = await pool.connect();
     try {
-        await pool.query("BEGIN");
+        await client.query("BEGIN");
         // version check
-        const check = await pool.query("SELECT version FROM questions WHERE quid = $1", [
+        const check = await client.query("SELECT version, image FROM questions WHERE quid = $1", [
             data.quid,
         ]);
 
-        if (check.rows[0].version !== data.qnVersion) {
-            await pool.query("ROLLBACK");
+        if (check.rowCount == 0) {
+            throw new Error("Question not found.");
+        }
+        const currentQuestion = check.rows[0];
+        if (currentQuestion.version !== data.version) {
+            await client.query("ROLLBACK");
             return -1;
         }
 
-        const result = await pool.query(updateQuestion, updateQuestionValues);
-        if (result.rowCount == 0) {
-            await pool.query("ROLLBACK");
-            return 0;
+        //Reinsert topic mapping and difficulty
+        await client.query("DELETE FROM qn_topics WHERE quid = $1", [data.quid]);
+
+        for (const topicId of topics) {
+            await client.query(
+                "INSERT INTO qn_topics (quid, tid, difficulty) VALUES ($1, $2, $3)",
+                [data.quid, topicId, data.difficulty],
+            );
         }
 
-        await pool.query(
-            `UPDATE qn_topics 
-                SET difficulty = $1 
-                WHERE quid = $2`,
-            [data.difficulty, data.quid],
-        );
+        //Update the values within the question
+        const result = await client.query(updateQuestion, updateQuestionValues);
+        if (result.rowCount == 0) {
+            throw new Error("Failed to update question");
+        }
 
-        await pool.query("COMMIT");
+        if (
+            currentQuestion.image !== data.qnImage &&
+            currentQuestion.image !== undefined &&
+            currentQuestion.image !== null
+        ) {
+            const isSuccess = await deleteImage(currentQuestion.image);
+            if (!isSuccess) {
+                throw new Error("Failed to delete image");
+            }
+        }
+
+        await client.query("COMMIT");
 
         return result.rowCount;
-    } catch {
-        await pool.query("ROLLBACK");
+    } catch (e) {
+        console.log(e);
+        await client.query("ROLLBACK");
+        if (data.qnImage !== undefined && data.qnImage !== null) {
+            // Image was already uploaded in frontend, need to delete since the edit did not go through
+            await deleteImage(data.qnImage).catch((e) => console.log(e));
+        }
         console.log("Edit failed");
+    } finally {
+        client.release();
     }
 
     return 0;
@@ -191,15 +228,18 @@ export async function EditQuestion(data: QuestionEdit) {
 export async function DeleteQuestion(questionId: UUID) {
     try {
         const getResult = await pool.query("SELECT * FROM questions WHERE quid = $1", [questionId]);
+        if (getResult.rows == 0) {
+            return 0;
+        }
         const question = getResult.rows[0];
+
+        const result = await pool.query("DELETE FROM questions WHERE quid = $1", [questionId]);
         if (question.image !== null) {
             const deleteImageResult = await deleteImage(question.image);
             if (!deleteImageResult) {
                 return 0;
             }
         }
-        const result = await pool.query("DELETE FROM questions WHERE quid = $1", [questionId]);
-
         return result.rowCount;
     } catch (e) {
         console.log(e);
@@ -237,7 +277,7 @@ export async function SearchQuestion(
         try {
             //Query
             const userARes = await fetch(
-                `http://attempt-service:3004/v1/api/attempts/internal/users/${userA}/questions`,
+                `http://attempts-service:3004/v1/api/attempts/internal/users/${userA}/questions`,
                 {
                     method: "GET",
                     headers: {
@@ -248,7 +288,7 @@ export async function SearchQuestion(
             );
 
             const userBRes = await fetch(
-                `http://attempt-service:3004/v1/api/attempts/internal/users/${userB}/questions`,
+                `http://attempts-service:3004/v1/api/attempts/internal/users/${userB}/questions`,
                 {
                     method: "GET",
                     headers: {
@@ -276,7 +316,7 @@ export async function SearchQuestion(
                 (qid: UUID) => !aQuestions.includes(qid) || !bQuestions.includes(qid),
             );
             if (unattemptedEither.length >= 1) {
-                return randomQuestion(unattemptedBoth);
+                return randomQuestion(unattemptedEither);
             }
         } catch {
             return defaultQuestion[0];
@@ -298,5 +338,17 @@ export async function SearchQuestionDatabase(title: string) {
     } catch (e) {
         console.log(e);
         return null;
+    }
+}
+
+export async function UpdateQuestionPopularityScore(quid: string) {
+    try {
+        const query =
+            "UPDATE questions SET popularity_score = popularity_score + 1 WHERE quid = $1";
+        const result = await pool.query(query, [quid]);
+
+        return result.status;
+    } catch {
+        return 500;
     }
 }

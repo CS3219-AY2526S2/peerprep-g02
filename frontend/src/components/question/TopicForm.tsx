@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { UUID } from "crypto";
 
@@ -31,26 +31,42 @@ import { createTopic, deleteTopic, editTopic } from "@/services/question/topicSe
 
 export function TopicEdit() {
     const { topics, refreshTopics } = useTopics();
-    const [topicInfos, updateTopicInfos] = useState<TopicInfo[]>([]);
+    //const [topicInfos, updateTopicInfos] = useState<TopicInfo[]>([]);
+    const [topicInfos, updateTopicInfos] = useState<TopicInfo[]>(() => {
+        if (!topics) return [];
+        return Object.entries(topics).map(([tid, topic]) => ({
+            tid: tid as UUID,
+            topic,
+        }));
+    });
+    // const [initialized, setInitialized] = useState(false);
     const [openConfirm, setOpenConfirm] = useState<boolean>(false);
     const [target, setTarget] = useState<UUID | null>(null);
     const [openForm, setOpenForm] = useState<boolean>(false);
-    if (topics == null) {
-        return <div>Apologies, an error has occurred</div>;
-    }
 
-    useEffect(() => {
-        if (topics == null) return;
-        const initTopicInfo: TopicInfo[] = Object.entries(topics).map(([tid, topic]) => {
-            return { tid: tid as UUID, topic };
-        });
-        if (initTopicInfo.length > 0) {
-            updateTopicInfos(initTopicInfo);
-        }
-    }, []);
+    // useEffect(() => {
+    //     if (topics == null) return;
+    //     if (!topics || initialized) return;
+    //     const initTopicInfo: TopicInfo[] = Object.entries(topics).map(([tid, topic]) => {
+    //         return { tid: tid as UUID, topic };
+    //     });
+    //     if (initTopicInfo.length > 0) {
+    //         updateTopicInfos(initTopicInfo);
+    //     }
+    //     setInitialized(true);
+    // }, [topics, initialized]);
 
     const handleTopicChange = (index: number, value: string) => {
-        if (!/[a-zA-Z ]/.test(value.charAt(value.length - 1))) return;
+        if (value === "") {
+            updateTopicInfos((prev) => {
+                const newEdit = [...prev];
+                newEdit[index] = { ...newEdit[index], topic: value };
+                return newEdit;
+            });
+            return;
+        }
+
+        if (!/[a-zA-Z -]/.test(value.charAt(value.length - 1))) return;
         updateTopicInfos((prev) => {
             const newEdit = [...prev];
             newEdit[index] = { ...newEdit[index], topic: value };
@@ -62,21 +78,28 @@ export function TopicEdit() {
         updateTopicInfos((prev) => [...prev, { tid: null, topic: "" }]);
     };
 
-    function saveChanges() {
+    async function saveChanges() {
+        //Remove blanks
+        const validTopics: TopicInfo[] = topicInfos.filter(
+            (item) => item.tid !== null && item.topic.trim().length !== 0,
+        );
+
         //Get all those that have edited
-        const changedTopicNames: TopicInfo[] = topicInfos.filter((item) => {
+        const changedTopicNames: TopicInfo[] = validTopics.filter((item) => {
             if (item.tid == null || !(item.tid in topics!)) return false;
             return topics![item.tid] !== undefined && topics![item.tid] != item.topic;
         });
         if (changedTopicNames.length > 0) {
-            editTopic(changedTopicNames);
+            await editTopic(changedTopicNames);
         }
 
         //Get the newly added topics
-        const newTopics = topicInfos.filter((item) => item.tid == null);
+        const newTopics = validTopics.filter((item) => item.tid == null);
         if (newTopics.length > 0) {
-            createTopic(newTopics);
+            await createTopic(newTopics);
         }
+
+        updateTopicInfos(validTopics);
 
         refresh();
     }
@@ -100,11 +123,19 @@ export function TopicEdit() {
         updateTopicInfos((prev) => prev.filter((_, i) => i !== index));
     }
 
-    function DeleteTopic() {
+    async function DeleteTopic() {
         //really delete
         if (target == null) return;
-        updateTopicInfos((prev) => prev.filter((_, i) => topicInfos[i].tid !== target));
-        deleteTopic(target as UUID);
+        const backup: TopicInfo | undefined = topicInfos.find((item) => item.tid === target);
+        updateTopicInfos((prev) => prev.filter((item) => item.tid !== target));
+        const result = await deleteTopic(target as UUID);
+        if (result !== 200 && backup !== undefined) {
+            updateTopicInfos((prev) => [...prev, backup]);
+        }
+    }
+
+    if (topics == null) {
+        return <div>Apologies, an error has occurred</div>;
     }
 
     return (

@@ -114,15 +114,15 @@ router.get("/leetcode", async (req, res) => {
     });
 });
 
+// --- ADMIN ONLY ROUTES (Middleware applied here) ---
+
+router.use(requireAdminAuth);
+
 router.get("/image-upload", async (req, res) => {
     const { file } = req.query;
     const url = await getSignedImageUrl(file as string);
     res.json({ url });
 });
-
-// --- ADMIN ONLY ROUTES (Middleware applied here) ---
-
-router.use(requireAdminAuth);
 
 //Save question
 router.post("", async (req, res) => {
@@ -146,6 +146,10 @@ router.put("", async (req, res) => {
     if (result == 0) {
         return res.status(400).json({
             message: "Unable to update question in database.",
+        });
+    } else if (result == -1) {
+        return res.status(500).json({
+            message: "Question version conflict.",
         });
     }
 
@@ -196,21 +200,6 @@ router.post("/leetcode", async (req, res) => {
     }
     return res.status(200).json({
         message: "Get leetcode questions success.",
-        body: result,
-    });
-});
-
-//Get topics
-router.get("/topics", async (req, res) => {
-    const result = await GetTopics();
-
-    if (!result) {
-        return res.status(400).json({
-            message: "Unable to find topics in the database.",
-        });
-    }
-    return res.status(200).json({
-        message: "Get topics success",
         body: result,
     });
 });

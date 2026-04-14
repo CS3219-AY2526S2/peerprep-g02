@@ -20,7 +20,7 @@ export function QuestionSearch(props: QuestionSearchProp) {
     ) => {
         const { value } = e.target;
 
-        if (value !== "" && !/[a-zA-Z ]/.test(value.charAt(value.length - 1))) return;
+        if (value !== "" && !/[a-zA-Z0-9 ]/.test(value.charAt(value.length - 1))) return;
         updateSearcString(value);
     };
 
