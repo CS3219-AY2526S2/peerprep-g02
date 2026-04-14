@@ -10,6 +10,7 @@ import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import { socketAuthMiddleware } from "@/middleware/socketAuth.js";
 import { registerSocketHandlers } from "@/sockets/registerSocketHandlers.js";
 import { logger } from "@/utils/logger.js";
+import { reconcileOrphanedSockets } from "@/utils/reconcilePresence.js";
 import { getRedisClient } from "@/utils/redis.js";
 import { createAdapterClients } from "@/utils/redisAdapter.js";
 
@@ -18,6 +19,9 @@ async function startServer(): Promise<void> {
     const redis = getRedisClient();
     await redis.ping();
     logger.info("Redis connection verified");
+
+    // Clean up any socket/presence keys orphaned by a previous crash
+    await reconcileOrphanedSockets();
 
     // Initialize Redis Pub/Sub clients for Socket.IO adapter
     const { pubClient, subClient } = createAdapterClients();
