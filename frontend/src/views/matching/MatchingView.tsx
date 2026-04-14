@@ -24,16 +24,29 @@ export function MatchingView() {
     const { isLoaded, user } = useUser();
 
     const { topics: topicMap } = useTopics();
+
     const topicOptions = useMemo(() => {
         return topicMap ? Object.values(topicMap) : [];
     }, [topicMap]);
 
-    const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-    const topics = useMemo(() => {
-        if (selectedTopics.length > 0) return selectedTopics;
-        if (topicOptions.length > 0) return [topicOptions[0]];
-        return [];
-    }, [selectedTopics, topicOptions]);
+    const [selectedTopicNames, setSelectedTopicNames] = useState<string[]>([]);
+
+    const topicsForQueue = useMemo(() => {
+        if (!topicMap) return [];
+
+        const allEntries = Object.entries(topicMap).map(([id, name]) => ({
+            id,
+            name,
+        }));
+
+        if (selectedTopicNames.length > 0) {
+            return selectedTopicNames
+                .map((name) => allEntries.find((t) => t.name === name))
+                .filter((t): t is { id: string; name: string } => t !== undefined);
+        }
+
+        return allEntries.length > 0 ? [allEntries[0]] : [];
+    }, [selectedTopicNames, topicMap]);
 
     const [languages, setLanguages] = useState<Language[]>([LANGUAGE_OPTIONS[0]]);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
@@ -90,7 +103,7 @@ export function MatchingView() {
         cancelSearch,
         userScore,
         isConnected,
-    } = useMatchingQueue(topics, languages, difficulty, (payload) => {
+    } = useMatchingQueue(topicsForQueue, languages, difficulty, (payload) => {
         if (payload.collaborationId) {
             handleNavigation(payload.collaborationId);
         }
@@ -106,7 +119,7 @@ export function MatchingView() {
                 {isSearching || isPreparing ? (
                     <MatchSearchingView
                         isPreparing={isPreparing}
-                        topics={topics}
+                        topics={selectedTopicNames}
                         languages={languages}
                         difficulties={getRelaxedDifficulties(difficulty, activeTier)}
                         relaxationTier={activeTier}
@@ -117,8 +130,8 @@ export function MatchingView() {
                     <MatchFormView
                         topicOptions={topicOptions}
                         languageOptions={LANGUAGE_OPTIONS}
-                        topics={topics}
-                        setTopics={setSelectedTopics}
+                        topics={selectedTopicNames}
+                        setTopics={setSelectedTopicNames}
                         userScore={userScore}
                         languages={languages}
                         setLanguages={setLanguages}

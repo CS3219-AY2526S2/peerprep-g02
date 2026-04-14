@@ -339,6 +339,7 @@ export function useCollaborationSession(collaborationId: string | undefined) {
         };
 
         const displayName = (uid: string) => userNamesRef.current[uid] ?? "Partner";
+        const seenJoinEvents = new Set<string>();
 
         // F4.3.2 - Handle user joined notification
         const handleUserJoined = (payload: UserJoinedPayload) => {
@@ -346,12 +347,16 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 return;
             }
 
-            const name = displayName(payload.userId);
-            const message = payload.wasDisconnected
-                ? `${name} has reconnected`
-                : `${name} has joined the session`;
+            const key = `${payload.userId}-${payload.collaborationId}`;
+            if (seenJoinEvents.has(key)) return;
+            seenJoinEvents.add(key);
+            setTimeout(() => seenJoinEvents.delete(key), 2000);
 
-            pushToast({ tone: "success", message });
+            if (payload.wasDisconnected) {
+                pushToast({ tone: "success", message: `${displayName(payload.userId)} has reconnected` });
+            } else {
+                pushToast({ tone: "success", message: `${displayName(payload.userId)} has joined the session` });
+            }
         };
 
         // F4.6.1 - Handle user disconnected notification
@@ -529,6 +534,7 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.SESSION_ENDED, handleSessionEnded);
                 socketRef.off(COLLABORATION_SOCKET_EVENTS.HINT_UPDATED, handleHintUpdated);
             }
+
         };
     }, [collaborationId]);
 
