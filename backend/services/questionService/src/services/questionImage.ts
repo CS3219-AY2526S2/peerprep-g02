@@ -1,7 +1,7 @@
 import { Storage } from "@google-cloud/storage";
 
 const storage = new Storage({
-    keyFilename: process.env.GOOGLE_BUCKET,
+    keyFilename: process.env.GOOGLE_IMAGE_BUCKET,
 });
 
 const bucketName = "question-image";

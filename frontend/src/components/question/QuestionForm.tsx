@@ -221,6 +221,7 @@ interface FormProp {
 
 function QuestionForm(props: FormProp): JSX.Element {
     const [file, setFile] = useState<File | null>(null);
+    const [removeOldImage, setRemoveOldImage] = useState<boolean>(false);
     const allowedFileTypes = ["image/jpeg", "image/png"];
     const { useCase } = useUseCase();
     const [openConfirm, setOpenConfirm] = useState<boolean>(false);
@@ -279,6 +280,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                     qnImage: newQuestions.qnImage,
                     version: newQuestions.version,
                 }));
+
                 DelayedDifficultyUpdate(newQuestions.difficulty);
             }
 
@@ -324,16 +326,17 @@ function QuestionForm(props: FormProp): JSX.Element {
         if (file !== null) {
             const result = await imageUpload(file);
             if (result == undefined) {
+                setUploading(false);
+                setDisplayError(true);
                 return;
             }
 
             finalFormData.qnImage = result;
-        } else if (useCase == null) {
+        } else if (useCase == null || removeOldImage) {
             finalFormData.qnImage = null;
         } else if (typeof formData.qnImage === "string") {
             const start = formData.qnImage.indexOf("uploads");
             const end = formData.qnImage.indexOf("?");
-
             const result = formData.qnImage?.substring(start, end);
             finalFormData.qnImage = result;
         }
@@ -400,7 +403,7 @@ function QuestionForm(props: FormProp): JSX.Element {
         }));
     };
 
-    const setImage = (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => {
+    const setImage = (e: ChangeEvent<HTMLInputElement>) => {
         const image = e.target.files?.[0];
         if (image == undefined) return;
 
@@ -470,7 +473,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                             </FieldLabel>
                             <Textarea
                                 required={true}
-                                id="qnTitile"
+                                id="qnTitle"
                                 name="qnTitle"
                                 className="border-2 border-grey-200 placeholder:text-grey-400"
                                 rows={4}
@@ -533,7 +536,19 @@ function QuestionForm(props: FormProp): JSX.Element {
                             <FieldLabel htmlFor="file" className="font-bold">
                                 Supporting Diagram
                             </FieldLabel>
-                            {formData.qnImage && <img src={formData.qnImage} alt="question" />}
+                            {formData.qnImage && !removeOldImage && (
+                                <div className="flex">
+                                    <img src={formData.qnImage} alt="question" />
+                                    <Button
+                                        type="button"
+                                        className="bg-transparent text-red-500 text-lg"
+                                        
+                                        onClick={() => setRemoveOldImage(true)}
+                                    >
+                                        x
+                                    </Button>
+                                </div>
+                            )}
                             <div className="flex">
                                 <Input
                                     id="questionFile"

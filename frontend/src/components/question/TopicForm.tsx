@@ -81,7 +81,7 @@ export function TopicEdit() {
     async function saveChanges() {
         //Remove blanks
         const validTopics: TopicInfo[] = topicInfos.filter(
-            (item) => item.tid !== null && item.topic.trim().length !== 0,
+            (item) => item.topic.trim().length !== 0,
         );
 
         //Get all those that have edited
@@ -98,7 +98,7 @@ export function TopicEdit() {
         if (newTopics.length > 0) {
             await createTopic(newTopics);
         }
-
+        
         updateTopicInfos(validTopics);
 
         refresh();
