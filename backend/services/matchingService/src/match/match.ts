@@ -22,12 +22,12 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
 
     const queueKeys = req.topics.flatMap((topic) =>
         req.difficulties.flatMap((diff) =>
-            req.languages.map((lang) => buildQueueKey(topic, diff, lang)),
+            req.languages.map((lang) => buildQueueKey(topic.id, diff, lang)),
         ),
     );
     const seekerKey = buildUserStatusKey(req.userId);
 
-    const [status, partnerId, matchedTopic, matchedDifficulty, matchedLanguage, startTimeStr] =
+    const [status, partnerId, matchedTopicId, matchedDifficulty, matchedLanguage, startTimeStr] =
         (await redis.eval(FIND_MATCH_LUA_SCRIPT, {
             keys: [...queueKeys, seekerKey],
             arguments: [
@@ -49,13 +49,13 @@ export async function findMatch(req: MatchRequest): Promise<MatchResult> {
             userBId: partnerId,
             difficulty,
             language: matchedLanguage,
-            topic: matchedTopic,
+            topicId: matchedTopicId,
         });
 
         return {
             matchFound: true,
             matchId,
-            matchedTopic,
+            matchedTopic: req.topics.find((t) => t.id === matchedTopicId)!,
             matchedDifficulty: difficulty,
             matchedLanguage,
             userId: req.userId,

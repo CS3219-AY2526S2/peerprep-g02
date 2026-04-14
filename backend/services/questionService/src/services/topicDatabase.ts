@@ -18,20 +18,13 @@ export async function GetTopics() {
 }
 
 export async function AddTopic(data: TopicInfo[]) {
-    let valueStr = "";
-    for (let i = 0; i < data.length; i++) {
-        const topic = data[i].topic.replace(/'/g, "''"); // escape single quotes
-        if (i === data.length - 1) {
-            valueStr += `('${topic}')`;
-        } else {
-            valueStr += `('${topic}'),`;
-        }
-    }
-
-    const insert = `INSERT INTO topics(topic) VALUES ${valueStr} RETURNING tid;`;
+    if (data.length == 0) return 0;
+    const values = data.map((topicInfo) => topicInfo.topic);
+    const placeholders = data.map((_: TopicInfo, index: number) => `($${index + 1})`).join(",");
+    const insert = `INSERT INTO topics(topic) VALUES ${placeholders} RETURNING tid;`;
 
     try {
-        const result = await pool.query(insert);
+        const result = await pool.query(insert, values);
         return result.rowCount;
     } catch (err) {
         console.error("Insert failed:", err);

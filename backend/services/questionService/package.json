@@ -5,7 +5,7 @@
     "scripts": {
         "predev": "npm run db:init",
         "prestart": "npm run db:init",
-        "test": "echo \"Error: no test specified\" && exit 1",
+        "test": "echo \"No test specified\"",
         "db:init": "node dist/initDb.js",
         "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
         "start": "node dist/app.js",
@@ -22,10 +22,8 @@
         "cors": "^2.8.6",
         "dotenv": "^17.3.1",
         "express": "^5.2.1",
-        "multer": "^2.1.1",
         "pg": "^8.19.0",
-        "prettier": "^3.8.1",
-        "vitest": "^4.1.2"
+        "prettier": "^3.8.1"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
@@ -41,6 +39,7 @@
         "ts-node-dev": "^2.0.0",
         "tsc-alias": "^1.8.16",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.57.2"
+        "typescript-eslint": "^8.57.2",
+        "vitest": "^4.1.2"
     }
 }

@@ -1,4 +1,4 @@
-import { ChangeEvent, JSX, useEffect, useState } from "react";
+import { ChangeEvent, JSX, useEffect, useMemo, useState } from "react";
 
 import { UUID } from "crypto";
 
@@ -12,7 +12,13 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogOverlay,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import {
     Field,
     FieldDescription,
@@ -112,40 +118,34 @@ interface SearchFieldProps {
 export function TopicSearch(props: SearchFieldProps) {
     const { topics } = useTopics();
     const [query, setQuery] = useState<string>("");
-    const [results, setResults] = useState<string[]>([]);
-    const [topicPool, setTopicPool] = useState<Record<string, UUID>>({});
-    const [searchSpace, updateSearchSpace] = useState<string[]>([]);
-    if (!topics) return;
 
-    useEffect(() => {
-        //Initialize topic pool
-        const topicIds: Record<string, UUID> = Object.fromEntries(
+    const topicPool = useMemo(() => {
+        if (!topics) return {};
+        return Object.fromEntries(
             Object.entries(topics as Record<UUID, string>).map(([key, value]) => [value, key]),
         ) as Record<string, UUID>;
-
-        setTopicPool(topicIds);
-        updateSearchSpace(Object.keys(topicIds));
-        setResults(Object.values(topics));
     }, [topics]);
+
+    const searchSpace = useMemo(() => {
+        if (!topics) return [];
+
+        return Object.entries(topics)
+            .filter(([id]) => !props.formTopics.includes(id as UUID))
+            .map(([_, name]) => name);
+    }, [topics, props.formTopics]);
+
+    const results = useMemo(() => {
+        return Object.values(searchSpace).filter((topicName) =>
+            topicName.toLowerCase().includes(query.toLowerCase()),
+        );
+    }, [searchSpace, query]);
 
     const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setQuery(value);
-        const filtered: string[] = searchSpace.filter((item) =>
-            item.toLowerCase().includes(value.toLowerCase()),
-        );
-        setResults(filtered);
     };
 
     const handleUpdate = (topic: string) => {
-        updateSearchSpace((prev) => {
-            return prev.filter((item) => item !== topic);
-        });
-
-        setResults((prev) => {
-            return prev.filter((item) => item !== topic);
-        });
-
         props.updateFormTopics((prev) => ({
             ...prev,
             qnTopics: [...prev.qnTopics, topicPool[topic] as UUID],
@@ -153,11 +153,6 @@ export function TopicSearch(props: SearchFieldProps) {
     };
 
     const handleRemove = (topic: UUID) => {
-        updateSearchSpace((prev) => [...prev, topics[topic]]);
-        if (topics[topic].toLowerCase().includes(query.toLowerCase())) {
-            setResults((prev) => [...prev, topics[topic]]);
-        }
-
         props.updateFormTopics((prev) => {
             const updatedTopics = prev.qnTopics.filter((item) => item !== topic);
             return {
@@ -167,6 +162,7 @@ export function TopicSearch(props: SearchFieldProps) {
         });
     };
 
+    if (!topics) return <div>Error, please reload</div>;
     return (
         <div className="space-y-2 w-full max-w-md">
             <Label htmlFor="search" className="font-bold">
@@ -225,6 +221,7 @@ interface FormProp {
 
 function QuestionForm(props: FormProp): JSX.Element {
     const [file, setFile] = useState<File | null>(null);
+    const [removeOldImage, setRemoveOldImage] = useState<boolean>(false);
     const allowedFileTypes = ["image/jpeg", "image/png"];
     const { useCase } = useUseCase();
     const [openConfirm, setOpenConfirm] = useState<boolean>(false);
@@ -235,10 +232,12 @@ function QuestionForm(props: FormProp): JSX.Element {
         qnImage: null,
         difficulty: Difficulty.EASY,
         qnTopics: [],
+        version: 1,
     });
 
     const [loading, setLoading] = useState(true);
     const [isUploading, setUploading] = useState(false);
+    const [isDisplayError, setDisplayError] = useState(false);
 
     const [imageError, setImageError] = useState<string>("");
 
@@ -263,11 +262,13 @@ function QuestionForm(props: FormProp): JSX.Element {
                     qnImage: null,
                     difficulty: Difficulty.EASY,
                     qnTopics: [],
+                    version: 1,
                 }));
                 setLoading(false);
                 return;
             }
             const newQuestions = await getQuestion(useCase);
+
             if (newQuestions != null) {
                 setFormData((prev) => ({
                     ...prev,
@@ -277,7 +278,9 @@ function QuestionForm(props: FormProp): JSX.Element {
                     qnTopics: newQuestions.topics,
                     testCase: newQuestions.testCase,
                     qnImage: newQuestions.qnImage,
+                    version: newQuestions.version,
                 }));
+
                 DelayedDifficultyUpdate(newQuestions.difficulty);
             }
 
@@ -320,15 +323,22 @@ function QuestionForm(props: FormProp): JSX.Element {
     async function handleSubmit() {
         const finalFormData: FormData = { ...formData };
 
-        if (file !== null && useCase == null) {
+        if (file !== null) {
             const result = await imageUpload(file);
             if (result == undefined) {
+                setUploading(false);
+                setDisplayError(true);
                 return;
             }
 
             finalFormData.qnImage = result;
-        } else if (useCase == null) {
+        } else if (useCase == null || removeOldImage) {
             finalFormData.qnImage = null;
+        } else if (typeof formData.qnImage === "string") {
+            const start = formData.qnImage.indexOf("uploads");
+            const end = formData.qnImage.indexOf("?");
+            const result = formData.qnImage?.substring(start, end);
+            finalFormData.qnImage = result;
         }
 
         if (useCase == null) {
@@ -339,6 +349,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                 DelayedPageUpdate();
             } else {
                 setUploading(false);
+                setDisplayError(true);
             }
         } else {
             //edit
@@ -351,6 +362,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                 DelayedPageUpdate();
             } else {
                 setUploading(false);
+                setDisplayError(true);
             }
         }
     }
@@ -391,7 +403,7 @@ function QuestionForm(props: FormProp): JSX.Element {
         }));
     };
 
-    const setImage = (e: ChangeEvent<HTMLInputElement, HTMLInputElement>) => {
+    const setImage = (e: ChangeEvent<HTMLInputElement>) => {
         const image = e.target.files?.[0];
         if (image == undefined) return;
 
@@ -416,12 +428,19 @@ function QuestionForm(props: FormProp): JSX.Element {
         setImageError("");
     };
 
-    // const handleUpload = async () => {
-    //     const result = await imageUpload(file);
-    // };
-
     return (
         <div className="flex w-screen h-screen pt-8 flex-col">
+            <Dialog open={isDisplayError} onOpenChange={setDisplayError}>
+                <DialogOverlay>
+                    <DialogContent className="flex flex-col items-center bg-white">
+                        <DialogTitle>An error has occurred</DialogTitle>
+                        <DialogDescription className="text-center">
+                            This question may have been updated elsewhere. Please reload the form to
+                            get the latest version, then try again.
+                        </DialogDescription>
+                    </DialogContent>
+                </DialogOverlay>
+            </Dialog>
             <Dialog open={isUploading} onOpenChange={setUploading}>
                 <DialogOverlay>
                     <DialogContent className="[&>button]:hidden flex flex-col items-center bg-white">
@@ -454,7 +473,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                             </FieldLabel>
                             <Textarea
                                 required={true}
-                                id="qnTitile"
+                                id="qnTitle"
                                 name="qnTitle"
                                 className="border-2 border-grey-200 placeholder:text-grey-400"
                                 rows={4}
@@ -517,7 +536,18 @@ function QuestionForm(props: FormProp): JSX.Element {
                             <FieldLabel htmlFor="file" className="font-bold">
                                 Supporting Diagram
                             </FieldLabel>
-                            {formData.qnImage && <img src={formData.qnImage} alt="question" />}
+                            {formData.qnImage && !removeOldImage && (
+                                <div className="flex">
+                                    <img src={formData.qnImage} alt="question" />
+                                    <Button
+                                        type="button"
+                                        className="bg-transparent text-red-500 text-lg"
+                                        onClick={() => setRemoveOldImage(true)}
+                                    >
+                                        x
+                                    </Button>
+                                </div>
+                            )}
                             <div className="flex">
                                 <Input
                                     id="questionFile"

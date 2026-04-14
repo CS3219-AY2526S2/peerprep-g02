@@ -8,6 +8,7 @@ import {
 } from "@/models/Attempt.js";
 import { UserScoreService } from "@/services/userScoreService.js";
 import { ServiceError } from "@/utils/ResponseHelpers.js";
+import { QuestionPopularityService } from "./questionPopularService.js";
 
 export type RecordAttemptInput = {
     userId: string;
@@ -71,6 +72,7 @@ export function calculateScoreDelta(difficulty: AttemptDifficulty, success: bool
 
 export class AttemptService {
     private readonly userScoreService = new UserScoreService();
+    private readonly qnPopularScoreService = new QuestionPopularityService();
 
     async recordAttempt(input: RecordAttemptInput): Promise<{
         message: string;
@@ -140,6 +142,8 @@ export class AttemptService {
             const scoreUpdates = await this.userScoreService.applyScoreDeltas([
                 { clerkUserId: userId, delta: netDelta },
             ]);
+
+            await this.qnPopularScoreService.updateQuestionPopularityScore({quid: questionId}).catch(err => console.error(err));
 
             return {
                 message: "Attempt recorded successfully.",

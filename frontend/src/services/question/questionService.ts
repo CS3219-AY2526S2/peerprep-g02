@@ -67,8 +67,8 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
 
         const cases: TestCase[] = data.test_case.map(
             (item: { input: unknown; output: unknown }) => ({
-                input: JSON.stringify(item.input).slice(1, -1),
-                output: JSON.stringify(item.output).slice(1, -1),
+                input: JSON.stringify(item.input),
+                output: JSON.stringify(item.output),
             }),
         );
 
@@ -80,6 +80,7 @@ export const getQuestion = async (id: UUID | null): Promise<QuestionData | null>
             testCase: cases,
             description: data.description,
             qnImage: data.qnImage,
+            version: data.version,
         };
     } catch {
         return null;

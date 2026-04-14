@@ -6,7 +6,7 @@ export type CreateSessionRequest = {
     userBId: string;
     difficulty: Difficulty;
     language: string;
-    topic: string;
+    topicId: string;
 };
 
 export type CreateSessionResponse = {
@@ -17,7 +17,7 @@ export type CreateSessionResponse = {
         userBId: string;
         difficulty: Difficulty;
         language: string;
-        topic: string;
+        topicId: string;
         questionId: string;
         status: string;
         createdAt: string;
@@ -37,7 +37,7 @@ export type CollaborationSuccessPayload = {
     matchFound: true;
     matchId?: string;
     collaborationId: string;
-    matchedTopic: string;
+    matchedTopicId: string;
     matchedDifficulty: Difficulty;
     matchedLanguage: string;
     userId: string;

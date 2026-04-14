@@ -15,6 +15,7 @@ export type QuestionData = {
     testCase: TestCase[];
     description: string;
     qnImage: string | null;
+    version: number;
 };
 
 export interface FormData {
@@ -24,6 +25,7 @@ export interface FormData {
     qnImage?: string | null;
     difficulty: Difficulty;
     qnTopics: UUID[];
+    version: number;
 }
 
 export interface TestCase {
