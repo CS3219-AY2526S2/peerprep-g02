@@ -83,10 +83,10 @@ export async function apiFetch(url: string, init: ApiRequestInit = {}): Promise<
     }
 
     if (response.status === 403) {
-        const payload = await response
+        const payload = (await response
             .clone()
             .json()
-            .catch(() => null) as { error?: string } | null;
+            .catch(() => null)) as { error?: string } | null;
 
         if (payload?.error === "Forbidden: account is not active.") {
             authFailureHandlerRef?.("inactive");
