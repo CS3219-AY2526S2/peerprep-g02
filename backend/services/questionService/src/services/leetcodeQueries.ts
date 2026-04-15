@@ -1,10 +1,11 @@
 import pool from "../database";
 
-//Reference links to understand hwo the query worked:
+//Reference links I used to understand how the query worked and the structure:
 // - https://www.postman.com/flight-geoscientist-10690765/leetcode/request/2x0uquu/question-number?sideView=agentMode
 // - https://stackoverflow.com/questions/65861041/how-to-filter-list-objects-by-field-value-in-graphql
 // - https://github.com/yerass11/Leetcode-Stats-API
-//reference for query
+// copied the structure of how the leetcode graphql should be called [const query below]
+
 const query = `
   query problemsetQuestionList(
     $skip: Int,

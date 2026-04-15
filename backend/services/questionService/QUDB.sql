@@ -9,12 +9,15 @@ CREATE TABLE questions (
     image TEXT,
     test_case JSON,
     popularity_score INT DEFAULT 0,
-    function_name TEXT NOT NULL DEFAULT ''
+    function_name TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMP DEFAULT NOW(),
+    version INT DEFAULT 1
 );
 
 CREATE TABLE topics (
     tid UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    topic TEXT NOT NULL
+    topic TEXT NOT NULL,
+    version INT DEFAULT 1
 );
 
 CREATE TABLE qn_topics (

@@ -69,21 +69,21 @@ router.post("/get", async (req, res) => {
 });
 
 //Search for matching question
-router.post("/search", async (req, res) => {
-    const { topic, difficulty, userA, userB } = req.body;
-    const result = await SearchQuestion(topic, difficulty, userA, userB);
+// router.post("/search", async (req, res) => {
+//     const { topic, difficulty, userA, userB } = req.body;
+//     const result = await SearchQuestion(topic, difficulty, userA, userB);
 
-    if (!result) {
-        return res.status(400).json({
-            message: "Unable to find matching question in the database.",
-        });
-    }
+//     if (!result) {
+//         return res.status(400).json({
+//             message: "Unable to find matching question in the database.",
+//         });
+//     }
 
-    return res.status(200).json({
-        message: "Get matching question success.",
-        body: result,
-    });
-});
+//     return res.status(200).json({
+//         message: "Get matching question success.",
+//         body: result,
+//     });
+// });
 
 //Get topics
 router.get("/topics", async (req, res) => {
