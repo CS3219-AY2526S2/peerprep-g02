@@ -133,7 +133,7 @@ services:
     ports:
       - "3005:3005"
     volumes:
-      - ./question-upload-key.json:/secrets/question-upload-key.json:ro
+      - ./secrets/questions-service/question-upload-key.json:/secrets/question-upload-key.json:ro
     depends_on:
       - cloudsql-proxy
     networks:
