@@ -862,6 +862,7 @@ Provides CRUD operations for coding questions and topics. Supports LeetCode ques
 - **Framework:** Express 5
 - **Database:** Google Cloud SQL (PostgreSQL) in production, local PostgreSQL 16 in development
 - **ORM:** None -- raw SQL via `pg` library for lightweight, direct database access
+- **Image Store:** Google Cloud Storage (Google Cloud Bucket)
 
 #### Dual-Database Architecture
 
@@ -898,27 +899,40 @@ The Question Service is designed to run against **two different database backend
 ```
 
 In local development, Docker Compose overrides `DB_HOST=questions-db` to point at a local PostgreSQL container. In production, the service connects through the Cloud SQL Auth Proxy sidecar (`DB_HOST=cloudsql-proxy`) to a managed Google Cloud SQL instance.
+Within the submitted code, we left the local development pool and the seedData for the databases to demonstrate an example of the schema. 
 
 #### Database Schema
 
 ```
   questions                                    topics
-  +---------------------+-----------+          +-------+----------+
-  | quid (PK)           | UUID      |          | tid   | UUID (PK)|
-  | title               | TEXT      |          | topic | TEXT     |
-  | description         | TEXT      |          +-------+----------+
-  | difficulty          | TEXT      |
+  +---------------------+-----------+          +------------+----------+
+  | quid (PK)           | UUID      |          | tid (PK)   | UUID     |
+  | title               | TEXT      |          | topic      | TEXT     |
+  | description         | TEXT      |          | version    | INTEGER  |
+  | difficulty          | TEXT      |          +----------+------------+
   | topics              | UUID[]    |---+      qn_topics (join table)
-  | image               | TEXT      |   |      +-------+----------+
-  | test_case           | JSON      |   |      | quid  | UUID (FK)|----> questions
-  | popularity_score    | INTEGER   |   |      | tid   | UUID (FK)|----> topics
-  | function_name       | TEXT      |   +----->| difficulty | TEXT |
-  +---------------------+-----------+          +-------+----------+
-                                               Composite PK: (quid, tid)
-                                               Index: (tid, difficulty)
+  | image               | TEXT      |   |      +------------+----------+
+  | test_case           | JSON      |   |      | quid       | UUID (FK)|----> questions
+  | popularity_score    | INTEGER   |   |      | tid        | UUID (FK)|----> topics
+  | updated_at          | TIMESTAMP |   +----->| difficulty | TEXT     |
+  | version             | INTEGER   |          +------------+----------+
+  | function_name       | TEXT      |          Composite PK: (quid, tid)
+  +---------------------+-----------+          Index: (tid, difficulty)
+                                               
+                                               
 ```
+The following database columns have the corresponding default values in the `questions` database:
+`quid` : `random uuid`
+`popularity_score` : `0`
+`updated_at` : `current time (NOW())`
+`version` : `1`
+
+The following database columns have the corresponding default values in the `topics` database:
+`tid` : `random uuid`
+`version` : `1`
 
 **Design choice:** Topics are stored both as a UUID array on the `questions` table (for fast reads) and in the `qn_topics` join table (for indexed queries by topic + difficulty). The join table has a composite index on `(tid, difficulty)` to optimize question selection during matchmaking.
+We decided on structured data over unstructured data (like MongoDB) because we query the columns for comparison more frequently, making PostgreSQL a more suitable choice.
 
 **Test cases** are stored as a JSON array on each question:
 
@@ -931,60 +945,131 @@ In local development, Docker Compose overrides `DB_HOST=questions-db` to point a
 
 The `function_name` field (e.g., `"twoSum"`, `"isValidBST"`) tells the Execution Service which function to invoke when running user code against test cases.
 
+The `version` field assist in optimistic locking of the table to prevent accidental overriding of the question data in a case where two admin users are editing the same question at the same time.
+
+
 #### API Routes
 
-| Method   | Endpoint           | Auth     | Description                                 |
-| -------- | ------------------ | -------- | ------------------------------------------- |
-| `GET`    | `/`                | Public   | List all questions                          |
-| `GET`    | `/popular`         | Public   | Get popular questions (by score)            |
-| `POST`   | `/get`             | Public   | Get a single question by ID                 |
-| `POST`   | `/search`          | Public   | Search by topic + difficulty                |
-| `GET`    | `/topics`          | Public   | List all topics                             |
-| `POST`   | `/`                | Admin    | Create a question                           |
-| `PUT`    | `/`                | Admin    | Edit a question                             |
-| `DELETE` | `/:id`             | Admin    | Delete a question                           |
-| `POST`   | `/leetcode`        | Admin    | Fetch questions from LeetCode GraphQL API   |
-| `POST`   | `/topics`          | Admin    | Create a topic                              |
-| `PUT`    | `/topics`          | Admin    | Edit a topic                                |
-| `DELETE` | `/topics/:id`      | Admin    | Delete a topic                              |
-| `POST`   | `/internal/select` | Internal | Select a random question for a match        |
-| `POST`   | `/internal/get`    | Internal | Get full question details (with test cases) |
+| Method   | Endpoint               | Auth     | Description                                                               |
+| -------- | ---------------------- | -------- | --------------------------------------------------------------------------|
+| `GET`    | `/`                    | Public   | List all questions                                                        |
+| `GET`    | `/popular`             | Public   | Get popular questions (by popularity_score)                               |
+| `POST`   | `/get`                 | Public   | Get a single question by ID                                               |
+| `GET`    | `/topics`              | Public   | List all topics                                                           |
+| `POST`   | `/`                    | Admin    | Create a question                                                         |
+| `PUT`    | `/`                    | Admin    | Edit a question                                                           |
+| `DELETE` | `/:id`                 | Admin    | Delete a question                                                         |
+| `POST`   | `/search-database`     | Admin    | Search by question name                                                   |
+| `POST`   | `/image-upload`.       | Admin    | Upload image to google cloud bucket and get back the storage location     |
+| `GET`    | `/leetcode`            | Admin    | Fetch questions from LeetCode GraphQL API                                 |
+| `POST`   | `/leetcode`            | Admin    | Fetch questions from LeetCode GraphQL API with the specified search topic |
+| `POST`   | `/topics`              | Admin    | Create a topic                                                            |
+| `PUT`    | `/topics`              | Admin    | Edit a topic                                                              |
+| `DELETE` | `/topics/:id`          | Admin    | Delete a topic                                                            |
+| `POST`   | `/internal/select`     | Internal | Select a random question for a match                                      |
+| `POST`   | `/internal/get`        | Internal | Get full question details (with test cases)                               |
+| `POST`   | `/internal/popularity` | Internal | Update the popularity of a question whenever an attempt is made           |
 
 #### Question Selection for Matchmaking
 
 When the Collaboration Service creates a session, it calls `POST /internal/select` to pick a question. The selection algorithm:
 
+The first diagram denotes when there is errors faced.
+The second diagram is the best case scenario when it gets a random question according to the selection algorithm.
+The selection algorithm:
+1. Get a default random question from the selected topic [diagram 1]
+2. Try to get users past attempts [diagram 2, attempt service call]
+3. Try to get a common question that both users have not attempted
+4. Try to get a question that either user has not attempted before
+5. All questions have been attempted, return the default random question.
+If there are any errors or failure, rturn the default random question.
+
+
 ```
-  Collaboration Service              Question Service              PostgreSQL
-  =====================              ================              ==========
-        |                                  |                           |
-        | POST /internal/select            |                           |
-        | { topic, difficulty,             |                           |
-        |   userAId, userBId }             |                           |
-        +--------------------------------->|                           |
-        |                                  |                           |
-        |                         1. Query qn_topics JOIN topics       |
-        |                            WHERE topic = :topic              |
-        |                            AND difficulty = :difficulty       |
-        |                                  +-------------------------->|
-        |                                  |   [matching question IDs] |
-        |                                  |<--------------------------+
-        |                                  |                           |
-        |                         2. Pick one at RANDOM                |
-        |                            Math.random() from results        |
-        |                                  |                           |
-        |                         3. Fetch full question record        |
-        |                                  +-------------------------->|
-        |                                  |<--------------------------+
-        |                                  |                           |
-        | { questionId, title,             |                           |
-        |   topic, difficulty }            |                           |
-        |<---------------------------------+                           |
+  Collaboration Service              Question Service              PostgreSQL                    Google Bucket
+  =====================              ================              ==========                    ==========
+        |                                  |                           |                             |
+        | POST /internal/select            |                           |                             |
+        | { topic, difficulty,             |                           |                             |
+        |   userAId, userBId }             |                           |                             |
+        +--------------------------------->|                           |                             |
+        |                                  |                           |                             |
+        |                         1. Query qn_topics JOIN topics       |                             |
+        |                            WHERE topic = :topic              |                             |
+        |                            AND difficulty = :difficulty      |                             |
+        |                                  +-------------------------->|                             |
+        |                                  |   [matching question IDs] |                             |
+        |                                  |<--------------------------+                             |
+        |                                  |                           |                             |
+        |                         2. Pick one at RANDOM                |                             |
+        |                            Math.random() from results        |                             |
+        |                                  |                           |                             |
+        |                         3. Fetch full question record        |                             |
+        |                                  +-------------------------->|                             |
+        |                                  |<--------------------------+                             |
+        |                                  |                           |                             |
+        |                                  |                           |                             |
+        |                         4. Fetch image link (if required)    |                             |
+        |                                  +---------------------------+---------------------------->|
+        |                                  |<--------------------------+-----------------------------|
+        |                                  |                           |                             |
+        | { questionId, title,             |                           |                             |
+        |   topic, difficulty }            |                           |                             |
+        |<---------------------------------+                           |                             |
 ```
+
+  Collaboration Service              Question Service              PostgreSQL               Attempts Service
+  =====================              ================              ==========              ==================
+        |                                  |                           |                           |
+        | POST /internal/select            |                           |                           |
+        | { topic, difficulty,             |                           |                           |
+        |   userAId, userBId }             |                           |                           |
+        +--------------------------------->|                           |                           |
+        |                                  |                           |                           |
+        |                         1. Query qn_topics JOIN topics       |                           |
+        |                            WHERE topic = :topic              |                           |
+        |                            AND difficulty = :difficulty      |                           |
+        |                                  +-------------------------->|                           |
+        |                                  |   [matching question IDs] |                           |
+        |                                  |<--------------------------+                           |
+        |                                  |                           |                           |
+        |                         2. Pick one at RANDOM                |                           |
+        |                            Math.random() from results        |                           |
+        |                                  |                           |                           |
+        |                                  +-------------------------->|                           |
+        |                                  |                           |                           |
+        |                                  |                           |                           |
+        |                                  |                           |    3. Get unique question |
+        |                                  |                           |       attempted by userA  |
+        |                                  +-------------------------- +-------------------------->|
+        |                                  |                           |     [unique question IDs] |      
+        |                                  |<--------------------------+---------------------------+ 
+        |                                  |                           |                           |  
+        |                                  |                           |    4. Get unique question |
+        |                                  |                           |       attempted by userB  |
+        |                                  +-------------------------- +-------------------------->|
+        |                                  |                           |     [unique question IDs] |      
+        |                                  |<--------------------------+---------------------------+ 
+        |                                  |                           |                           |
+        |                                  |                           |                           |
+        |                                  |                           |                           |
+        |                         5. Fetch full question record        |                           |
+        |                         and image link from google bucket    |                           |
+        |                         (not illustrated here) as required   |                           |
+        |                                  +-------------------------->|                           |
+        |                                  |<--------------------------+                           |
+        |                                  |                           |                           |
+        | { questionId, title,             |                           |                           |
+        |   topic, difficulty }            |                           |                           |
+        |<---------------------------------+                           |                           |
 
 #### LeetCode Import
 
-Admins can fetch question metadata from LeetCode's public GraphQL API (`POST /leetcode`). This queries `https://leetcode.com/graphql/` with a tag filter and returns metadata (title, difficulty, acceptance rate, topic tags). The admin can then manually create questions based on this data.
+For a topic with the number of questions of less than 5, QuestionService will automatically get some sample questions from Leetcode's public GraphQL API (`GET /leetcode`). Alternatively, admins can fetch question metadata from LeetCode's public GraphQL API (`POST /leetcode`) with their designed topic for some suggestions. Both queries `https://leetcode.com/graphql/` with a tag filter and returns metadata (title, difficulty, acceptance rate, topic tags). The admin can then manually create questions based on this data.
+
+### Image Handling
+
+For questions with image with them, the frontend will optimistically upload it to the google cloud bucket using the image upload link (`POST /image-upload`). If any issues or error happens, the image will then be deleted from the bucket from question service. By optimistically uploading the image, it prevents data loss.
 
 #### Admin Authorization (Delegated)
 
@@ -1601,10 +1686,10 @@ Real-time in-session chat for collaboration pairs. Uses native WebSockets (not S
 
 #### Internal Dependencies
 
-| Dependency | URL | Purpose |
-|---|---|---|
-| User Service | `http://user-service:3001` | WebSocket auth (validates JWT via `/users/internal/authz/context`) |
-| Redis | `message-redis:6379` | Message storage (dedicated Redis instance, isolated from collaboration Redis) |
+| Dependency   | URL                        | Purpose                                                                       |
+|--------------|----------------------------|-------------------------------------------------------------------------------|
+| User Service | `http://user-service:3001` | WebSocket auth (validates JWT via `/users/internal/authz/context`)            |
+| Redis        | `message-redis:6379`       | Message storage (dedicated Redis instance, isolated from collaboration Redis) |
 
 The message service has **no direct dependency** on the Collaboration Service -- the coupling is through the frontend, which passes the `collaborationId` from the collaboration session into the chat component.
 
@@ -1621,7 +1706,7 @@ The frontend connects directly to `ws://localhost:3019`, bypassing the API gatew
      |                              |                           |
      | ws://localhost:3019          |                           |
      | Sec-WebSocket-Protocol:      |                           |
-     |   [clerk-token]             |                           |
+     |   [clerk-token]              |                           |
      +----------------------------->|                           |
      |                              |                           |
      |                     Validate token:                      |
@@ -1632,19 +1717,19 @@ The frontend connects directly to `ws://localhost:3019`, bypassing the API gatew
      |                              |   {clerkUserId, status}   |
      |                              |<--------------------------+
      |                              |                           |
-     |   {type: "auth"}            |                           |
+     |   {type: "auth"}             |                           |
      |<-----------------------------+                           |
      |                              |                           |
-     | {type: "join",              |                           |
-     |  collaborationId, userId}   |                           |
+     | {type: "join",               |                           |
+     |  collaborationId, userId}    |                           |
      +----------------------------->|                           |
      |                              |                           |
-     |   Previous messages          |  (fetched from Redis     |
-     |   (one per ws.send)          |   LRANGE 0 -1)           |
+     |   Previous messages          |  (fetched from Redis      |
+     |   (one per ws.send)          |   LRANGE 0 -1)            |
      |<-----------------------------+                           |
      |                              |                           |
-     |   {type: "info",            |                           |
-     |    "Welcome to collab..."}  |                           |
+     |   {type: "info",            |                            |
+     |    "Welcome to collab..."}  |                            |
      |<-----------------------------+                           |
 ```
 
@@ -1663,7 +1748,7 @@ The frontend connects directly to `ws://localhost:3019`, bypassing the API gatew
 |---|---|---|
 | `auth` | After successful token validation | Signals the client to send a `join` message |
 | `info` | After joining a room | Welcome message or duplicate-join notification |
-| _(no type)_ | On incoming chat message | Broadcast message: `{from, message, replyMessage, messageId}` |
+| _(no type)_ | On incoming chat message | Broadcast message: `{from, message, replyMessage, messageId}`|
 
 #### Message Storage
 
