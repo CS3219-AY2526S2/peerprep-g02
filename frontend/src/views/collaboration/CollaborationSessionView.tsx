@@ -14,7 +14,9 @@ import ParticipantsPanel from "@/components/collaboration/ParticipantsPanel";
 import ProblemDescription from "@/components/collaboration/ProblemDescription";
 import SessionHeader from "@/components/collaboration/SessionHeader";
 import StatusBanners from "@/components/collaboration/StatusBanners";
+import { SubmissionResultDialog } from "@/components/collaboration/SubmissionResultDialog";
 import TestCasesPanel, { type TestRow } from "@/components/collaboration/TestCasesPanel";
+import LiveChat from "@/components/message/LiveChat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,14 +83,14 @@ export default function CollaborationSessionView() {
         return () => window.clearInterval(timer);
     }, []);
 
-    // Auto-redirect home after successful submission
+    // Auto-redirect home after submission (pass or fail)
     useEffect(() => {
-        if (!submissionResult?.success) return;
+        if (!submissionResult) return;
         const timeout = setTimeout(() => {
             void leaveSession().then(() => {
                 startTransition(() => navigate(ROUTES.DASHBOARD));
             });
-        }, 3000);
+        }, 5000);
         return () => clearTimeout(timeout);
     }, [submissionResult, leaveSession, navigate]);
 
@@ -147,11 +149,6 @@ export default function CollaborationSessionView() {
         <div className="min-h-screen bg-[#0b1120] text-slate-100">
             <SessionHeader
                 title={question?.title ?? session?.topic ?? "Collaboration Session"}
-                subtitle={
-                    session
-                        ? `${session.difficulty} · ${session.topic}`
-                        : "Connecting to collaboration session"
-                }
                 elapsed={elapsed}
                 onExitClick={() => setShowLeaveConfirm(true)}
             />
@@ -207,12 +204,16 @@ export default function CollaborationSessionView() {
                             </Card>
                         )}
 
-                        <ProblemDescription description={question?.description ?? null} />
+                        <ProblemDescription
+                            description={question?.description ?? null}
+                            qnImage={question?.qnImage}
+                        />
                         <ExamplesSection testCases={testRows} />
                         <ParticipantsPanel
                             participants={participants}
                             getDisplayName={getDisplayName}
                         />
+                        <LiveChat collaborationId={collaborationId} />
                     </div>
                 </section>
 
@@ -229,10 +230,8 @@ export default function CollaborationSessionView() {
                     <div className="grid flex-1 lg:grid-rows-[minmax(0,1.4fr)_minmax(280px,0.95fr)]">
                         <StatusBanners
                             sessionEnded={sessionEnded}
-                            submissionResult={submissionResult}
                             hasOfflineChanges={!!offlineChanges}
                             onReturnToDashboard={handleReturnToDashboard}
-                            onReturnHome={handleReturnHome}
                             onSubmitOfflineChanges={submitOfflineChanges}
                             onDiscardOfflineChanges={discardOfflineChanges}
                         />
@@ -262,6 +261,11 @@ export default function CollaborationSessionView() {
                     </div>
                 </section>
             </main>
+
+            <SubmissionResultDialog
+                submissionResult={submissionResult}
+                onReturnHome={handleReturnHome}
+            />
 
             <LeaveSessionDialog
                 open={showLeaveConfirm}

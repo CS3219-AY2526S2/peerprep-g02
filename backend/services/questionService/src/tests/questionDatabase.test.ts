@@ -1,95 +1,156 @@
-// // tests/questions.service.test.ts
-// import { UUID } from "node:crypto";
-// import { beforeEach, describe, expect, it, vi } from "vitest";
+import { UUID } from "node:crypto";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// import pool from "../database";
-// import * as service from "../services/questionDatabase";
+import pool from "../database";
+import {
+    CreateQuestion,
+    DeleteQuestion,
+    EditQuestion,
+    GetQuestions,
+} from "../services/questionDatabase";
+import { deleteImage } from "../services/questionImage";
 
-// // Mock pool.query
-// vi.mock("../database", () => ({
-//     default: {
-//         query: vi.fn(),
-//     },
-// }));
+type TestCase = {
+    input: string;
+    output: string;
+};
 
-// describe("Questions Service", () => {
-//     beforeEach(() => {
-//         vi.clearAllMocks();
-//     });
+type QuestionData = {
+    qnTitle: string;
+    qnDesc: string;
+    testCase: TestCase[];
+    difficulty: string;
+    qnTopics: UUID[];
+    qnImage?: string | null;
+};
 
-//     it("GetQuestions should return rows", async () => {
-//         const mockRows = [{ quid: "123", title: "Test" }];
-//         (pool.query as any).mockResolvedValue({ rows: mockRows });
+type QuestionEdit = {
+    quid: UUID;
+    qnTitle: string;
+    qnDesc: string;
+    testCase: TestCase[];
+    difficulty: string;
+    qnTopics: UUID[];
+    qnImage?: string | null;
+    version: number;
+};
 
-//         const result = await service.GetQuestions();
-//         expect(pool.query).toHaveBeenCalledWith("SELECT * FROM questions LIMIT 5");
-//         expect(result).toEqual(mockRows);
-//     });
+vi.mock("../database", () => ({
+    default: {
+        connect: vi.fn(),
+        query: vi.fn(),
+    },
+}));
 
-//     it("GetPopularQuestions should return top 3 titles", async () => {
-//         const mockRows = [{ title: "Q1" }, { title: "Q2" }, { title: "Q3" }];
-//         (pool.query as any).mockResolvedValue({ rows: mockRows });
+vi.mock("../services/questionImage", () => ({
+    deleteImage: vi.fn().mockResolvedValue(true),
+}));
 
-//         const result = await service.GetPopularQuestions();
-//         expect(pool.query).toHaveBeenCalledWith(
-//             "SELECT title FROM questions ORDER BY popularity_score DESC LIMIT 3",
-//         );
-//         expect(result).toEqual(mockRows);
-//     });
+describe("Questions Service", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
 
-//     it("CreateQuestion should return true on success", async () => {
-//         const data = {
-//             qnTitle: "Test Question",
-//             qnDesc: "Description",
-//             testCase: [{ input: "1", output: "2" }],
-//             difficulty: "Easy",
-//             qnTopics: ["uuid1"],
-//         };
-//         (pool.query as any).mockResolvedValue({ rows: [{ quid: "q1" }] });
+    it("GetQuestions should return rows", async () => {
+        const mockRows = [{ quid: "123", title: "Test" }];
+        (pool.query as any).mockResolvedValue({ rows: mockRows });
 
-//         const result = await service.CreateQuestion(data as any);
-//         expect(result).toBe(true);
-//     });
+        const result = await GetQuestions();
+        expect(pool.query).toHaveBeenCalledWith(
+            "SELECT * FROM questions ORDER BY updated_at DESC LIMIT 5",
+        );
+        expect(result).toEqual(mockRows);
+    });
 
-//     it("EditQuestion should return true on success", async () => {
-//         const data = {
-//             quid: "uuid1",
-//             qnTitle: "Updated Title",
-//             qnDesc: "Updated Desc",
-//             testCase: [{ input: "1", output: "2" }],
-//             difficulty: "Medium",
-//             qnTopics: ["uuid1"],
-//         };
-//         (pool.query as any).mockResolvedValue({ rows: [{ quid: "uuid1" }] });
+    it("should insert question and associated topics", async () => {
+        const mockData: QuestionData = {
+            qnTitle: "Test Question",
+            qnDesc: "Description",
+            testCase: [{ input: "a", output: "b" }],
+            difficulty: "easy",
+            qnTopics: [
+                "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544",
+                "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545",
+            ],
+            qnImage: "/upload/test-image-url",
+        };
 
-//         const result = await service.EditQuestion(data as any);
-//         expect(result).toBe(true);
-//     });
+        const mockClient = {
+            query: vi.fn().mockResolvedValue([]),
+            release: vi.fn(),
+        };
 
-//     it("DeleteQuestion should return true on success", async () => {
-//         (pool.query as any).mockResolvedValue({ rows: [] });
-//         const result = await service.DeleteQuestion("uuid1" as UUID);
-//         expect(result).toBe(true);
-//         expect(pool.query).toHaveBeenCalledWith("DELETE FROM questions WHERE quid = $1", ["uuid1"]);
-//     });
+        pool.connect.mockResolvedValue(mockClient);
 
-//     it("GetQuestion should return rows for a given quid", async () => {
-//         const mockRows = [{ quid: "uuid1", title: "Test" }];
-//         (pool.query as any).mockResolvedValue({ rows: mockRows });
+        mockClient.query.mockResolvedValueOnce({
+            rows: [{ quid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0543" }],
+        });
+        mockClient.query.mockResolvedValueOnce({ rowCount: 1 });
 
-//         const result = await service.GetQuestion("uuid1" as UUID);
-//         expect(result).toEqual(mockRows);
-//     });
+        await CreateQuestion(mockData);
 
-//     it("SearchQuestion should return a UUID", async () => {
-//         // Mock GetQuestion and pool.query
-//         const mockQuid = "uuid1";
-//         vi.spyOn(service, "GetQuestion").mockResolvedValue([{ quid: mockQuid }]);
-//         (pool.query as any).mockResolvedValue({
-//             rows: [{ quid: mockQuid }],
-//         });
+        expect(mockClient.query).toHaveBeenCalledWith(
+            expect.stringContaining("INSERT INTO questions"),
+            expect.arrayContaining([
+                mockData.qnTitle,
+                mockData.qnDesc,
+                mockData.difficulty,
+                mockData.qnImage,
+            ]),
+        );
+        expect(mockClient.release).toHaveBeenCalled();
+    });
 
-//         const result = await service.SearchQuestion("topic1", "Easy", null, null);
-//         expect(result.quid).toBe(mockQuid);
-//     });
-// });
+    it("EditQuestion should update existing question and topics", async () => {
+        const mockData: QuestionEdit = {
+            quid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0543",
+            qnTitle: "Test Question",
+            qnDesc: "Description",
+            testCase: [{ input: "a", output: "b" }],
+            difficulty: "easy",
+            qnTopics: [
+                "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544",
+                "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545",
+            ],
+            qnImage: "/upload/test-image-url",
+            version: 1,
+        };
+
+        const mockClient = {
+            query: vi.fn(),
+            release: vi.fn(),
+        };
+
+        pool.connect.mockResolvedValue(mockClient);
+
+        mockClient.query.mockResolvedValueOnce({
+            rowCount: 1,
+            rows: [{ version: 1, image: "/old-image-url" }],
+        });
+
+        await EditQuestion(mockData);
+
+        expect(mockClient.query).toHaveBeenCalledWith(
+            expect.stringContaining("SELECT version, image FROM questions WHERE quid = $1"),
+            [mockData.quid],
+        );
+
+        expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it("DeleteQuestion should delete a question and its image", async () => {
+        const questionId = "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544";
+        const mockQuestion = { quid: questionId, image: "image-url" };
+
+        (pool.query as any).mockResolvedValueOnce({ rows: [mockQuestion] });
+        (pool.query as any).mockResolvedValueOnce({ rowCount: 1 });
+
+        const result = await DeleteQuestion(questionId);
+
+        expect(pool.query).toHaveBeenCalledWith("DELETE FROM questions WHERE quid = $1", [
+            questionId,
+        ]);
+        expect(deleteImage).toHaveBeenCalledWith("image-url");
+        expect(result).toBe(1);
+    });
+});

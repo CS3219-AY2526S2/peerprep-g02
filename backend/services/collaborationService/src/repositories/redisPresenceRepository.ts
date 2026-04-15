@@ -2,6 +2,7 @@ import type { UUID } from "node:crypto";
 
 import { env } from "@/config/env.js";
 import type { PresenceStatus, SessionParticipantPresence } from "@/models/session.js";
+import { getInstanceId } from "@/utils/instanceHeartbeat.js";
 import { getRedisClient } from "@/utils/redis.js";
 
 type SocketBinding = {
@@ -73,6 +74,7 @@ export class RedisPresenceRepository {
         pipeline.hset(KEYS.socket(socketId), {
             collaborationId,
             userId,
+            instanceId: getInstanceId(),
         });
         pipeline.pexpire(KEYS.socket(socketId), this.ttlMs);
 

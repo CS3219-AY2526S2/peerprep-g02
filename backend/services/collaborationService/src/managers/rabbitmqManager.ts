@@ -35,6 +35,7 @@ export class RabbitMQManager {
     private connection: ChannelModel | null = null;
     private channel: Channel | null = null;
     private isReconnecting = false;
+    private isShuttingDown = false;
     private io: Server | null = null;
 
     private constructor() {}
@@ -102,7 +103,7 @@ export class RabbitMQManager {
     }
 
     private handleConnectionError(error: Error): void {
-        if (this.isReconnecting) return;
+        if (this.isReconnecting || this.isShuttingDown) return;
         this.isReconnecting = true;
 
         logger.error({ err: error }, "RabbitMQ connection lost. Retrying in 5s...");
@@ -238,6 +239,17 @@ export class RabbitMQManager {
                             );
                         }
 
+                        // Send submission confirmation to the submitter regardless of attempt recording
+                        io.to(userRoom(userId)).emit(
+                            SOCKET_EVENTS.SUBMISSION_COMPLETE,
+                            {
+                                collaborationId,
+                                success: allPassed,
+                                totalTestCases: parsed.result.totalTestCases,
+                                testCasesPassed: parsed.result.testCasesPassed,
+                            },
+                        );
+
                         try {
                             await attemptRecordingService.recordAttempt({
                                 userId,
@@ -251,17 +263,6 @@ export class RabbitMQManager {
                                 totalTestCases: parsed.result.totalTestCases,
                                 testCasesPassed: parsed.result.testCasesPassed,
                             });
-
-                            // Send submission confirmation to the submitter
-                            io.to(userRoom(userId)).emit(
-                                SOCKET_EVENTS.SUBMISSION_COMPLETE,
-                                {
-                                    collaborationId,
-                                    success: allPassed,
-                                    totalTestCases: parsed.result.totalTestCases,
-                                    testCasesPassed: parsed.result.testCasesPassed,
-                                },
-                            );
                         } catch (attemptError) {
                             logger.error(
                                 { err: attemptError, correlationId, collaborationId },
@@ -401,7 +402,10 @@ export class RabbitMQManager {
     }
 
     public async close(): Promise<void> {
+        this.isShuttingDown = true;
         await this.channel?.close();
         await this.connection?.close();
+        this.channel = null;
+        this.connection = null;
     }
 }

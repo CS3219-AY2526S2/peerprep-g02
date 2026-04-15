@@ -1,29 +1,21 @@
-import { CheckCircle2, XCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-import { cn } from "@/lib/utils";
-import type {
-    SessionEndedPayload,
-    SubmissionCompletePayload,
-} from "@/models/collaboration/collaborationType";
+import type { SessionEndedPayload } from "@/models/collaboration/collaborationType";
 
 interface StatusBannersProps {
     sessionEnded: SessionEndedPayload | null;
-    submissionResult: SubmissionCompletePayload | null;
     hasOfflineChanges: boolean;
     onReturnToDashboard: () => void;
-    onReturnHome: () => void;
     onSubmitOfflineChanges: () => void;
     onDiscardOfflineChanges: () => void;
 }
 
 export default function StatusBanners({
     sessionEnded,
-    submissionResult,
     hasOfflineChanges,
     onReturnToDashboard,
-    onReturnHome,
     onSubmitOfflineChanges,
     onDiscardOfflineChanges,
 }: StatusBannersProps) {
@@ -48,47 +40,6 @@ export default function StatusBanners({
                         onClick={onReturnToDashboard}
                     >
                         Return to Dashboard
-                    </Button>
-                </div>
-            )}
-
-            {submissionResult && (
-                <div
-                    className={cn(
-                        "flex items-center justify-between border-b px-5 py-4",
-                        submissionResult.success
-                            ? "border-emerald-500/30 bg-emerald-500/10"
-                            : "border-amber-500/30 bg-amber-500/10",
-                    )}
-                >
-                    <div className="flex items-center gap-3">
-                        {submissionResult.success ? (
-                            <CheckCircle2 className="size-5 text-emerald-400" />
-                        ) : (
-                            <XCircle className="size-5 text-amber-400" />
-                        )}
-                        <span
-                            className={cn(
-                                "font-medium",
-                                submissionResult.success ? "text-emerald-300" : "text-amber-300",
-                            )}
-                        >
-                            Solution submitted! {submissionResult.testCasesPassed}/
-                            {submissionResult.totalTestCases} test cases passed.
-                        </span>
-                    </div>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className={cn(
-                            "bg-transparent",
-                            submissionResult.success
-                                ? "border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20"
-                                : "border-amber-500/50 text-amber-300 hover:bg-amber-500/20",
-                        )}
-                        onClick={onReturnHome}
-                    >
-                        Return Home
                     </Button>
                 </div>
             )}

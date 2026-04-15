@@ -1,3 +1,4 @@
+import { AppConstants } from "@/constants.js";
 import { query, type QueryExecutor, withTransaction } from "@/utils/postgres.js";
 import { ServiceError } from "@/utils/ResponseHelpers.js";
 
@@ -92,6 +93,8 @@ class UserRepository {
         const hasAvatarUrl = input.avatarUrl !== undefined;
         const hasPreferredLanguage = input.preferredLanguage !== undefined;
         const hasLastLoginAt = input.lastLoginAt instanceof Date;
+        const normalizedPreferredLanguage =
+            input.preferredLanguage ?? AppConstants.DEFAULT_PREFERRED_LANGUAGE;
 
         const result = await query<UserRow>(
             `
@@ -120,7 +123,7 @@ class UserRepository {
                 input.name,
                 input.avatarUrl ?? null,
                 "user",
-                input.preferredLanguage ?? null,
+                normalizedPreferredLanguage,
                 input.lastLoginAt || null,
                 hasAvatarUrl,
                 hasPreferredLanguage,

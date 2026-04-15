@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { AppConstants } from "@/constants.js";
 import { AuthResponse } from "@/types/auth.js";
 import { UserRole, userRepository } from "@/models/User.js";
 import { ClerkService } from "@/services/clerkService.js";
@@ -40,7 +41,8 @@ export class AuthService {
                 clerkUserId: clerkUser.clerkUserId,
                 name: clerkUser.name,
                 avatarUrl: clerkUser.avatarUrl,
-                preferredLanguage: clerkUser.preferredLanguage,
+                preferredLanguage:
+                    clerkUser.preferredLanguage ?? AppConstants.DEFAULT_PREFERRED_LANGUAGE,
                 lastLoginAt: clerkUser.lastSignInAt || new Date(),
             });
 

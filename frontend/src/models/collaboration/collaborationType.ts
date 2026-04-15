@@ -126,4 +126,5 @@ export type CollaborationQuestion = {
         input: string;
         output: string;
     }>;
+    qnImage?: string | null;
 };

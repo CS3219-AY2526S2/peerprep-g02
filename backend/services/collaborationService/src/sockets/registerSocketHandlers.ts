@@ -49,7 +49,7 @@ function userRoom(userId: string): string {
     return `user:${userId}`;
 }
 
-export function registerSocketHandlers(io: Server): void {
+export function registerSocketHandlers(io: Server): ReturnType<typeof setInterval> {
     io.on("connection", (socket: Socket) => {
         const userId = socket.data.userId as string | undefined;
 
@@ -709,24 +709,25 @@ export function registerSocketHandlers(io: Server): void {
     const lockKey = "distributed-lock:inactivity-check";
     const lockDurationMs = Math.max(env.inactivityCheckIntervalMs - 5000, 10000);
 
-    setInterval(async () => {
+    const inactivityCheckInterval = setInterval(async () => {
         try {
             // Acquire distributed lock — skip if another instance holds it
             const acquired = await redis.set(lockKey, "1", "NX", "PX", lockDurationMs);
             if (!acquired) return;
 
-            const inactiveSessionIds = await collaborationSessionService.getInactiveSessions(
-                env.sessionInactivityTimeoutMs,
-            );
+            const { inactiveIds, graceExpiredIds } =
+                await collaborationSessionService.getSessionsToCleanup(
+                    env.sessionInactivityTimeoutMs,
+                    env.disconnectGraceMs,
+                );
 
-            for (const collaborationId of inactiveSessionIds) {
+            for (const collaborationId of inactiveIds) {
                 const endResult = await collaborationSessionService.endSession(
                     collaborationId,
                     "inactivity_timeout",
                 );
 
                 if (endResult) {
-                    // Notify all users in the session that it has ended
                     io.to(collaborationRoom(collaborationId)).emit(SOCKET_EVENTS.SESSION_ENDED, {
                         collaborationId,
                         reason: "inactivity_timeout",
@@ -738,8 +739,29 @@ export function registerSocketHandlers(io: Server): void {
                     );
                 }
             }
+
+            for (const collaborationId of graceExpiredIds) {
+                const endResult = await collaborationSessionService.endSession(
+                    collaborationId,
+                    "both_users_left",
+                );
+
+                if (endResult) {
+                    io.to(collaborationRoom(collaborationId)).emit(SOCKET_EVENTS.SESSION_ENDED, {
+                        collaborationId,
+                        reason: "both_users_left",
+                    });
+
+                    logger.info(
+                        { collaborationId, reason: "disconnect_grace_expired" },
+                        "Session ended - user left and partner's disconnect grace period expired",
+                    );
+                }
+            }
         } catch (error) {
             logger.error({ err: error }, "Error checking for inactive sessions");
         }
     }, env.inactivityCheckIntervalMs);
+
+    return inactivityCheckInterval;
 }

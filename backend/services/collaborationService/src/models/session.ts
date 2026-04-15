@@ -28,6 +28,7 @@ export type SelectedQuestion = {
     topic: string;
     difficulty: SessionDifficulty;
     title?: string;
+    functionName?: string;
 };
 
 export type QuestionDetails = {
@@ -38,6 +39,7 @@ export type QuestionDetails = {
     topics: string[];
     testCase: Array<{ input: unknown; output: unknown }>;
     functionName: string;
+    qnImage?: string | null;
 };
 
 export type CollaborationSession = {
