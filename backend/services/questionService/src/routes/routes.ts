@@ -12,7 +12,6 @@ import {
     GetPopularQuestions,
     GetQuestion,
     GetQuestions,
-    SearchQuestion,
     SearchQuestionDatabase,
 } from "../services/questionDatabase";
 import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDatabase";

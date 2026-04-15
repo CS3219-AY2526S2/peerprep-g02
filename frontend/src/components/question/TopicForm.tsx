@@ -99,7 +99,7 @@ export function TopicEdit() {
         }
 
         const duplicateTopics = hasDuplicates();
-        
+
         if (duplicateTopics) {
             displayErrorPopup("You cannot have duplicate topic names");
             return;

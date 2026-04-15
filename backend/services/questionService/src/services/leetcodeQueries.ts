@@ -72,7 +72,6 @@ function getRandomQuestionIndexes(questionsLength: number) {
 }
 
 export async function getLeetCode(topic: string) {
-    
     const queryVars = {
         skip: 0,
         topic: topic,

@@ -5,7 +5,7 @@ import pool from "../database";
 type TopicInfo = {
     tid: UUID;
     topic: string;
-    version: Number;
+    version: number;
 };
 
 export async function GetTopics() {
@@ -36,26 +36,31 @@ export async function AddTopic(data: TopicInfo[]) {
 
 export async function EditTopic(data: TopicInfo[]) {
     console.log(data);
-    const update = "UPDATE topics SET topic = $2, version = version + 1 WHERE tid = $1 AND version = $3 RETURNING tid";
+    const update =
+        "UPDATE topics SET topic = $2, version = version + 1 WHERE tid = $1 AND version = $3 RETURNING tid";
 
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
+        await client.query("BEGIN");
         for (let i: number = 0; i < data.length; i++) {
             const topicInfo = data[i];
-            const result = await client.query(update, [topicInfo.tid, topicInfo.topic, topicInfo.version]);
+            const result = await client.query(update, [
+                topicInfo.tid,
+                topicInfo.topic,
+                topicInfo.version,
+            ]);
             console.log(result);
             if (result.rowCount < 1) {
                 throw new Error("Wrong version detected");
             }
         }
-        await client.query('COMMIT');
-        
+        await client.query("COMMIT");
+
         return 1;
     } catch (e) {
-        await client.query('ROLLBACK');
+        await client.query("ROLLBACK");
         if ((e as Error).message == "Wrong version detected") {
-            return -1
+            return -1;
         }
         console.log(e);
     } finally {
