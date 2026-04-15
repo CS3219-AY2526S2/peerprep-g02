@@ -974,7 +974,7 @@ The `version` field assist in optimistic locking of the table to prevent acciden
 
 When the Collaboration Service creates a session, it calls `POST /internal/select` to pick a question. The selection algorithm:
 
-The first diagram denotes when there is errors faced.
+The first diagram denotes how the question is served when there is any error.
 The second diagram is the best case scenario when it gets a random question according to the selection algorithm.
 The selection algorithm:
 1. Get a default random question from the selected topic [diagram 1]
@@ -984,7 +984,7 @@ The selection algorithm:
 5. All questions have been attempted, return the default random question.
 If there are any errors or failure, rturn the default random question.
 
-
+Diagram 1:
 ```
   Collaboration Service              Question Service              PostgreSQL                    Google Bucket
   =====================              ================              ==========                    ==========
@@ -1018,6 +1018,9 @@ If there are any errors or failure, rturn the default random question.
         |<---------------------------------+                           |                             |
 ```
 
+
+Diagram 2:
+```
   Collaboration Service              Question Service              PostgreSQL               Attempts Service
   =====================              ================              ==========              ==================
         |                                  |                           |                           |
@@ -1062,6 +1065,7 @@ If there are any errors or failure, rturn the default random question.
         | { questionId, title,             |                           |                           |
         |   topic, difficulty }            |                           |                           |
         |<---------------------------------+                           |                           |
+```
 
 #### LeetCode Import
 
