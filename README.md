@@ -1127,7 +1127,7 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
 
 **Multi-tab synchronization:** Each browser tab opens a separate Socket.IO connection. All sockets for the same user in the same session share presence state in Redis. OT operations, execution results, and hints are broadcast to the Socket.IO room, so every tab receives them. A user is only marked `DISCONNECTED` when **all** their sockets close (socketCount reaches 0). `session:leave` only removes the triggering socket -- the user is only marked `LEFT` when their last socket triggers it. This means closing one tab doesn't disrupt the session if other tabs remain open.
 
-**Startup orphan cleanup:** On boot, the service scans Redis for `socket:*` keys left by a previous crash, removes them, and marks any users still appearing as "connected" to "disconnected".
+**Instance heartbeat & startup reconciliation:** Each instance registers a unique `instance:{id}` key in Redis with a 30-second TTL, refreshed every 10 seconds. Every `socket:*` binding includes the owning `instanceId`. On startup, the service SCANs all `socket:*` keys, groups them by owning instance, checks each instance's liveness key, and only removes sockets belonging to dead instances. Affected users still showing as "connected" are transitioned to "disconnected". Sockets belonging to live instances are left untouched, making this safe during rolling restarts and horizontal scaling.
 
 #### Code Execution: Run vs Submit
 
@@ -1154,6 +1154,40 @@ The prompt has two modes: if code exists, it analyzes for bugs/missing logic; if
 #### Session End
 
 Sessions end via: **both users left**, **inactivity timeout** (30min, checked every 60s with a Redis distributed lock for horizontal scaling), or **manual** `endSession` call. On end: session marked inactive, user active-session indices cleared, all Redis data cleaned up (session, presence, OT doc, output, hints), `session:ended` emitted.
+
+#### Graceful Shutdown
+
+On `SIGTERM` / `SIGINT`, the service performs an ordered teardown with a 10-second forced-exit safety timer:
+
+```
+  Graceful Shutdown Sequence
+  ==========================
+
+  1. Guard against double-shutdown (isShuttingDown flag)
+  2. Start 10s forced-exit timer (.unref'd -- won't keep process alive)
+  3. clearInterval(inactivityCheckInterval)   -- stop session sweeper
+  4. httpServer.close()                       -- stop accepting new connections
+  5. ioServer.close()                         -- disconnect all sockets
+                                                (fires disconnect handlers,
+                                                 which clean up socket:* and
+                                                 presence:* Redis keys)
+  6. RabbitMQManager.close()                  -- stop consumers, close
+                                                channel + connection
+                                                (isShuttingDown flag prevents
+                                                 auto-reconnect attempts)
+  7. Close Redis adapter pub/sub clients      -- tear down Socket.IO adapter
+  8. stopInstanceHeartbeat()                  -- delete instance:{id} liveness
+                                                key (uses main Redis client)
+  9. closeRedis()                             -- close main Redis client (last,
+                                                 since step 8 depends on it)
+  10. process.exit(0)
+```
+
+Key design decisions:
+- `ioServer.close()` is called **before** Redis cleanup so that disconnect handlers can still write to Redis
+- `stopInstanceHeartbeat()` is called **before** `closeRedis()` because it needs the Redis client to delete the liveness key
+- RabbitMQ's `isShuttingDown` flag prevents the reconnection logic from firing when the connection drops during shutdown
+- The 10s timer ensures the process exits even if a step hangs (e.g., unresponsive broker)
 
 #### Socket Events Reference
 
@@ -1196,6 +1230,9 @@ Sessions end via: **both users left**, **inactivity timeout** (30min, checked ev
 | Heartbeat interval | 25 seconds | `CS_HEARTBEAT_INTERVAL_MS` |
 | Heartbeat timeout | 20 seconds | `CS_HEARTBEAT_TIMEOUT_MS` |
 | Max hints per user | 2 | Constant |
+| Instance heartbeat TTL | 30 seconds | Constant |
+| Instance heartbeat interval | 10 seconds | Constant |
+| Shutdown timeout | 10 seconds | Constant |
 | OT history cap | 50 ops | Constant |
 | OT CAS retries | 5 | Constant |
 
@@ -1205,6 +1242,7 @@ Sessions end via: **both users left**, **inactivity timeout** (30min, checked ev
 - **OT Lua CAS** for race-free concurrent writes
 - **Redis distributed lock** (`SET NX PX`) for inactivity sweeper -- only one instance runs the check
 - **Nginx `ip_hash`** for consistent Socket.IO routing
+- **Instance heartbeat** (`instance:{id}` key, 30s TTL, 10s refresh) -- each instance registers liveness so startup reconciliation only removes sockets from dead instances, not from peers in a multi-instance deployment
 
 ---
 
@@ -1564,20 +1602,40 @@ This is the complete flow from login to completing a coding session:
                       RabbitMQ Queue Architecture
                       ===========================
 
-  +------------------+       REQ_QUEUE        +---------------------+
-  |                  | =====================> |                     |
-  | Matching Service |   CreateSession msg    | Collaboration Svc   |
-  |                  |   {userA, userB,       |                     |
-  |                  |    matchId, config}    |  1. Consume message |
-  |                  |                        |  2. Select question |
-  |                  |       RES_QUEUE        |  3. Create session  |
-  |                  | <===================== |  4. Publish result  |
-  |                  |   SessionCreated msg   |                     |
-  +------------------+   {sessionId, status}  +---------------------+
+  SESSION CREATION (Matching <-> Collaboration):
 
-  - Queues are durable (survive broker restarts)
-  - Messages include x-retry-count header (max 5 retries)
+  +------------------+  collab_create_req_queue  +---------------------+
+  |                  | ========================> |                     |
+  | Matching Service |   CreateSession msg       | Collaboration Svc   |
+  |                  |   {userA, userB,          |                     |
+  |                  |    matchId, config}       |  1. Consume message |
+  |                  |                           |  2. Select question |
+  |                  |  collab_create_res_queue  |  3. Create session  |
+  |                  | <======================== |  4. Publish result  |
+  |                  |   SessionCreated msg      |                     |
+  +------------------+   {sessionId, status}     +---------------------+
+
+  CODE EXECUTION (Collaboration <-> Execution):
+
+  +---------------------+    exec_req_queue     +---------------------+
+  |                     | =====================> |                     |
+  | Collaboration Svc   |  ExecutionRequest msg  | Execution Service   |
+  |                     |  {code, language,      |                     |
+  |                     |   functionName,        |  1. Wrap in harness |
+  |                     |   testCases,           |  2. Run in Piston   |
+  |                     |   correlationId}       |  3. Parse results   |
+  |                     |                        |  4. Publish result  |
+  |                     |    exec_res_queue      |                     |
+  |                     | <===================== |                     |
+  |                     |  ExecutionResult msg   |                     |
+  +---------------------+  {correlationId,       +---------------------+
+                            results, stderr}
+
+  - All queues are durable (survive broker restarts)
+  - Session creation messages include x-retry-count header (max 5 retries)
   - Non-retryable errors are discriminated and dead-lettered
+  - Execution uses correlationId to route results back to the correct session
+  - On shutdown, isShuttingDown flag prevents consumer auto-reconnect
 ```
 
 ## CI/CD Pipeline
