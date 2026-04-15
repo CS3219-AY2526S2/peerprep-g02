@@ -68,7 +68,7 @@ function UserMessage(prop: MessageInfoType) {
                         <ContextMenuTrigger className="flex flex-col w-fit max-w-xs items-start justify-start rounded-xl text-sm whitespace-pre-wrap">
                             {prop.replyMessage && (
                                 <p
-                                    className={`line-clamp-2 italic pl-[3px] ml-0 border-l-4
+                                    className={`line-clamp-2 italic pl-[3px] ml-0 text-black border-l-4
                                         ${
                                             prop.isSelf
                                                 ? "bg-[#7DBBFF] border-white"
@@ -174,7 +174,7 @@ const CollaborationChat: React.FC<{ collaborationId: string | undefined }> = ({
 
                 if (data.type == "info") {
                     // For logging during testing
-                    console.log(data.message);
+                    //console.log(data.message);
                 } else if (data.type == "auth") {
                     JoinRoom();
                 } else {
