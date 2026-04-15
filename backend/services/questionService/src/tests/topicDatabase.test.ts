@@ -1,112 +1,95 @@
-// import { describe, it, expect, vi, beforeEach } from "vitest";
+import { UUID } from "node:crypto";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-// // 👇 mock BEFORE importing the functions
-// vi.mock("../database", () => {
-//   return {
-//     default: {
-//       query: vi.fn(),
-//     },
-//   };
-// });
+import pool from "../database";
+import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDatabase";
 
-// import pool from "../database";
-// import { GetTopics, AddTopic, EditTopic, DeleteTopic } from "../services/topicDatabase"; // adjust path
-// import { UUID } from "crypto";
+type TopicInfo = {
+    tid: UUID;
+    topic: string;
+};
 
-// const mockedQuery = pool.query as unknown as ReturnType<typeof vi.fn>;
+vi.mock("../database", () => ({
+    default: {
+        query: vi.fn(),
+    },
+}));
 
-// type TopicInfo = {
-//     tid: UUID;
-//     topic: string;
-// };
+describe("Topic Service Functions", () => {
+    afterEach(() => {
+        vi.clearAllMocks();
+    });
 
-// beforeEach(() => {
-//   vi.clearAllMocks();
-// });
+    // Test for GetTopics
+    it("should fetch topics successfully", async () => {
+        const mockResult = {
+            rows: [
+                { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array" },
+                { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545", topic: "String" },
+            ],
+        };
 
-// describe("Topic Service", () => {
-//   // ✅ GetTopics
-//   it("should return topics", async () => {
-//     mockedQuery.mockResolvedValue({
-//       rows: [{ tid: "1", topic: "math" }],
-//     });
+        pool.query.mockResolvedValue(mockResult);
 
-//     const result = await GetTopics();
+        const result = await GetTopics();
 
-//     expect(mockedQuery).toHaveBeenCalledWith("SELECT * FROM topics");
-//     expect(result).toEqual([{ tid: "1", topic: "math" }]);
-//   });
+        expect(pool.query).toHaveBeenCalledWith("SELECT * FROM topics");
+        expect(result).toEqual(mockResult.rows);
+    });
 
-//   it("should return null on error", async () => {
-//     mockedQuery.mockRejectedValue(new Error("DB error"));
+    it("should add topics successfully", async () => {
+        const mockData: TopicInfo[] = [
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array" },
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545", topic: "String" },
+        ];
+        const mockResult = { rowCount: 2 };
 
-//     const result = await GetTopics();
+        pool.query.mockResolvedValueOnce(mockResult);
 
-//     expect(result).toBeNull();
-//   });
+        const result = await AddTopic(mockData);
 
-//   // ✅ AddTopic
-//   it("should insert topics and return rowCount", async () => {
-//     mockedQuery.mockResolvedValue({ rowCount: 2 });
+        expect(pool.query).toHaveBeenCalledWith(
+            expect.stringContaining("INSERT INTO topics(topic) VALUES"),
+            expect.arrayContaining([mockData[0].topic, mockData[1].topic]),
+        );
+        expect(result).toBe(mockResult.rowCount);
+    });
 
-//     const data: TopicInfo[] = [
-//             { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0542", topic: "Array" },
-//             { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0543", topic: "String" },
-//         ];
+    it("should edit topics successfully", async () => {
+        const mockData: TopicInfo[] = [
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array" },
+        ];
+        const mockResult = [{ rowCount: 1 }];
 
-//     const result = await AddTopic(data);
+        pool.query.mockResolvedValueOnce(mockResult);
 
-//     expect(mockedQuery).toHaveBeenCalledWith(
-//       expect.stringContaining("INSERT INTO topics"),
-//       ["Array", "String"]
-//     );
-//     expect(result).toBe(2);
-//   });
+        await EditTopic(mockData);
 
-//   it("should return 0 if empty input", async () => {
-//     const result = await AddTopic([]);
-//     expect(result).toBe(0);
-//     expect(mockedQuery).not.toHaveBeenCalled();
-//   });
+        expect(pool.query).toHaveBeenCalledWith(
+            expect.stringContaining("UPDATE topics SET topic = $2 WHERE tid = $1"),
+            expect.arrayContaining([mockData[0].tid, mockData[0].topic]),
+        );
+    });
 
-//   // ✅ EditTopic
-//   it("should update topics", async () => {
-//     mockedQuery.mockResolvedValue({ tid: "1" });
+    it("should delete topic and related questions successfully", async () => {
+        const mockTid = "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544";
+        const mockQuids = [{ quid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545" }];
+        const mockDeleteResult = { rowCount: 1 };
 
-//     const data: TopicInfo[] = [
-//             { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0542", topic: "Array" },
+        pool.query
+            .mockResolvedValueOnce({ rows: mockQuids })
+            .mockResolvedValueOnce(mockDeleteResult)
+            .mockResolvedValueOnce(mockDeleteResult);
 
-//         ];
+        const result = await DeleteTopic(mockTid);
 
-//     const result = await EditTopic(data);
-
-//     expect(mockedQuery).toHaveBeenCalledWith(
-//       "UPDATE topics SET topic = $2 WHERE tid = $1 RETURNING tid",
-//       ["5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0542", "Array"]
-//     );
-//     expect(result).not.toBeNull();
-//   });
-
-//   // ✅ DeleteTopic
-//   it("should delete topic and related questions", async () => {
-//     mockedQuery
-//       // first query: get quid
-//       .mockResolvedValueOnce({
-//         rows: [{ quid: "q1" }, { quid: "q2" }],
-//       })
-//       // delete questions
-//       .mockResolvedValueOnce({})
-//       .mockResolvedValueOnce({})
-//       // delete topic
-//       .mockResolvedValueOnce({ rowCount: 1 });
-
-//     const result = await DeleteTopic("1" as any);
-
-//     expect(mockedQuery).toHaveBeenCalledWith(
-//       "SELECT quid FROM qn_topics WHERE tid = $1",
-//       ["1"]
-//     );
-
-//     expect(result).toBe(1);
-//   });
-// });
+        expect(pool.query).toHaveBeenCalledWith("SELECT quid FROM qn_topics WHERE tid = $1", [
+            mockTid,
+        ]);
+        expect(pool.query).toHaveBeenCalledWith("DELETE FROM questions WHERE quid = $1", [
+            mockQuids[0].quid,
+        ]);
+        expect(pool.query).toHaveBeenCalledWith("DELETE FROM topics WHERE tid = $1", [mockTid]);
+        expect(result).toBe(mockDeleteResult.rowCount);
+    });
+});

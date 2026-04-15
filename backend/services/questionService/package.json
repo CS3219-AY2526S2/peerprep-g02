@@ -5,7 +5,7 @@
     "scripts": {
         "predev": "npm run db:init",
         "prestart": "npm run db:init",
-        "test": "echo \"No test specified\"",
+        "test": "vitest",
         "db:init": "node dist/initDb.js",
         "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
         "start": "node dist/app.js",
