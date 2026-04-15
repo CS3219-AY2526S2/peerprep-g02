@@ -251,7 +251,7 @@ export async function DeleteQuestion(questionId: UUID) {
 async function randomQuestion(questions: UUID[]) {
     const randomIndex = Math.floor(Math.random() * questions.length);
     const result = await GetQuestion(questions[randomIndex]);
-    return result;
+    return result == null ? null : result[0];
 }
 
 export async function SearchQuestion(
@@ -273,11 +273,11 @@ export async function SearchQuestion(
         if (defaultQuestion == null) return null;
         if (userA == null || userB == null) return defaultQuestion[0];
 
-        // //With attempt service
+        // With attempt service
         try {
             //Query
             const userARes = await fetch(
-                `http://attempts-service:3004/v1/api/attempts/internal/users/${userA}/questions`,
+                `http://attempts-service:3004/attempts/users/${userA}/questions`,
                 {
                     method: "GET",
                     headers: {
@@ -288,7 +288,7 @@ export async function SearchQuestion(
             );
 
             const userBRes = await fetch(
-                `http://attempts-service:3004/v1/api/attempts/internal/users/${userB}/questions`,
+                `http://attempts-service:3004/attempts/users/${userB}/questions`,
                 {
                     method: "GET",
                     headers: {
@@ -308,13 +308,16 @@ export async function SearchQuestion(
             const unattemptedBoth = allQuestions.filter(
                 (qid: UUID) => !aQuestions.includes(qid) && !bQuestions.includes(qid),
             );
-            if (unattemptedBoth.length >= 2) {
+
+            if (unattemptedBoth.length >= 1) {
                 return randomQuestion(unattemptedBoth);
             }
+
             //Get an unattempted question for either users
             const unattemptedEither = allQuestions.filter(
                 (qid: UUID) => !aQuestions.includes(qid) || !bQuestions.includes(qid),
             );
+
             if (unattemptedEither.length >= 1) {
                 return randomQuestion(unattemptedEither);
             }
@@ -347,7 +350,7 @@ export async function UpdateQuestionPopularityScore(quid: string) {
             "UPDATE questions SET popularity_score = popularity_score + 1 WHERE quid = $1";
         const result = await pool.query(query, [quid]);
 
-        return result.status;
+        return result.rows == 1 ? 200 : 500;
     } catch {
         return 500;
     }
