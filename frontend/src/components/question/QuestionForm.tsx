@@ -589,12 +589,8 @@ function QuestionForm(props: FormProp): JSX.Element {
                                         <table className="w-full text-xs">
                                             <thead>
                                                 <tr className="border-b border-gray-300 text-left text-gray-500">
-                                                    <th className="pb-1 pr-3 font-medium">
-                                                        Input
-                                                    </th>
-                                                    <th className="pb-1 pr-3 font-medium">
-                                                        Output
-                                                    </th>
+                                                    <th className="pb-1 pr-3 font-medium">Input</th>
+                                                    <th className="pb-1 pr-3 font-medium">Output</th>
                                                     <th className="pb-1 font-medium">Meaning</th>
                                                 </tr>
                                             </thead>
@@ -618,9 +614,7 @@ function QuestionForm(props: FormProp): JSX.Element {
                                                     </td>
                                                 </tr>
                                                 <tr className="border-b border-gray-100">
-                                                    <td className="py-1 pr-3">
-                                                        ["1010", "1011"]
-                                                    </td>
+                                                    <td className="py-1 pr-3">["1010", "1011"]</td>
                                                     <td className="py-1 pr-3">"10101"</td>
                                                     <td className="py-1 font-sans text-gray-500">
                                                         2 args: strings; output is a string

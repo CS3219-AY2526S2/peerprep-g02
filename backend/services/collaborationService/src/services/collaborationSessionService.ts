@@ -566,6 +566,27 @@ export class CollaborationSessionService {
     }
 
     /**
+     * Mark a user as "left" after they submit code.
+     * Submission is independent per user — only the submitter is removed,
+     * the partner can continue working.
+     */
+    async markUserLeftAfterSubmission(collaborationId: string, userId: string): Promise<void> {
+        const session =
+            await this.redisSessionRepository.getSessionByCollaborationId(collaborationId);
+        if (!session || session.status !== "active") {
+            return;
+        }
+
+        await this.redisPresenceRepository.markUserAsLeft(collaborationId, userId);
+        await this.redisSessionRepository.clearUserActiveSession(userId);
+
+        logger.info(
+            { collaborationId, userId },
+            "Marked user as left after submission",
+        );
+    }
+
+    /**
      * F4.8.2, F4.8.3, F4.9 - End a collaboration session
      */
     async getHints(collaborationId: string): Promise<StoredHint[]> {

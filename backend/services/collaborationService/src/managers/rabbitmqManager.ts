@@ -269,6 +269,19 @@ export class RabbitMQManager {
                                 "Failed to record attempt after execution",
                             );
                         }
+
+                        // Submission means the submitter has left — clear their active session
+                        try {
+                            await collaborationSessionService.markUserLeftAfterSubmission(
+                                collaborationId,
+                                userId,
+                            );
+                        } catch (leaveError) {
+                            logger.error(
+                                { err: leaveError, correlationId, collaborationId },
+                                "Failed to mark user as left after submission",
+                            );
+                        }
                     }
                 } else {
                     // Execution failed — broadcast error to stop spinners
