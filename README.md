@@ -1089,7 +1089,7 @@ Internal routes (`/internal/*`) are mounted **before** the admin middleware in t
 
 Real-time collaborative coding session manager. Pairs two matched users into a shared code editor backed by Operational Transformation (OT), handles code execution and submission via RabbitMQ, and provides AI-powered hints via Google Gemini.
 
-**Port:** 3003 | **State:** All in Redis (no database) | **Real-time:** Socket.IO with Redis adapter
+**Port:** 3003 | **State:** All in Redis (no database) | **Real-time:** Socket.IO with Redis adapter | **Health:** `GET /health` (liveness only, no dependency checks)
 
 #### Tech Stack
 
@@ -1228,7 +1228,7 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
 
 | Aspect | DISCONNECTED | LEFT |
 |---|---|---|
-| Trigger | Network drop, tab close, ping timeout | User clicks "Leave Session" |
+| Trigger | Network drop, tab close, Socket.IO ping timeout (25s interval, 20s timeout) | User clicks "Leave Session" |
 | Rejoin? | Yes (within 3 min grace period) | No (permanent) |
 | Active session index | Kept (user sees rejoin prompt) | Cleared |
 | Other user sees | `user:disconnected` | `user:left` |
@@ -1238,13 +1238,15 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
 
 **Instance heartbeat & startup reconciliation:** Each instance registers a unique `instance:{id}` key in Redis with a 30-second TTL, refreshed every 10 seconds. Every `socket:*` binding includes the owning `instanceId`. On startup, the service SCANs all `socket:*` keys, groups them by owning instance, checks each instance's liveness key, and only removes sockets belonging to dead instances. Affected users still showing as "connected" are transitioned to "disconnected". Sockets belonging to live instances are left untouched, making this safe during rolling restarts and horizontal scaling.
 
+**Inactivity timeout:** Sessions auto-end after **30 minutes** of no code activity (`CS_SESSION_INACTIVITY_TIMEOUT_MS`). A periodic check runs every 60 seconds using a **distributed Redis lock** (`SET NX PX`) so only one instance runs the sweep when scaling horizontally. The same sweep also catches sessions where one user left and the other's disconnect grace period has expired.
+
 #### Code Execution: Run vs Submit
 
-Both `code:run` and `code:submit` publish an `ExecutionRequestMessage` to `exec_req_queue` (RabbitMQ). A Redis key `exec:pending:<correlationId>` with 65s TTL acts as a timeout safety net. When the execution service responds on `exec_res_queue`:
+Both `code:run` and `code:submit` emit `code:running` to the room (enabling UI spinners), then publish an `ExecutionRequestMessage` to `exec_req_queue` (RabbitMQ). A Redis key `exec:pending:<correlationId>` with 65s TTL acts as a timeout safety net -- if the execution service doesn't respond in time, a timeout error is broadcast via `output:updated`, preventing infinite loading states. When the execution service responds on `exec_res_queue`:
 
 - Results are stored in Redis and broadcast to the room via `output:updated`
 - **Run:** no attempt recorded -- done
-- **Submit:** additionally records the attempt directly to the Attempt Service (`POST http://attempts-service:3004/attempts`) and sends `submission:complete` to the submitting user only
+- **Submit:** sends `submission:complete` to the submitting user first, then records the attempt to the Attempt Service (`POST http://attempts-service:3004/attempts`) as fire-and-forget
 
 Key design decisions:
 - Either user can submit independently (no dual-agreement needed)
@@ -1256,7 +1258,7 @@ Key design decisions:
 
 Integrates with **Google Gemini 2.5 Flash** for context-aware hints. Each user gets **2 hints per session** (4 total for the pair), shared with both participants in real time.
 
-Flow: validate session & rate limit (atomic Redis `INCR`) -> fetch current code + question context -> call Gemini (maxOutputTokens: 512, temperature: 0.4) -> store hint in Redis -> broadcast `hint:updated` to room.
+Flow: validate session & user access -> non-atomic pre-check remaining hints (fast-fail before expensive AI call) -> fetch current code + question context + previous hints -> call Gemini (maxOutputTokens: 512, temperature: 0.4) -> atomic Redis `INCR` to reserve slot + store hint -> broadcast `hint:updated` to room.
 
 The prompt has two modes: if code exists, it analyzes for bugs/missing logic; if no code, it suggests algorithms/data structures. It never provides full solutions -- only 2-3 sentence guidance. Previous hints are included to avoid repetition.
 
