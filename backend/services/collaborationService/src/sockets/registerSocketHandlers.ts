@@ -715,18 +715,19 @@ export function registerSocketHandlers(io: Server): ReturnType<typeof setInterva
             const acquired = await redis.set(lockKey, "1", "NX", "PX", lockDurationMs);
             if (!acquired) return;
 
-            const inactiveSessionIds = await collaborationSessionService.getInactiveSessions(
-                env.sessionInactivityTimeoutMs,
-            );
+            const { inactiveIds, graceExpiredIds } =
+                await collaborationSessionService.getSessionsToCleanup(
+                    env.sessionInactivityTimeoutMs,
+                    env.disconnectGraceMs,
+                );
 
-            for (const collaborationId of inactiveSessionIds) {
+            for (const collaborationId of inactiveIds) {
                 const endResult = await collaborationSessionService.endSession(
                     collaborationId,
                     "inactivity_timeout",
                 );
 
                 if (endResult) {
-                    // Notify all users in the session that it has ended
                     io.to(collaborationRoom(collaborationId)).emit(SOCKET_EVENTS.SESSION_ENDED, {
                         collaborationId,
                         reason: "inactivity_timeout",
@@ -738,10 +739,6 @@ export function registerSocketHandlers(io: Server): ReturnType<typeof setInterva
                     );
                 }
             }
-
-            // Check for sessions where one user left and the other's disconnect grace period expired
-            const graceExpiredIds =
-                await collaborationSessionService.getSessionsWithExpiredGrace(env.disconnectGraceMs);
 
             for (const collaborationId of graceExpiredIds) {
                 const endResult = await collaborationSessionService.endSession(

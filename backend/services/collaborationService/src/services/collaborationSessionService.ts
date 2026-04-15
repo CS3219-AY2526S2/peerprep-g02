@@ -689,11 +689,17 @@ export class CollaborationSessionService {
     }
 
     /**
-     * F4.8.3 - Check for inactive sessions
+     * F4.8.3 - Single-pass cleanup check for inactive and grace-expired sessions.
+     * Scans active sessions once and checks both inactivity and grace-expiry conditions,
+     * reducing Redis load compared to two separate scans.
      */
-    async getInactiveSessions(inactivityTimeoutMs: number): Promise<string[]> {
+    async getSessionsToCleanup(
+        inactivityTimeoutMs: number,
+        gracePeriodMs: number,
+    ): Promise<{ inactiveIds: string[]; graceExpiredIds: string[] }> {
         const activeSessions = await this.redisSessionRepository.getActiveSessions();
-        const inactiveSessionIds: string[] = [];
+        const inactiveIds: string[] = [];
+        const graceExpiredIds: string[] = [];
 
         for (const session of activeSessions) {
             const isInactive = await this.redisPresenceRepository.isSessionInactive(
@@ -701,22 +707,10 @@ export class CollaborationSessionService {
                 inactivityTimeoutMs,
             );
             if (isInactive) {
-                inactiveSessionIds.push(session.collaborationId);
+                inactiveIds.push(session.collaborationId);
+                continue;
             }
-        }
 
-        return inactiveSessionIds;
-    }
-
-    /**
-     * Find sessions where one user has left and the other user's disconnect grace period has expired.
-     * Called by the periodic inactivity check to clean up deferred session ends.
-     */
-    async getSessionsWithExpiredGrace(gracePeriodMs: number): Promise<string[]> {
-        const activeSessions = await this.redisSessionRepository.getActiveSessions();
-        const expiredSessionIds: string[] = [];
-
-        for (const session of activeSessions) {
             const assignedUserIds = [session.userAId, session.userBId];
             const participants = await this.redisPresenceRepository.getParticipants(
                 session.collaborationId,
@@ -734,12 +728,12 @@ export class CollaborationSessionService {
                         gracePeriodMs,
                     );
                 if (!rejoinCheck.canRejoin) {
-                    expiredSessionIds.push(session.collaborationId);
+                    graceExpiredIds.push(session.collaborationId);
                 }
             }
         }
 
-        return expiredSessionIds;
+        return { inactiveIds, graceExpiredIds };
     }
 
     /**
