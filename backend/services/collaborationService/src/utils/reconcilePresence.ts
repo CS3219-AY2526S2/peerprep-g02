@@ -156,8 +156,9 @@ export async function reconcileOrphanedSockets(): Promise<void> {
         }
         const statusResults = await statusPipeline.exec();
 
-        for (let i = 0; i < userIds.length; i++) {
-            const userId = userIds[i];
+        const userIdArray = [...userIds];
+        for (let i = 0; i < userIdArray.length; i++) {
+            const userId = userIdArray[i];
             const presenceKey = `presence:${collaborationId}:${userId}`;
             const currentStatus = (statusResults[i] as [Error | null, string | null])?.[1];
 

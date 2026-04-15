@@ -37,6 +37,7 @@ type RedisPipeline = {
     set: (key: string, value: string, ...args: (string | number)[]) => RedisPipeline;
     del: (...keys: string[]) => RedisPipeline;
     hset: (key: string, data: Record<string, string>) => RedisPipeline;
+    hget: (key: string, field: string) => RedisPipeline;
     hgetall: (key: string) => RedisPipeline;
     hdel: (key: string, ...fields: string[]) => RedisPipeline;
     pexpire: (key: string, ms: number) => RedisPipeline;

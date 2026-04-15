@@ -2,9 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ProblemDescriptionProps {
     description: string | null;
+    qnImage?: string | null;
 }
 
-export default function ProblemDescription({ description }: ProblemDescriptionProps) {
+export default function ProblemDescription({ description, qnImage }: ProblemDescriptionProps) {
     return (
         <Card className="border border-white/10 bg-white/[0.03] py-0 shadow-none ring-0">
             <CardHeader className="px-6 pt-6">
@@ -17,6 +18,13 @@ export default function ProblemDescription({ description }: ProblemDescriptionPr
                     .map((paragraph, index) => (
                         <p key={`${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>
                     ))}
+                {qnImage && (
+                    <img
+                        src={qnImage}
+                        alt="Supporting diagram"
+                        className="mt-4 max-w-full rounded-md border border-white/10"
+                    />
+                )}
             </CardContent>
         </Card>
     );

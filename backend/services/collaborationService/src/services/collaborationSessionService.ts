@@ -331,6 +331,7 @@ export class CollaborationSessionService {
                     questionDescription: question.description,
                     testCases: JSON.stringify(question.testCase),
                     functionName: question.functionName,
+                    qnImage: question.qnImage,
                 });
             } catch (error) {
                 logger.warn(

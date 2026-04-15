@@ -35,6 +35,7 @@ type QuestionDetailsResponse = {
             topics?: string[];
             testCase?: Array<{ input: unknown; output: unknown }>;
             functionName?: string;
+            qnImage?: string | null;
         };
     };
 };
@@ -152,6 +153,7 @@ export class QuestionSelectionService {
                 topics: question.topics ?? [],
                 testCase: question.testCase ?? [],
                 functionName: question.functionName ?? "",
+                qnImage: question.qnImage ?? null,
             };
         } catch (error) {
             logger.error({ err: error, questionId }, "Error fetching question details");

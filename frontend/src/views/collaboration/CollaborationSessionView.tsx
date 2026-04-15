@@ -203,7 +203,7 @@ export default function CollaborationSessionView() {
                             </Card>
                         )}
 
-                        <ProblemDescription description={question?.description ?? null} />
+                        <ProblemDescription description={question?.description ?? null} qnImage={question?.qnImage} />
                         <ExamplesSection testCases={testRows} />
                         <ParticipantsPanel
                             participants={participants}

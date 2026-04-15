@@ -42,6 +42,7 @@ router.post("/get", async (req, res) => {
                 topics: question.topic_names ?? question.topics,
                 testCase: question.test_case,
                 functionName: question.function_name,
+                qnImage: question.qnImage ?? null,
             },
         },
     });
