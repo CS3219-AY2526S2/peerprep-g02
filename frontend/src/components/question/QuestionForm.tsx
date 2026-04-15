@@ -77,7 +77,7 @@ function TestCases(info: ITestCase) {
                         value={info.input}
                         onChange={(e) => info.handleChange("input", e.target.value)}
                         rows={5}
-                        className="w-full rounded-lg border-2 border-grey-200 pl-[10px]leading-[30px] placeholder:text-grey-400"
+                        className="w-full rounded-lg border-2 border-grey-200 pl-[10px] leading-[30px] placeholder:text-grey-400"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                         List of function arguments. For a single array arg, wrap it: [[1,2,3]]
@@ -98,7 +98,7 @@ function TestCases(info: ITestCase) {
                         value={info.output}
                         onChange={(e) => info.handleChange("output", e.target.value)}
                         rows={5}
-                        className="w-full rounded-lg border-2 border-grey-200 pl-[10px]leading-[30px] placeholder:text-grey-400"
+                        className="w-full rounded-lg border-2 border-grey-200 pl-[10px] leading-[30px] placeholder:text-grey-400"
                     />
                 </Field>
             </div>

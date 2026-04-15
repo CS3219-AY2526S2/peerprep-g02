@@ -10,6 +10,7 @@ import { RabbitMQManager } from "@/managers/rabbitmqManager.js";
 import { socketAuthMiddleware } from "@/middleware/socketAuth.js";
 import { registerSocketHandlers } from "@/sockets/registerSocketHandlers.js";
 import { logger } from "@/utils/logger.js";
+import { startInstanceHeartbeat, stopInstanceHeartbeat } from "@/utils/instanceHeartbeat.js";
 import { reconcileOrphanedSockets } from "@/utils/reconcilePresence.js";
 import { getRedisClient } from "@/utils/redis.js";
 import { createAdapterClients } from "@/utils/redisAdapter.js";
@@ -20,8 +21,17 @@ async function startServer(): Promise<void> {
     await redis.ping();
     logger.info("Redis connection verified");
 
-    // Clean up any socket/presence keys orphaned by a previous crash
-    await reconcileOrphanedSockets();
+    // Register this instance's liveness key before reconciliation so that
+    // simultaneous startups don't treat each other as dead.
+    await startInstanceHeartbeat();
+
+    // Clean up socket bindings belonging to dead instances (best-effort).
+    // A failure here should not prevent the service from starting.
+    try {
+        await reconcileOrphanedSockets();
+    } catch (err) {
+        logger.warn({ err }, "Orphaned socket reconciliation failed — continuing startup");
+    }
 
     // Initialize Redis Pub/Sub clients for Socket.IO adapter
     const { pubClient, subClient } = createAdapterClients();
@@ -70,3 +80,12 @@ startServer().catch((error) => {
     logger.error({ err: error }, "Failed to start server");
     process.exit(1);
 });
+
+async function shutdown(signal: string): Promise<void> {
+    logger.info({ signal }, "Received shutdown signal, cleaning up...");
+    await stopInstanceHeartbeat();
+    process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
