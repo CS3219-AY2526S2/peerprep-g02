@@ -161,7 +161,7 @@ services:
       - "--port=5432"
       - "cs3219-491608:asia-southeast1:questions-db"
     volumes:
-      - ./gcp-key.json:/secrets/gcp-key.json:ro
+      - ./secrets/cloudsql-proxy/gcp-key.json:/secrets/gcp-key.json:ro
     env_file:
       - ./secrets/cloudsql-proxy/.env
     networks:
