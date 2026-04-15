@@ -1,4 +1,5 @@
 import type { WebhookEvent } from "@clerk/express/webhooks";
+import { AppConstants } from "@/constants.js";
 import { userRepository } from "@/models/User.js";
 
 type WebhookUserEmail = {
@@ -38,7 +39,9 @@ function buildName(payload: WebhookUserPayload): string {
 
 function toPreferredLanguage(payload: WebhookUserPayload): string | null {
     const value = payload.unsafe_metadata?.defaultLanguage;
-    return typeof value === "string" ? value : null;
+    return typeof value === "string" && value.trim().length > 0
+        ? value
+        : AppConstants.DEFAULT_PREFERRED_LANGUAGE;
 }
 
 // process + write to DB
@@ -67,7 +70,9 @@ export class ClerkWebhookService {
                     upsertInput.avatarUrl = payload.image_url ?? null;
                 }
 
-                if ("unsafe_metadata" in payload) {
+                if (event.type === "user.created") {
+                    upsertInput.preferredLanguage = toPreferredLanguage(payload);
+                } else if ("unsafe_metadata" in payload) {
                     upsertInput.preferredLanguage = toPreferredLanguage(payload);
                 }
 

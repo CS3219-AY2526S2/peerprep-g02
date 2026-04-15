@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     status TEXT NOT NULL DEFAULT 'active',
     role TEXT NOT NULL DEFAULT 'user',
     score INTEGER NOT NULL DEFAULT 0,
-    preferred_language TEXT NULL,
+    preferred_language TEXT NULL DEFAULT 'Python',
     last_login_at TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
