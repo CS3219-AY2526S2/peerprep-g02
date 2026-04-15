@@ -874,28 +874,31 @@ The Question Service is designed to run against **two different database backend
   - Cloud SQL Proxy handles authentication via service accounts
 ```
 
-In local development, Docker Compose overrides `DB_HOST=questions-db` to point at a local PostgreSQL container. In production, the service connects through the Cloud SQL Auth Proxy sidecar (`DB_HOST=cloudsql-proxy`) to a managed Google Cloud SQL instance.
+In local development, Docker Compose overrides `DB_HOST=questions-db` to point at a local PostgreSQL container. In production, the service connects through the Cloud SQL Auth Proxy sidecar (`DB_HOST=cloudsql-proxy`) to a managed Google Cloud SQL instance. 
 
 #### Database Schema
 
 ```
   questions                                    topics
-  +---------------------+-----------+          +-------+----------+
-  | quid (PK)           | UUID      |          | tid   | UUID (PK)|
-  | title               | TEXT      |          | topic | TEXT     |
-  | description         | TEXT      |          +-------+----------+
+  +---------------------+-----------+          +----------+----------+
+  | quid (PK)           | UUID      |          | tid (PK) | UUID     |
+  | title               | TEXT      |          | topic    | TEXT     |
+  | description         | TEXT      |          +----------+----------+
   | difficulty          | TEXT      |
   | topics              | UUID[]    |---+      qn_topics (join table)
-  | image               | TEXT      |   |      +-------+----------+
-  | test_case           | JSON      |   |      | quid  | UUID (FK)|----> questions
-  | popularity_score    | INTEGER   |   |      | tid   | UUID (FK)|----> topics
-  | function_name       | TEXT      |   +----->| difficulty | TEXT |
-  +---------------------+-----------+          +-------+----------+
-                                               Composite PK: (quid, tid)
-                                               Index: (tid, difficulty)
+  | image               | TEXT      |   |      +------------+----------+
+  | test_case           | JSON      |   |      | quid       | UUID (FK)|----> questions
+  | popularity_score    | INTEGER   |   |      | tid        | UUID (FK)|----> topics
+  | updated_at          | TIMESTAMP |   +----->| difficulty | TEXT     |
+  | version             | INTEGER   |          +------------+----------+
+  | function_name       | TEXT      |          Composite PK: (quid, tid)
+  +---------------------+-----------+          Index: (tid, difficulty)
+                                               
+                                               
 ```
 
 **Design choice:** Topics are stored both as a UUID array on the `questions` table (for fast reads) and in the `qn_topics` join table (for indexed queries by topic + difficulty). The join table has a composite index on `(tid, difficulty)` to optimize question selection during matchmaking.
+We decided on structured data over unstructured data (like MongoDB) because we query the columns for comparison more frequently, making PostgreSQL a more suitable choice.
 
 **Test cases** are stored as a JSON array on each question:
 
@@ -908,24 +911,27 @@ In local development, Docker Compose overrides `DB_HOST=questions-db` to point a
 
 The `function_name` field (e.g., `"twoSum"`, `"isValidBST"`) tells the Execution Service which function to invoke when running user code against test cases.
 
+The `version` field assist in optimistic locking of the table to prevent accidental overriding of the question data in a case where two admin users are editing the same question at the same time.
+
 #### API Routes
 
-| Method   | Endpoint           | Auth     | Description                                 |
-| -------- | ------------------ | -------- | ------------------------------------------- |
-| `GET`    | `/`                | Public   | List all questions                          |
-| `GET`    | `/popular`         | Public   | Get popular questions (by score)            |
-| `POST`   | `/get`             | Public   | Get a single question by ID                 |
-| `POST`   | `/search`          | Public   | Search by topic + difficulty                |
-| `GET`    | `/topics`          | Public   | List all topics                             |
-| `POST`   | `/`                | Admin    | Create a question                           |
-| `PUT`    | `/`                | Admin    | Edit a question                             |
-| `DELETE` | `/:id`             | Admin    | Delete a question                           |
-| `POST`   | `/leetcode`        | Admin    | Fetch questions from LeetCode GraphQL API   |
-| `POST`   | `/topics`          | Admin    | Create a topic                              |
-| `PUT`    | `/topics`          | Admin    | Edit a topic                                |
-| `DELETE` | `/topics/:id`      | Admin    | Delete a topic                              |
-| `POST`   | `/internal/select` | Internal | Select a random question for a match        |
-| `POST`   | `/internal/get`    | Internal | Get full question details (with test cases) |
+| Method   | Endpoint               | Auth     | Description                                                     |
+| -------- | ---------------------- | -------- | ----------------------------------------------------------------|
+| `GET`    | `/`                    | Public   | List all questions                                              |
+| `GET`    | `/popular`             | Public   | Get popular questions (by score)                                |
+| `POST`   | `/get`                 | Public   | Get a single question by ID                                     |
+| `POST`   | `/search`              | Public   | Search by topic + difficulty                                    |
+| `GET`    | `/topics`              | Public   | List all topics                                                 |
+| `POST`   | `/`                    | Admin    | Create a question                                               |
+| `PUT`    | `/`                    | Admin    | Edit a question                                                 |
+| `DELETE` | `/:id`                 | Admin    | Delete a question                                               |
+| `POST`   | `/leetcode`            | Admin    | Fetch questions from LeetCode GraphQL API                       |
+| `POST`   | `/topics`              | Admin    | Create a topic                                                  |
+| `PUT`    | `/topics`              | Admin    | Edit a topic                                                    |
+| `DELETE` | `/topics/:id`          | Admin    | Delete a topic                                                  |
+| `POST`   | `/internal/select`     | Internal | Select a random question for a match                            |
+| `POST`   | `/internal/get`        | Internal | Get full question details (with test cases)                     |
+| `POST`   | `/internal/popularity` | Internal | Update the popularity of a question whenever an attempt is made |
 
 #### Question Selection for Matchmaking
 
@@ -958,6 +964,49 @@ When the Collaboration Service creates a session, it calls `POST /internal/selec
         |   topic, difficulty }            |                           |
         |<---------------------------------+                           |
 ```
+
+  Collaboration Service              Question Service              PostgreSQL               Attempts Service
+  =====================              ================              ==========              ==================
+        |                                  |                           |                           |
+        | POST /internal/select            |                           |                           |
+        | { topic, difficulty,             |                           |                           |
+        |   userAId, userBId }             |                           |                           |
+        +--------------------------------->|                           |                           |
+        |                                  |                           |                           |
+        |                         1. Query qn_topics JOIN topics       |                           |
+        |                            WHERE topic = :topic              |                           |
+        |                            AND difficulty = :difficulty      |                           |
+        |                                  +-------------------------->|                           |
+        |                                  |   [matching question IDs] |                           |
+        |                                  |<--------------------------+                           |
+        |                                  |                           |                           |
+        |                         2. Pick one at RANDOM                |                           |
+        |                            Math.random() from results        |                           |
+        |                                  |                           |                           |
+        |                                  +-------------------------->|                           |
+        |                                  |                           |                           |
+        |                                  |                           |                           |
+        |                                  |                           |    3. Get unique question |
+        |                                  |                           |       attempted by userA  |
+        |                                  +-------------------------- +-------------------------->|
+        |                                  |                           |     [unique question IDs] |      
+        |                                  |<--------------------------+---------------------------+ 
+        |                                  |                           |                           |  
+        |                                  |                           |    4. Get unique question |
+        |                                  |                           |       attempted by userB  |
+        |                                  +-------------------------- +-------------------------->|
+        |                                  |                           |     [unique question IDs] |      
+        |                                  |<--------------------------+---------------------------+ 
+        |                                  |                           |                           |
+        |                                  |                           |                           |
+        |                                  |                           |                           |
+        |                         5. Fetch full question record        |                           |
+        |                                  +-------------------------->|                           |
+        |                                  |<--------------------------+                           |
+        |                                  |                           |                           |
+        | { questionId, title,             |                           |                           |
+        |   topic, difficulty }            |                           |                           |
+        |<---------------------------------+                           |                           |
 
 #### LeetCode Import
 
