@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
+
 import { CheckCircle2, XCircle } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
-    DialogTitle,
     DialogDescription,
     DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+
 import type { SubmissionCompletePayload } from "@/models/collaboration/collaborationType";
 
 interface SubmissionResultDialogProps {
@@ -26,23 +28,22 @@ export function SubmissionResultDialog({
     const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
 
     useEffect(() => {
-        if (!submissionResult) {
-            setCountdown(REDIRECT_SECONDS);
-            return;
-        }
+        if (!submissionResult) return;
 
-        setCountdown(REDIRECT_SECONDS);
+        // Use a local counter and only call setState inside the interval callback
+        let remaining = REDIRECT_SECONDS;
         const interval = setInterval(() => {
-            setCountdown((prev) => {
-                if (prev <= 1) {
-                    clearInterval(interval);
-                    return 0;
-                }
-                return prev - 1;
-            });
+            remaining -= 1;
+            setCountdown(Math.max(0, remaining));
+            if (remaining <= 0) {
+                clearInterval(interval);
+            }
         }, 1000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            setCountdown(REDIRECT_SECONDS);
+        };
     }, [submissionResult]);
 
     if (!submissionResult) return null;

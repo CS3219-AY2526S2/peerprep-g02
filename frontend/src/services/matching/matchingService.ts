@@ -61,5 +61,5 @@ export const matchingService = new MatchingService();
 
 // FOR DEMO
 if (typeof window !== "undefined") {
-    (window as any).matchingService = matchingService;
+    (window as unknown as Record<string, unknown>).matchingService = matchingService;
 }
