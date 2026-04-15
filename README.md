@@ -31,6 +31,7 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
   - [Collaboration Service](#4-collaboration-service)
   - [Execution Service](#5-execution-service)
   - [Attempt Service](#6-attempt-service)
+  - [Message Service](#7-message-service)
 - [Inter-Service Flows](#inter-service-flows--integrations)
 - [CI/CD Pipeline](#cicd-pipeline)
 
@@ -40,7 +41,7 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
 
 ### High-Level Overview
 
-The system follows a **microservices architecture** with an Nginx API gateway, three PostgreSQL databases, two Redis instances, and RabbitMQ for asynchronous messaging.
+The system follows a **microservices architecture** with an Nginx API gateway, three PostgreSQL databases, three Redis instances, and RabbitMQ for asynchronous messaging.
 
 ```
                                     PeerPrep System Architecture
@@ -65,17 +66,20 @@ The system follows a **microservices architecture** with an Nginx API gateway, t
     +--------+--------+-----------+-----------+-----------+
     |        |        |           |           |           |
     v        v        v           v           v           v
-+------+ +------+ +------+  +-------+  +-------+  +-------+
-| User | |Match | | Ques |  |Collab |  |Attempt|  | Exec  |
-| Svc  | | Svc  | | Svc  |  |  Svc  |  |  Svc  |  |  Svc  |
-| :3001| | :3002| | :3005|  | :3003 |  | :3004 |  | :3006 |
-+--+---+ +--+---+ +--+---+  +---+---+  +---+---+  +---+---+
-   |        |        |           |          |           |
-   v        v        v           v          v           v
-+------+ +------+ +------+  +-------+  +-------+  +-------+
-|Postgr| |Redis | |Postgr|  | Redis |  |Postgr |  |Piston |
-| :5433| |      | | :5435|  |       |  | :5436 |  | :2000 |
-+------+ +------+ +------+  +-------+  +-------+  +-------+
++------+ +------+ +------+  +-------+  +-------+  +-------+  +-------+
+| User | |Match | | Ques |  |Collab |  |Attempt|  | Exec  |  |  Msg  |
+| Svc  | | Svc  | | Svc  |  |  Svc  |  |  Svc  |  |  Svc  |  |  Svc  |
+| :3001| | :3002| | :3005|  | :3003 |  | :3004 |  | :3006 |  | :3019 |
++--+---+ +--+---+ +--+---+  +---+---+  +---+---+  +---+---+  +---+---+
+   |        |        |           |          |           |          |
+   v        v        v           v          v           v          v
++------+ +------+ +------+  +-------+  +-------+  +-------+  +-------+
+|Postgr| |Redis | |Postgr|  | Redis |  |Postgr |  |Piston |  | Redis |
+| :5433| |      | | :5435|  |       |  | :5436 |  | :2000 |  |       |
++------+ +------+ +------+  +-------+  +-------+  +-------+  +-------+
+
+    Frontend also connects directly to Message Service via WebSocket
+    (bypasses gateway, :3019, Sec-WebSocket-Protocol auth)
 
                     +-------------------+
                     |     RabbitMQ      |  :5672 (AMQP) / :15672 (UI)
@@ -101,35 +105,45 @@ This diagram shows how each service communicates and what protocols they use.
   |          +--------------------------->| Nginx API Gateway |
   | Frontend |                            +--------+----------+
   |          +--------------------------->|        |
-  +----------+  WebSocket (JWT in auth)   |        |
-                                          |  Routes to services
-                                          |
-     +------------------------------------+------------------------------------+
-     |                |                |                |                |
-     v                v                v                v                v
-+---------+    +-----------+    +-----------+    +----------+     +----------+
-|  User   |    | Matching  |    | Question  |    | Collab   |     | Attempt  |
-| Service |    |  Service  |    |  Service  |    | Service  |     | Service  |
-+---------+    +-----------+    +-----------+    +----------+     +----------+
-     ^              |  ^              ^               |  |  |           ^
-     |              |  |              |               |  |  |           |
-     +--------------+  |              +---------------+  |  +-----------+
-     | x-internal-     |              | x-internal-      |
-     | service-key     |              | service-key      |
-     | (auth context)  |              | (select question) |
-     |                 |                                  |
-     |          +------+------+                    +------+------+
-     |          |  RabbitMQ   |                    |  Execution  |
-     |          | (REQ / RES  |                    |   Service   |
-     |          |   Queues)   |                    +------+------+
-     |          +------+------+                           |
-     |                 |                            +-----+-----+
-     |                 v                            |  Piston   |
-     |          Collaboration Svc                   | (Sandbox) |
-     |          (consumes & responds)               +-----------+
-     |
-     +--- Also called by: Matching Svc, Collab Svc, Attempt Svc
-          (all validate user auth via User Service internally)
+  |          |  WebSocket (JWT in auth)   |        |
+  |          |                            |  Routes to services
+  |          |                            |
+  |          |   +------------------------+------------------------------------+
+  |          |   |                |                |                |           |
+  |          |   v                v                v                v           v
+  |     +---------+    +-----------+    +-----------+    +----------+     +----------+
+  |     |  User   |    | Matching  |    | Question  |    | Collab   |     | Attempt  |
+  |     | Service |    |  Service  |    |  Service  |    | Service  |     | Service  |
+  |     +---------+    +-----------+    +-----------+    +----------+     +----------+
+  |          ^              |  ^              ^               |  |  |           ^
+  |          |              |  |              |               |  |  |           |
+  |          +--------------+  |              +---------------+  |  +-----------+
+  |          | x-internal-     |              | x-internal-      |
+  |          | service-key     |              | service-key      |
+  |          | (auth context)  |              | (select question) |
+  |          |                 |                                  |
+  |          |          +------+------+                    +------+------+
+  |          |          |  RabbitMQ   |                    |  Execution  |
+  |          |          | (REQ / RES  |                    |   Service   |
+  |          |          |   Queues)   |                    +------+------+
+  |          |          +------+------+                           |
+  |          |                 |                            +-----+-----+
+  |          |                 v                            |  Piston   |
+  |          |          Collaboration Svc                   | (Sandbox) |
+  |          |          (consumes & responds)               +-----------+
+  |          |
+  |          +--- Also called by: Matching Svc, Collab Svc, Attempt Svc
+  |               (all validate user auth via User Service internally)
+  |
+  |  WebSocket (direct, bypasses gateway)
+  +------------>+-----------+
+                |  Message  |    Auth via User Service
+                |  Service  +--> (x-internal-service-key)
+                +-----------+
+                     |
+                  +--+---+
+                  |Redis |  (dedicated instance)
+                  +------+
 
 
   Legend:
@@ -214,7 +228,7 @@ peerprep-g02/
 git clone https://github.com/CS3219-AY2526S2/peerprep-g02.git
 cd peerprep-g02
 
-# Build and spin up all 17 containers
+# Build and spin up all 20 containers
 docker-compose up --build
 ```
 
@@ -975,420 +989,274 @@ Internal routes (`/internal/*`) are mounted **before** the admin middleware in t
 
 ### 4. Collaboration Service
 
-Manages real-time collaborative coding sessions. This is the most complex service in the system -- it orchestrates real-time code synchronization via Operational Transformation, handles multi-tab connections, manages disconnection/reconnection with grace periods, runs code against test cases, and records attempt history.
+Real-time collaborative coding session manager. Pairs two matched users into a shared code editor backed by Operational Transformation (OT), handles code execution and submission via RabbitMQ, and provides AI-powered hints via Google Gemini.
+
+**Port:** 3003 | **State:** All in Redis (no database) | **Real-time:** Socket.IO with Redis adapter
 
 #### Tech Stack
 
 - **Runtime:** Node.js / TypeScript
 - **Framework:** Express 4, Socket.IO 4 with Redis adapter
-- **State:** Redis (session data, OT documents, presence tracking, Socket.IO pub/sub)
-- **Inter-service Messaging:** RabbitMQ (durable queues with retry logic)
-- **Concurrency Control:** Redis Lua scripts for atomic compare-and-swap
-
-#### How Sessions are Created
-
-```
-                     Session Creation Flow
-                     =====================
-
-  Matching Service                RabbitMQ                 Collaboration Service
-  ================           ==============               =====================
-        |                          |                              |
-        |  1. Publish to REQ_QUEUE |                              |
-        +------------------------->|                              |
-        |    {userA, userB,        |  2. Consume from REQ_QUEUE   |
-        |     matchId, config}     +----------------------------->|
-        |                          |                              |
-        |                          |    3. Validate both users    |
-        |                          |       via User Service       |
-        |                          |                              |
-        |                          |    4. Check idempotency key  |
-        |                          |       (prevent duplicates)   |
-        |                          |                              |
-        |                          |    5. Select question via    |
-        |                          |       Question Service       |
-        |                          |                              |
-        |                          |    6. Create session in Redis|
-        |                          |       + init OT document     |
-        |                          |       with code template     |
-        |                          |                              |
-        |                          |  7. Publish to RES_QUEUE     |
-        |  8. Consume from RES     |<-----------------------------+
-        |<-------------------------+     {sessionId, success}     |
-        |                          |                              |
-        |  9. Emit match_success   |                              |
-        |     to both clients      |                              |
-
-  Idempotency: If the same matchId + config is received twice,
-  the existing session is returned instead of creating a duplicate.
-
-  RabbitMQ retry: Messages carry x-retry-count header (max 5).
-  Non-retryable errors (user invalid, question not found) are
-  discarded. Retryable errors are re-published with count+1.
-```
-
-When the OT document is initialized, a **language-specific code template** is generated:
-
-- Python: `class Solution:\n    def twoSum(self):\n        pass`
-- JavaScript/TypeScript: `class Solution {\n    twoSum() {\n    }\n}`
-- Java: `class Solution {\n    public void twoSum() {\n    }\n}`
-
-#### Real-Time Code Synchronization (Operational Transformation)
-
-The Collaboration Service implements **Operational Transformation (OT)** to synchronize code edits between two users in real time without conflicts. Here's how it works:
-
-```
-                     OT Synchronization Flow
-                     ========================
-
-  Client A                    Server (Redis)                   Client B
-  ========                    ==============                   ========
-     |                              |                              |
-     | 1. Types "hello" at pos 0   |                              |
-     |    revision: 5               |                              |
-     |    ops: [{insert, pos:0,     |                              |
-     |           text:"hello"}]     |                              |
-     +----------------------------->|                              |
-     |                              |                              |
-     |              2. Server checks client revision               |
-     |                 Client rev (5) == Server rev (5)            |
-     |                 No transform needed                         |
-     |                                                             |
-     |              3. Lua CAS: atomically update doc              |
-     |                 IF revision == 5, SET content,              |
-     |                 SET revision = 6                             |
-     |                                                             |
-     |              4. Store ops in history (capped at 50)         |
-     |                              |                              |
-     |   ACK {revision: 6}         |  code:change {revision: 6,   |
-     |<-----------------------------+  ops: [{insert, pos:0,       |
-     |                              |        text:"hello"}]}       |
-     |                              +----------------------------->|
-     |                              |                              |
-     |                              |     Client B applies ops     |
-     |                              |     to their local doc       |
-
-
-  CONFLICT CASE: Both clients edit simultaneously
-  ================================================
-
-  Client A (rev 5)              Server (rev 5)             Client B (rev 5)
-  =================             ==============             =================
-     |                              |                              |
-     | insert "X" at pos 0          |          insert "Y" at pos 3 |
-     +----------------------------->|<-----------------------------+
-     |                              |                              |
-     |              Client A arrives first:                        |
-     |              rev 5 == server 5, apply directly              |
-     |              doc = "X...", server rev = 6                   |
-     |                              |                              |
-     |              Client B arrives second:                       |
-     |              rev 5 < server 6 (1 behind)                    |
-     |              Fetch ops since rev 5 from history             |
-     |              Transform B's ops against A's ops:             |
-     |                                                             |
-     |              B's insert at pos 3 must account for           |
-     |              A's insert at pos 0 (shifts B to pos 4)        |
-     |                                                             |
-     |              Apply transformed ops, CAS update              |
-     |              Server rev = 7                                 |
-     |                              |                              |
-     |   Broadcast transformed ops  |  ACK {revision: 7}          |
-     |<-----------------------------+----------------------------->|
-```
-
-**Operation types:**
-
-- `insert` -- Insert text at a position
-- `delete` -- Remove a count of characters from a position
-- `retain` -- No-op (produced when overlapping deletes cancel out)
-
-**Conflict resolution priority:** The server always transforms client operations with `priority: "right"`, meaning existing server operations take precedence when two edits target the same position.
-
-**Atomic updates via Lua CAS:** The OT document (content + revision) is updated atomically using a Redis Lua script that checks `currentRevision == expectedRevision` before writing. If another write happened concurrently, the operation retries (up to 5 attempts), re-fetching and re-transforming against the new state.
-
-**Fallback -- Full sync:** If transformation fails entirely (returns null), the server sends a `code:sync` event with the complete authoritative document, forcing the client to reset.
-
-#### Presence, Disconnection, and Reconnection
-
-The service tracks three distinct presence states for each user in a session:
-
-```
-                       User Presence State Machine
-                       ===========================
-
-                    +-------------------------------------------+
-                    |                                           |
-                    v                                           |
-              +-----------+    all sockets drop    +-------------+
-   join  ---->| CONNECTED |----------------------->|DISCONNECTED |
-              +-----------+                        +------+------+
-                ^       |                                 |
-                |       |                    rejoin within |  grace period
-                |       |                    30 seconds    |  expires
-                |       |                                 |
-                |  +----+                          +------v------+
-                |  |                               |   (KICKED)  |
-                |  |  user clicks "Leave"          | Cannot rejoin|
-                |  |                               +-------------+
-                |  v
-              +-----------+
-              |   LEFT    |--- permanent, cannot rejoin
-              +-----------+
-                    |
-                    | if other user is also LEFT or DISCONNECTED:
-                    v
-              +-----------+
-              |SESSION END|
-              +-----------+
-
-
-  Key Differences:
-  ================================================================
-  | Aspect              | DISCONNECTED        | LEFT             |
-  |---------------------|---------------------|------------------|
-  | Trigger             | Network drop,       | User clicks      |
-  |                     | tab close, timeout  | "Leave Session"  |
-  | Rejoin allowed?     | Yes (within 30s)    | No (permanent)   |
-  | Active session      | Kept (user can      | Cleared (no      |
-  |   index             | see rejoin prompt)  | rejoin prompt)   |
-  | Other user sees     | "user:disconnected" | "user:left"      |
-  | Session ends?       | No (stays active)   | Yes, if partner  |
-  |                     |                     | is LEFT or       |
-  |                     |                     | DISCONNECTED     |
-  ================================================================
-```
-
-**Multi-tab support:** A user can have multiple browser tabs open to the same session. Each tab is a separate Socket.IO connection. The `socketCount` field tracks active connections per user. A user is only marked `DISCONNECTED` when **all** their sockets disconnect (count reaches 0).
-
-**Reconnection flow:** When a disconnected user reconnects within the 30-second grace period:
-
-1. The server validates `lastDisconnectTime + 30s > now`
-2. Clears the `lastDisconnectTime`, sets status back to `CONNECTED`
-3. Returns the full authoritative state (code snapshot, revision, participants, question) with `wasDisconnected: true`
-4. Broadcasts `user:joined` with `wasDisconnected: true` to the room
-
-**Intentional leave flow:**
-
-1. User's status is set to `LEFT`, added to the `left:{collabId}` Redis set
-2. The user's `active-session` index is cleared (so they won't see a stale rejoin prompt on the home page)
-3. **All** sockets for this user in this session are forcibly removed (handles multi-tab)
-4. If the other user is also `LEFT` or `DISCONNECTED`, the session ends automatically
-
-#### Code Execution: Run vs Submit
-
-Both operations execute code, but they differ in whether an attempt is recorded:
-
-```
-                    Run vs Submit Flow
-                    ==================
-
-  User clicks "Run"                    User clicks "Submit"
-  =================                    ====================
-       |                                      |
-       | code:run                             | code:submit
-       v                                      v
-  +---------+                            +---------+
-  | Emit    |                            | Emit    |
-  | code:   |                            | code:   |
-  | running |  (both users see loading)  | running |  (both users see loading)
-  +---------+                            +---------+
-       |                                      |
-       v                                      v
-  +------------------+                  +------------------+
-  | Fetch code from  |                  | Fetch code from  |
-  | OT document      |                  | OT document      |
-  +------------------+                  +------------------+
-       |                                      |
-       v                                      v
-  +------------------+                  +------------------+
-  | POST /execute    |                  | POST /execute    |
-  | to Execution Svc |                  | to Execution Svc |
-  | (60s timeout)    |                  | (60s timeout)    |
-  +------------------+                  +------------------+
-       |                                      |
-       v                                      v
-  +------------------+                  +------------------+
-  | output:updated   |                  | output:updated   |
-  | to BOTH users    |                  | to BOTH users    |
-  | (shared results) |                  | (shared results) |
-  +------------------+                  +------------------+
-       |                                      |
-       v                                      v
-  +------------------+                  +------------------+
-  |     DONE         |                  | Record attempt   |
-  | (no attempt      |                  | for SUBMITTER    |
-  |  recorded)       |                  | ONLY (not both)  |
-  +------------------+                  +------------------+
-                                              |
-                                              v
-                                        +------------------+
-                                        | submission:      |
-                                        | complete         |
-                                        | to SUBMITTER     |
-                                        | ONLY             |
-                                        +------------------+
-
-  Key design decisions:
-  - Either user can submit independently (no dual-agreement needed)
-  - Execution results are shared with BOTH users
-  - Attempt is attributed ONLY to the user who clicked Submit
-  - Success = all test cases passed (testCasesPassed == totalTestCases > 0)
-```
-
-#### Session End Triggers
-
-A session can end in three ways:
-
-| Trigger            | Description                                                    |
-| ------------------ | -------------------------------------------------------------- |
-| Both users left    | One user leaves, then the other also leaves or is disconnected |
-| Inactivity timeout | No code changes for 30 minutes (configurable)                  |
-| Session TTL        | Redis keys expire after 1 hour (configurable)                  |
-
-The **inactivity sweeper** runs every 60 seconds with a Redis distributed lock (`SET NX PX`), ensuring only one server instance runs the check when scaling horizontally. It scans all active sessions and ends any that have been idle beyond the timeout.
-
-When a session ends, the service:
-
-1. Fetches the final code and revision from the OT document
-2. Marks the session as `inactive`
-3. Deletes all session data from Redis (session hash, presence, OT document, output)
-4. Emits `session:ended` to all connected clients with the reason
-
-#### Socket Events -- Complete Reference
-
-**Client -> Server:**
-
-| Event                  | Payload                                       | Description                             |
-| ---------------------- | --------------------------------------------- | --------------------------------------- |
-| `session:check-active` | --                                            | Check if user has a session to rejoin   |
-| `session:join`         | `{ collaborationId }`                         | Join a room; returns full session state |
-| `code:change`          | `{ collaborationId, revision, operations[] }` | Send OT operations                      |
-| `session:leave`        | `{ collaborationId }`                         | Intentionally leave (permanent)         |
-| `code:run`             | `{ collaborationId }`                         | Execute code (no attempt recorded)      |
-| `code:submit`          | `{ collaborationId }`                         | Execute code + record attempt           |
-| `hint:request`         | `{ collaborationId }`                         | Request an AI-generated hint            |
-
-**Server -> Client:**
-
-| Event                 | Payload                                     | Scope               | Description                    |
-| --------------------- | ------------------------------------------- | ------------------- | ------------------------------ |
-| `connection:ready`    | `{ userId }`                                | Sender only         | Auth confirmed                 |
-| `user:joined`         | `{ userId, wasDisconnected }`               | Room (excl. sender) | User joined/reconnected        |
-| `presence:updated`    | `{ participants[] }`                        | Room (all)          | Updated presence for all users |
-| `code:change`         | `{ userId, revision, operations[] }`        | Room (excl. sender) | Broadcast OT operations        |
-| `code:sync`           | `{ code, revision }`                        | Sender only         | Full doc sync (fallback)       |
-| `user:disconnected`   | `{ userId, reason }`                        | Room (all)          | User's last connection dropped |
-| `user:left`           | `{ userId }`                                | Room (all)          | User intentionally left        |
-| `session:ended`       | `{ reason }`                                | Room (all)          | Session terminated             |
-| `code:running`        | --                                          | Room (all)          | Code execution in progress     |
-| `output:updated`      | `{ output }`                                | Room (all)          | Execution results              |
-| `submission:complete` | `{ success, testCasesPassed }`              | Submitter only      | Attempt recorded               |
-| `hint:updated`        | `{ collaborationId, hints[], requestedBy }` | Room (all)          | New AI hint available          |
-
-#### Session Configuration
-
-| Setting                   | Default       | Description                                     |
-| ------------------------- | ------------- | ----------------------------------------------- |
-| Session TTL               | 1 hour        | TTL on all Redis keys for a session             |
-| Disconnect grace period   | 30 seconds    | Window for reconnection after disconnect        |
-| Inactivity timeout        | 30 minutes    | Time without code changes before session ends   |
-| Inactivity check interval | 60 seconds    | How often the sweeper runs                      |
-| Heartbeat interval        | 25 seconds    | Socket.IO ping interval                         |
-| Heartbeat timeout         | 20 seconds    | Socket.IO pong timeout (disconnect if exceeded) |
-| Execution timeout         | 60 seconds    | Max time for code execution requests            |
-| OT max history            | 50 operations | Capped operation history for transforms         |
-| OT max retries            | 5             | CAS retry limit for concurrent writes           |
+- **State:** Redis (sessions, OT documents, presence, output, hints, Socket.IO pub/sub)
+- **Messaging:** RabbitMQ (session creation + code execution)
+- **Concurrency:** Redis Lua scripts for atomic compare-and-swap
 
 #### Internal Dependencies
 
-| Dependency        | Purpose                                                         |
-| ----------------- | --------------------------------------------------------------- |
-| User Service      | Validate user identity on WebSocket connection                  |
-| Question Service  | Select and retrieve coding questions for sessions               |
-| Execution Service | Run submitted code in a sandbox                                 |
-| Attempt Service   | Record coding attempt results                                   |
-| Google Gemini API | Generate context-aware AI hints (2.5 Flash)                     |
-| RabbitMQ          | Receive session creation requests, publish responses            |
-| Redis             | Session state, OT documents, presence, hints, Socket.IO adapter |
+All inter-service HTTP calls use `x-internal-service-key` header auth and native `fetch` -- no calls go through the API gateway.
 
-#### Horizontal Scaling Design
+| Dependency | URL | Purpose |
+|---|---|---|
+| User Service | `http://user-service:3001` | Socket auth (validates JWT via `/users/internal/authz/context`), user name resolution |
+| Question Service | `http://questions-service:3005` | Question selection (`/internal/select`) and details + test cases (`/internal/get`) |
+| Execution Service | via RabbitMQ `exec_req_queue` / `exec_res_queue` | Sandboxed code execution (not direct HTTP) |
+| Attempt Service | `http://attempts-service:3004` | Records attempts directly via `POST /attempts` |
+| Gemini API | `https://generativelanguage.googleapis.com` | AI hint generation (Gemini 2.5 Flash) |
+| Redis | | All session state + Socket.IO cross-instance pub/sub |
+| RabbitMQ | | Session creation requests from matching + code execution request/response |
 
-The service is built for multi-instance deployment:
+#### Session Creation
 
-- **Socket.IO Redis adapter** synchronizes events across instances via Redis pub/sub
-- **OT atomic updates** use a Redis Lua compare-and-swap script to prevent race conditions
-- **Inactivity sweeper** uses a Redis distributed lock so only one instance runs the check
-- **Nginx `ip_hash`** ensures consistent Socket.IO routing per client
+Sessions are created via **two paths**, both calling the same `createSession` logic:
+
+1. **RabbitMQ consumer** (primary) -- Consumes from `collab_create_req_queue` (published by matching service). On success, publishes result to `collab_create_res_queue`. Failures retry with exponential backoff (2s, 4s, 8s, 16s, 32s) via a delay queue with dead-letter routing. Non-retryable errors (user invalid, question not found, active session conflict) are discarded immediately.
+
+2. **HTTP endpoint** -- `POST /sessions` with internal service auth. Returns the session directly.
+
+Creation steps: validate both users (User Service) -> select question (Question Service) -> create session in Redis -> initialize OT document with language-specific code template (e.g., `class Solution { twoSum() {} }`). Duplicate requests with the same matchId return the existing session (idempotent).
+
+#### Socket Authentication
+
+Sockets authenticate on connection via middleware. The client sends a JWT (in `Authorization` header or `auth.token`). The middleware forwards it to the User Service's `/users/internal/authz/context` endpoint. If the user is active, `socket.data.userId` is set; otherwise the connection is rejected.
+
+#### Session Join
+
+On `session:join` with a `collaborationId`, the server:
+
+1. Validates session exists, is active, and user is assigned to it
+2. Checks user hasn't left, and if disconnected, that they're within the 3-minute reconnect grace period
+3. Registers the socket (supports multiple tabs per user)
+4. Returns full state: session metadata, question details, code snapshot + OT revision, participant presence, existing hints, user display names
+5. Broadcasts `user:joined` and `presence:updated` to the room
+
+#### Real-Time Code Editing (OT)
+
+Uses **Operational Transformation** to synchronize edits between two users:
+
+- Clients send `code:change` with their revision number and operations (`insert` / `delete` / `retain`)
+- Server transforms incoming ops against concurrent ops since the client's revision
+- Atomic updates via a **Redis Lua CAS script** (check `currentRevision == expected` before writing), with up to 5 retries on conflict
+- Acknowledged ops are broadcast to all other clients in the room
+- On unrecoverable desync, a full `code:sync` is sent with the authoritative document
+
+```
+  CONFLICT CASE: Both clients edit at the same time
+  ==================================================
+
+  Client A (rev 5)              Server (rev 5)             Client B (rev 5)
+       |                              |                              |
+       | insert "X" at pos 0          |          insert "Y" at pos 3 |
+       +----------------------------->|<-----------------------------+
+       |                              |                              |
+       |     A arrives first: rev matches, apply directly            |
+       |     doc = "X...", server rev = 6                            |
+       |                              |                              |
+       |     B arrives second: rev 5 < server 6                     |
+       |     Fetch ops since rev 5, transform B against A:           |
+       |     B's insert at pos 3 shifts to pos 4                     |
+       |     Apply transformed ops, CAS update -> rev 7              |
+       |                              |                              |
+       |   Broadcast transformed ops  |     ACK {revision: 7}       |
+       |<-----------------------------+----------------------------->|
+```
+
+Operation history is capped at 50 entries. Server uses `priority: "right"` (existing server ops take precedence at same position).
+
+#### Presence & Disconnection
+
+```
+  User Presence State Machine (with multi-tab)
+  ==============================================
+
+  Each tab = 1 Socket.IO connection. Redis tracks socketCount per user.
+  State transitions depend on whether sockets remain open.
+
+                        session:join
+                        (any tab)
+                            |
+                            v
+                    +---------------+
+                    |   CONNECTED   |  socketCount >= 1
+                    |               |  (each new tab increments count)
+                    +-------+-------+
+                      ^     |     |
+                      |     |     |  user clicks "Leave" on a tab:
+          tab opens   |     |     |  - that socket is removed
+         (new socket  |     |     |  - if socketCount > 0: still CONNECTED
+          joins room) |     |     |  - if socketCount == 0: transitions to LEFT
+                      |     |     |
+                      |     |     +---------------------------+
+                      |     |                                 |
+                      |     |  tab closes / network drop:     |
+                      |     |  - that socket is removed        |
+                      |     |  - if socketCount > 0:           |
+                      |     |    still CONNECTED (no event)    |
+                      |     |  - if socketCount == 0:          |
+                      |     |    transitions to DISCONNECTED   |
+                      |     |                                 |
+                      |     v                                 v
+                +---------------+                     +-----------+
+                | DISCONNECTED  |                     |   LEFT    |
+                | socketCount=0 |                     | permanent |
+                +-------+-------+                     +-----+-----+
+                  ^     |                                   |
+                  |     |  rejoin within 3 min              |
+                  |     |  (new tab connects):              |
+                  |     |  -> back to CONNECTED             |
+                  |     |                                   |
+                  |     |  grace period expires:            |
+                  |     |  -> cannot rejoin                 |
+                  |     v                                   |
+                  |  +-------------+                        |
+                  |  | Cannot      |                        |
+                  |  | rejoin      |                        |
+                  |  +-------------+                        |
+                  |                                         |
+                  +----- if other user is also              |
+                         LEFT or DISCONNECTED: -------------+
+                                    |
+                                    v
+                              +-----------+
+                              |SESSION END|
+                              +-----------+
+```
+
+| Aspect | DISCONNECTED | LEFT |
+|---|---|---|
+| Trigger | Network drop, tab close, ping timeout | User clicks "Leave Session" |
+| Rejoin? | Yes (within 3 min grace period) | No (permanent) |
+| Active session index | Kept (user sees rejoin prompt) | Cleared |
+| Other user sees | `user:disconnected` | `user:left` |
+| Session ends? | No (stays active) | Yes, if partner is LEFT or DISCONNECTED |
+
+**Multi-tab synchronization:** Each browser tab opens a separate Socket.IO connection. All sockets for the same user in the same session share presence state in Redis. OT operations, execution results, and hints are broadcast to the Socket.IO room, so every tab receives them. A user is only marked `DISCONNECTED` when **all** their sockets close (socketCount reaches 0). `session:leave` only removes the triggering socket -- the user is only marked `LEFT` when their last socket triggers it. This means closing one tab doesn't disrupt the session if other tabs remain open.
+
+**Instance heartbeat & startup reconciliation:** Each instance registers a unique `instance:{id}` key in Redis with a 30-second TTL, refreshed every 10 seconds. Every `socket:*` binding includes the owning `instanceId`. On startup, the service SCANs all `socket:*` keys, groups them by owning instance, checks each instance's liveness key, and only removes sockets belonging to dead instances. Affected users still showing as "connected" are transitioned to "disconnected". Sockets belonging to live instances are left untouched, making this safe during rolling restarts and horizontal scaling.
+
+#### Code Execution: Run vs Submit
+
+Both `code:run` and `code:submit` publish an `ExecutionRequestMessage` to `exec_req_queue` (RabbitMQ). A Redis key `exec:pending:<correlationId>` with 65s TTL acts as a timeout safety net. When the execution service responds on `exec_res_queue`:
+
+- Results are stored in Redis and broadcast to the room via `output:updated`
+- **Run:** no attempt recorded -- done
+- **Submit:** additionally records the attempt directly to the Attempt Service (`POST http://attempts-service:3004/attempts`) and sends `submission:complete` to the submitting user only
+
+Key design decisions:
+- Either user can submit independently (no dual-agreement needed)
+- Execution results are shared with **both** users
+- Attempt is attributed **only** to the user who clicked Submit
+- Success = all test cases passed (`testCasesPassed == totalTestCases > 0`)
 
 #### AI Hints
 
-The Collaboration Service integrates with **Google Gemini 2.5 Flash** to provide context-aware AI hints during coding sessions. Each user gets a maximum of **2 hints per session** (4 total for the pair), and all hints are shared with both participants in real time.
+Integrates with **Google Gemini 2.5 Flash** for context-aware hints. Each user gets **2 hints per session** (4 total for the pair), shared with both participants in real time.
+
+Flow: validate session & rate limit (atomic Redis `INCR`) -> fetch current code + question context -> call Gemini (maxOutputTokens: 512, temperature: 0.4) -> store hint in Redis -> broadcast `hint:updated` to room.
+
+The prompt has two modes: if code exists, it analyzes for bugs/missing logic; if no code, it suggests algorithms/data structures. It never provides full solutions -- only 2-3 sentence guidance. Previous hints are included to avoid repetition.
+
+#### Session End
+
+Sessions end via: **both users left**, **inactivity timeout** (30min, checked every 60s with a Redis distributed lock for horizontal scaling), or **manual** `endSession` call. On end: session marked inactive, user active-session indices cleared, all Redis data cleaned up (session, presence, OT doc, output, hints), `session:ended` emitted.
+
+#### Graceful Shutdown
+
+On `SIGTERM` / `SIGINT`, the service performs an ordered teardown with a 10-second forced-exit safety timer:
 
 ```
-                          AI Hints Flow
-                          ==============
+  Graceful Shutdown Sequence
+  ==========================
 
-  User A clicks                Collaboration           Google Gemini
-  "Get AI Hint"                  Service                 2.5 Flash
-  ==============               ============             ============
-       |                            |                        |
-       | hint:request               |                        |
-       | {collaborationId}          |                        |
-       +--------------------------->|                        |
-       |                            |                        |
-       |               1. Check rate limit                   |
-       |                  (Redis INCR, atomic)               |
-       |                  Max 2 per user                     |
-       |                            |                        |
-       |               2. Fetch context:                     |
-       |                  - Question title, description      |
-       |                  - Difficulty level                  |
-       |                  - Programming language              |
-       |                  - Current code (from OT doc)       |
-       |                  - Previous hints (avoid repeats)   |
-       |                            |                        |
-       |               3. Build prompt and call Gemini       |
-       |                  POST /v1beta/models/               |
-       |                  gemini-2.5-flash:generateContent   |
-       |                  {maxOutputTokens: 512,             |
-       |                   temperature: 0.4}                 |
-       |                            +----------------------->|
-       |                            |                        |
-       |                            |   2-3 sentence hint    |
-       |                            |   (no full solutions)  |
-       |                            |<-----------------------+
-       |                            |                        |
-       |               4. Store hint in Redis                |
-       |                  (hints:{collabId} list)            |
-       |                            |                        |
-       |   ACK {hints[],            |                        |
-       |    hintsRemaining}         |                        |
-       |<---------------------------+                        |
-       |                            |                        |
-       |               5. Broadcast hint:updated             |
-       |                  to ALL users in room               |
-       |                            |                        |
-       |                            +--------> User B sees
-       |                                       new hint in
-       |                                       real time
+  1. Guard against double-shutdown (isShuttingDown flag)
+  2. Start 10s forced-exit timer (.unref'd -- won't keep process alive)
+  3. clearInterval(inactivityCheckInterval)   -- stop session sweeper
+  4. httpServer.close()                       -- stop accepting new connections
+  5. ioServer.close()                         -- disconnect all sockets
+                                                (fires disconnect handlers,
+                                                 which clean up socket:* and
+                                                 presence:* Redis keys)
+  6. RabbitMQManager.close()                  -- stop consumers, close
+                                                channel + connection
+                                                (isShuttingDown flag prevents
+                                                 auto-reconnect attempts)
+  7. Close Redis adapter pub/sub clients      -- tear down Socket.IO adapter
+  8. stopInstanceHeartbeat()                  -- delete instance:{id} liveness
+                                                key (uses main Redis client)
+  9. closeRedis()                             -- close main Redis client (last,
+                                                 since step 8 depends on it)
+  10. process.exit(0)
 ```
 
-**Prompt design:** The hint prompt has two modes:
+Key design decisions:
+- `ioServer.close()` is called **before** Redis cleanup so that disconnect handlers can still write to Redis
+- `stopInstanceHeartbeat()` is called **before** `closeRedis()` because it needs the Redis client to delete the liveness key
+- RabbitMQ's `isShuttingDown` flag prevents the reconnection logic from firing when the connection drops during shutdown
+- The 10s timer ensures the process exits even if a step hangs (e.g., unresponsive broker)
 
-- **Code written** -- Analyzes the user's current code for bugs, logical errors, or missing edge cases
-- **No code yet** -- Suggests algorithms, data structures, or techniques to approach the problem
+#### Socket Events Reference
 
-The prompt explicitly instructs Gemini to **never provide full solutions or complete code** -- only conceptual guidance in 2-3 sentences. Previous hints are included in the prompt context to avoid repetition.
+**Client -> Server:**
 
-**Rate limiting:** Uses atomic Redis `INCR` on `hints:count:{collabId}:{userId}` to prevent race conditions when concurrent hint requests arrive. The counter and hint list keys inherit the session TTL.
+| Event | Payload | Description |
+|---|---|---|
+| `session:check-active` | -- | Check if user has a session to rejoin |
+| `session:join` | `{ collaborationId }` | Join room; returns full state |
+| `code:change` | `{ collaborationId, revision, operations[] }` | Send OT operations |
+| `session:leave` | `{ collaborationId }` | Intentionally leave (permanent) |
+| `code:run` | `{ collaborationId }` | Run code (no attempt) |
+| `code:submit` | `{ collaborationId }` | Submit code (run + record attempt) |
+| `hint:request` | `{ collaborationId }` | Request AI hint |
 
-**Redis data:**
+**Server -> Client:**
 
-| Key                                      | Type             | Description                              |
-| ---------------------------------------- | ---------------- | ---------------------------------------- |
-| `hints:{collaborationId}`                | List             | All hints for the session (JSON objects) |
-| `hints:count:{collaborationId}:{userId}` | String (counter) | Number of hints used by this user        |
+| Event | Scope | Description |
+|---|---|---|
+| `connection:ready` | Sender | Auth confirmed, includes `userId` |
+| `user:joined` | Room (excl. sender) | User joined/reconnected |
+| `presence:updated` | Room (all) | Updated participant list |
+| `code:change` | Room (excl. sender) | Broadcast OT operations |
+| `code:sync` | Sender | Full doc sync (recovery fallback) |
+| `user:disconnected` | Room (all) | User's last connection dropped |
+| `user:left` | Room (all) | User intentionally left |
+| `session:ended` | Room (all) | Session terminated (with reason) |
+| `code:running` | Room (all) | Execution in progress |
+| `output:updated` | Room (all) | Execution results |
+| `submission:complete` | Submitter only | Attempt recorded with results |
+| `hint:updated` | Room (all) | New AI hint available |
+
+#### Configuration
+
+| Setting | Default | Env Variable |
+|---|---|---|
+| Session TTL | 1 hour | `CS_SESSION_TTL_MS` |
+| Disconnect grace | 3 minutes | `CS_DISCONNECT_GRACE_MS` |
+| Inactivity timeout | 30 minutes | `CS_SESSION_INACTIVITY_TIMEOUT_MS` |
+| Heartbeat interval | 25 seconds | `CS_HEARTBEAT_INTERVAL_MS` |
+| Heartbeat timeout | 20 seconds | `CS_HEARTBEAT_TIMEOUT_MS` |
+| Max hints per user | 2 | Constant |
+| Instance heartbeat TTL | 30 seconds | Constant |
+| Instance heartbeat interval | 10 seconds | Constant |
+| Shutdown timeout | 10 seconds | Constant |
+| OT history cap | 50 ops | Constant |
+| OT CAS retries | 5 | Constant |
+
+#### Horizontal Scaling
+
+- **Socket.IO Redis adapter** for cross-instance event broadcast
+- **OT Lua CAS** for race-free concurrent writes
+- **Redis distributed lock** (`SET NX PX`) for inactivity sweeper -- only one instance runs the check
+- **Nginx `ip_hash`** for consistent Socket.IO routing
+- **Instance heartbeat** (`instance:{id}` key, 30s TTL, 10s refresh) -- each instance registers liveness so startup reconciliation only removes sockets from dead instances, not from peers in a multi-instance deployment
 
 ---
 
@@ -1703,6 +1571,130 @@ This allows users to improve their score within a session by fixing bugs and re-
 
 ---
 
+### 7. Message Service
+
+Real-time in-session chat for collaboration pairs. Uses native WebSockets (not Socket.IO) with ephemeral Redis-backed message storage. Messages persist for the duration of a session and are automatically cleaned up after participants leave.
+
+**Port:** 3019 | **State:** Redis (no database) | **Real-time:** Native WebSocket (`ws` library)
+
+#### Tech Stack
+
+- **Runtime:** Node.js / TypeScript
+- **Framework:** Express 5 (HTTP server only -- no REST routes)
+- **Real-time:** `ws` 8.x (native WebSocket, not Socket.IO)
+- **State:** Redis (`ioredis`) -- message lists with TTL
+- **Auth:** Clerk JWT validated via User Service
+
+#### Internal Dependencies
+
+| Dependency | URL | Purpose |
+|---|---|---|
+| User Service | `http://user-service:3001` | WebSocket auth (validates JWT via `/users/internal/authz/context`) |
+| Redis | `message-redis:6379` | Message storage (dedicated Redis instance, isolated from collaboration Redis) |
+
+The message service has **no direct dependency** on the Collaboration Service -- the coupling is through the frontend, which passes the `collaborationId` from the collaboration session into the chat component.
+
+#### WebSocket Connection Flow
+
+The frontend connects directly to `ws://localhost:3019`, bypassing the API gateway. Authentication is passed via the `Sec-WebSocket-Protocol` header.
+
+```
+  WebSocket Authentication & Join
+  ================================
+
+  Frontend                    Message Service              User Service
+  ========                    ===============              ============
+     |                              |                           |
+     | ws://localhost:3019          |                           |
+     | Sec-WebSocket-Protocol:      |                           |
+     |   [clerk-token]             |                           |
+     +----------------------------->|                           |
+     |                              |                           |
+     |                     Validate token:                      |
+     |                     GET /users/internal/authz/context    |
+     |                     Authorization: Bearer <token>        |
+     |                     x-internal-service-key: <key>        |
+     |                              +-------------------------->|
+     |                              |   {clerkUserId, status}   |
+     |                              |<--------------------------+
+     |                              |                           |
+     |   {type: "auth"}            |                           |
+     |<-----------------------------+                           |
+     |                              |                           |
+     | {type: "join",              |                           |
+     |  collaborationId, userId}   |                           |
+     +----------------------------->|                           |
+     |                              |                           |
+     |   Previous messages          |  (fetched from Redis     |
+     |   (one per ws.send)          |   LRANGE 0 -1)           |
+     |<-----------------------------+                           |
+     |                              |                           |
+     |   {type: "info",            |                           |
+     |    "Welcome to collab..."}  |                           |
+     |<-----------------------------+                           |
+```
+
+#### WebSocket Message Types
+
+**Client -> Server:**
+
+| type | Fields | Description |
+|---|---|---|
+| `join` | `collaborationId`, `userId`, `messageId` | Join a chat room; server sends back all previous messages from Redis |
+| `message` | `collaborationId`, `userId`, `text`, `messageId`, `replyMessage` | Send a chat message; broadcast to all other room members |
+
+**Server -> Client:**
+
+| type | When | Description |
+|---|---|---|
+| `auth` | After successful token validation | Signals the client to send a `join` message |
+| `info` | After joining a room | Welcome message or duplicate-join notification |
+| _(no type)_ | On incoming chat message | Broadcast message: `{from, message, replyMessage, messageId}` |
+
+#### Message Storage
+
+Messages are stored in **Redis lists**, keyed by `collaborationRoom:{collaborationId}:messages`. Each message is a JSON string:
+
+```
+{
+  from: string         // Clerk userId of sender
+  message: string      // Message text
+  replyMessage: string | null  // Quoted message text (reply feature)
+  messageId: string    // Client-generated UUID
+}
+```
+
+| Behavior | Detail |
+|---|---|
+| Write | `RPUSH` on every new message |
+| Read | `LRANGE 0 -1` on join (all messages at once) |
+| Active room TTL | 2 hours (refreshed on every message) |
+| Empty room TTL | 5 minutes (set when last user disconnects) |
+| Persistence | None -- messages are ephemeral and expire with the Redis key |
+
+#### Reply / Quote Feature
+
+Users can right-click a message to quote it. The `replyMessage` field carries the quoted text (plain text copy, not a reference by message ID). Quoted messages render with a left border and italic styling above the reply.
+
+#### Room Management
+
+Rooms are tracked **in-memory** via a `Map<string, Set<WebSocket>>`. When a WebSocket closes, it is removed from all rooms. If a room becomes empty, the message TTL is reduced to 5 minutes and the in-memory room is deleted.
+
+Message deduplication is **client-side only** -- the frontend maintains a `chatIds` Set to prevent rendering duplicates. The sender does not receive their own broadcast (filtered by `client !== ws`); instead, the message is optimistically added to the local chat state on send.
+
+#### Configuration
+
+| Setting | Default | Source |
+|---|---|---|
+| WebSocket port | 3019 | Hardcoded |
+| Redis host | `message-redis` | Hardcoded |
+| Message TTL (active) | 2 hours | Hardcoded |
+| Message TTL (empty room) | 5 minutes | Hardcoded |
+| User Service URL | `http://user-service:3001` | `USER_SERVICE_URL` env var |
+| Internal API key | shared secret | `INTERNAL_SERVICE_API_KEY` env var |
+
+---
+
 ## Inter-Service Flows & Integrations
 
 ### End-to-End User Journey
@@ -1734,7 +1726,9 @@ This is the complete flow from login to completing a coding session:
   5. COLLABORATIVE CODING
      Frontend --[WebSocket]--> Gateway --> Collaboration Service
        --> OT sync between both clients via Redis
-       --> Code execution: Collaboration Svc --> Execution Svc --> Piston
+       --> Code execution: Collaboration Svc --> RabbitMQ --> Execution Svc --> Piston
+     Frontend --[WebSocket]--> Message Service
+       --> In-session chat via Redis-backed message lists
 
   6. SESSION END
      Collaboration Service
@@ -1748,20 +1742,40 @@ This is the complete flow from login to completing a coding session:
                       RabbitMQ Queue Architecture
                       ===========================
 
-  +------------------+       REQ_QUEUE        +---------------------+
-  |                  | =====================> |                     |
-  | Matching Service |   CreateSession msg    | Collaboration Svc   |
-  |                  |   {userA, userB,       |                     |
-  |                  |    matchId, config}    |  1. Consume message |
-  |                  |                        |  2. Select question |
-  |                  |       RES_QUEUE        |  3. Create session  |
-  |                  | <===================== |  4. Publish result  |
-  |                  |   SessionCreated msg   |                     |
-  +------------------+   {sessionId, status}  +---------------------+
+  SESSION CREATION (Matching <-> Collaboration):
 
-  - Queues are durable (survive broker restarts)
-  - Messages include x-retry-count header (max 5 retries)
+  +------------------+  collab_create_req_queue  +---------------------+
+  |                  | ========================> |                     |
+  | Matching Service |   CreateSession msg       | Collaboration Svc   |
+  |                  |   {userA, userB,          |                     |
+  |                  |    matchId, config}       |  1. Consume message |
+  |                  |                           |  2. Select question |
+  |                  |  collab_create_res_queue  |  3. Create session  |
+  |                  | <======================== |  4. Publish result  |
+  |                  |   SessionCreated msg      |                     |
+  +------------------+   {sessionId, status}     +---------------------+
+
+  CODE EXECUTION (Collaboration <-> Execution):
+
+  +---------------------+    exec_req_queue     +---------------------+
+  |                     | =====================> |                     |
+  | Collaboration Svc   |  ExecutionRequest msg  | Execution Service   |
+  |                     |  {code, language,      |                     |
+  |                     |   functionName,        |  1. Wrap in harness |
+  |                     |   testCases,           |  2. Run in Piston   |
+  |                     |   correlationId}       |  3. Parse results   |
+  |                     |                        |  4. Publish result  |
+  |                     |    exec_res_queue      |                     |
+  |                     | <===================== |                     |
+  |                     |  ExecutionResult msg   |                     |
+  +---------------------+  {correlationId,       +---------------------+
+                            results, stderr}
+
+  - All queues are durable (survive broker restarts)
+  - Session creation messages include x-retry-count header (max 5 retries)
   - Non-retryable errors are discriminated and dead-lettered
+  - Execution uses correlationId to route results back to the correct session
+  - On shutdown, isShuttingDown flag prevents consumer auto-reconnect
 ```
 
 ## CI/CD Pipeline
@@ -1799,13 +1813,13 @@ GitHub Actions workflows run on every push and pull request to `main`:
 | **Runtime** | Node.js 24 |
 | **Frontend** | React 19, Vite 7, TailwindCSS, Radix UI, shadcn/ui |
 | **Backend** | Express 4/5, Socket.IO |
-| **Databases** | PostgreSQL 16 (x3), Redis (x2) |
+| **Databases** | PostgreSQL 16 (x3), Redis (x3) |
 | **Message Broker** | RabbitMQ 4.2 |
 | **Auth** | Clerk (JWT-based) |
 | **AI Hints** | Google Gemini 2.5 Flash |
 | **Code Execution** | Piston (sandboxed) |
 | **API Gateway** | Nginx |
-| **Containerization** | Docker, Docker Compose (17 containers) |
+| **Containerization** | Docker, Docker Compose (20 containers) |
 | **CI/CD** | GitHub Actions |
 | **Logging** | Pino |
 | **Validation** | Zod |

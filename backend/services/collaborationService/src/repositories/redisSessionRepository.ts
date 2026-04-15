@@ -24,6 +24,7 @@ function buildIdempotencyKey(payload: CreateSessionRequest): string {
 
 type CreateSessionInput = CreateSessionRequest & {
     questionId: UUID;
+    functionName?: string;
 };
 
 type CreateSessionResult =
@@ -144,6 +145,7 @@ export class RedisSessionRepository {
             questionId: session.questionId,
             status: session.status,
             createdAt: session.createdAt,
+            ...(input.functionName ? { functionName: input.functionName } : {}),
         });
         pipeline.pexpire(sessionKey, this.ttlMs);
 
@@ -217,7 +219,7 @@ export class RedisSessionRepository {
 
     async storeQuestionDetails(
         collaborationId: string,
-        details: { questionTitle: string; questionDescription: string; testCases: string; functionName: string },
+        details: { questionTitle: string; questionDescription: string; testCases: string; functionName: string; qnImage?: string | null },
     ): Promise<void> {
         const sessionKey = KEYS.session(collaborationId);
         await this.redis.hset(sessionKey, {
@@ -225,21 +227,23 @@ export class RedisSessionRepository {
             questionDescription: details.questionDescription,
             testCases: details.testCases,
             functionName: details.functionName,
+            ...(details.qnImage ? { qnImage: details.qnImage } : {}),
         });
     }
 
     async getQuestionDetails(
         collaborationId: string,
-    ): Promise<{ questionTitle: string; questionDescription: string; testCases: string; functionName: string } | null> {
+    ): Promise<{ questionTitle: string; questionDescription: string; testCases: string; functionName: string; qnImage: string | null } | null> {
         const sessionKey = KEYS.session(collaborationId);
-        const [questionTitle, questionDescription, testCases, functionName] = await this.redis.hmget(
+        const [questionTitle, questionDescription, testCases, functionName, qnImage] = await this.redis.hmget(
             sessionKey,
             "questionTitle",
             "questionDescription",
             "testCases",
             "functionName",
+            "qnImage",
         );
-        if (!questionTitle && !testCases && !functionName) {
+        if (!questionTitle || !testCases) {
             return null;
         }
         return {
@@ -247,6 +251,7 @@ export class RedisSessionRepository {
             questionDescription: questionDescription ?? "",
             testCases: testCases ?? "[]",
             functionName: functionName ?? "",
+            qnImage: qnImage ?? null,
         };
     }
 

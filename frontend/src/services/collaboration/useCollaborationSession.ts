@@ -284,6 +284,7 @@ export function useCollaborationSession(collaborationId: string | undefined) {
                         difficulty: ack.state.question.difficulty,
                         description: ack.state.question.description,
                         testCase: ack.state.question.testCase,
+                        qnImage: ack.state.question.qnImage ?? null,
                     });
                 }
             } catch (error) {

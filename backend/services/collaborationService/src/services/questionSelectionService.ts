@@ -12,6 +12,7 @@ type QuestionSelectionResponse = {
             title?: string;
             topic?: string;
             difficulty?: CreateSessionRequest["difficulty"];
+            functionName?: string;
         };
     };
     body?: {
@@ -20,6 +21,7 @@ type QuestionSelectionResponse = {
         title?: string;
         topic?: string;
         difficulty?: CreateSessionRequest["difficulty"];
+        functionName?: string;
     };
 };
 
@@ -33,6 +35,7 @@ type QuestionDetailsResponse = {
             topics?: string[];
             testCase?: Array<{ input: unknown; output: unknown }>;
             functionName?: string;
+            qnImage?: string | null;
         };
     };
 };
@@ -93,6 +96,7 @@ export class QuestionSelectionService {
                 topic: question?.topic ?? request.topic,
                 difficulty: question?.difficulty ?? request.difficulty,
                 title: question?.title,
+                functionName: question?.functionName,
             };
         } catch (error) {
             if (error instanceof AppError) {
@@ -149,6 +153,7 @@ export class QuestionSelectionService {
                 topics: question.topics ?? [],
                 testCase: question.testCase ?? [],
                 functionName: question.functionName ?? "",
+                qnImage: question.qnImage ?? null,
             };
         } catch (error) {
             logger.error({ err: error, questionId }, "Error fetching question details");

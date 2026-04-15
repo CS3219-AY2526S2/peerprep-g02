@@ -27,7 +27,7 @@ export async function getSignedImageUrl(filename: string) {
     const options = {
         version: "v4" as const,
         action: "read" as const,
-        expires: Date.now() + 15 * 60 * 1000,
+        expires: Date.now() + 60 * 60 * 1000,
     };
 
     const [url] = await storage.bucket("question-image").file(filename).getSignedUrl(options);

@@ -4,17 +4,11 @@ import { Button } from "@/components/ui/button";
 
 interface SessionHeaderProps {
     title: string;
-    subtitle: string;
     elapsed: string;
     onExitClick: () => void;
 }
 
-export default function SessionHeader({
-    title,
-    subtitle,
-    elapsed,
-    onExitClick,
-}: SessionHeaderProps) {
+export default function SessionHeader({ title, elapsed, onExitClick }: SessionHeaderProps) {
     return (
         <div className="border-b border-white/10 bg-[#101827]/95 px-4 py-4 shadow-[0_12px_45px_rgba(0,0,0,0.35)] backdrop-blur">
             <div className="mx-auto flex max-w-[1800px] flex-wrap items-center justify-between gap-4">
@@ -32,7 +26,6 @@ export default function SessionHeader({
                                 {title}
                             </span>
                         </div>
-                        <p className="mt-1 text-sm text-slate-400">{subtitle}</p>
                     </div>
                 </div>
 

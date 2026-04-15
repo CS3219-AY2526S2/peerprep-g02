@@ -38,7 +38,7 @@ export const DEFAULTS = {
     REDIS_PORT: 6379,
     REDIS_DB: 0,
     STUB_QUESTION_PREFIX: "stub",
-    DISCONNECT_GRACE_MS: 30 * 1000, // 30 seconds grace period for reconnection
+    DISCONNECT_GRACE_MS: 3 * 60 * 1000, // 3 minutes grace period for reconnection
     HEARTBEAT_INTERVAL_MS: 25 * 1000, // Socket.IO pingInterval
     HEARTBEAT_TIMEOUT_MS: 20 * 1000, // Socket.IO pingTimeout
     SESSION_INACTIVITY_TIMEOUT_MS: 30 * 60 * 1000, // 30 minutes inactivity timeout

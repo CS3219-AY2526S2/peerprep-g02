@@ -42,6 +42,7 @@ router.post("/get", async (req, res) => {
                 topics: question.topic_names ?? question.topics,
                 testCase: question.test_case,
                 functionName: question.function_name,
+                qnImage: question.qnImage ?? null,
             },
         },
     });
@@ -96,6 +97,10 @@ router.post("/select", async (req, res) => {
                     typeof questionRecord.difficulty === "string"
                         ? questionRecord.difficulty
                         : difficulty.trim(),
+                functionName:
+                    typeof questionRecord.function_name === "string"
+                        ? questionRecord.function_name
+                        : undefined,
             },
         },
     });
