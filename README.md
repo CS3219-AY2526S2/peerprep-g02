@@ -1238,11 +1238,11 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
 
 #### Code Execution: Run vs Submit
 
-Both `code:run` and `code:submit` publish an `ExecutionRequestMessage` to `exec_req_queue` (RabbitMQ). A Redis key `exec:pending:<correlationId>` with 65s TTL acts as a timeout safety net. When the execution service responds on `exec_res_queue`:
+Both `code:run` and `code:submit` emit `code:running` to the room, then publish an `ExecutionRequestMessage` to `exec_req_queue` (RabbitMQ). A Redis key `exec:pending:<correlationId>` with 65s TTL acts as a timeout safety net. When the execution service responds on `exec_res_queue`:
 
 - Results are stored in Redis and broadcast to the room via `output:updated`
 - **Run:** no attempt recorded -- done
-- **Submit:** additionally records the attempt directly to the Attempt Service (`POST http://attempts-service:3004/attempts`) and sends `submission:complete` to the submitting user only
+- **Submit:** sends `submission:complete` to the submitting user first, then records the attempt to the Attempt Service (`POST http://attempts-service:3004/attempts`) as fire-and-forget
 
 Key design decisions:
 - Either user can submit independently (no dual-agreement needed)
@@ -1254,9 +1254,29 @@ Key design decisions:
 
 Integrates with **Google Gemini 2.5 Flash** for context-aware hints. Each user gets **2 hints per session** (4 total for the pair), shared with both participants in real time.
 
-Flow: validate session & rate limit (atomic Redis `INCR`) -> fetch current code + question context -> call Gemini (maxOutputTokens: 512, temperature: 0.4) -> store hint in Redis -> broadcast `hint:updated` to room.
+Flow: validate session & user access -> non-atomic pre-check remaining hints (fast-fail) -> fetch current code + question context + previous hints -> call Gemini (maxOutputTokens: 512, temperature: 0.4) -> atomic Redis `INCR` to reserve slot + store hint -> broadcast `hint:updated` to room.
 
 The prompt has two modes: if code exists, it analyzes for bugs/missing logic; if no code, it suggests algorithms/data structures. It never provides full solutions -- only 2-3 sentence guidance. Previous hints are included to avoid repetition.
+
+#### Inactivity Timeout
+
+Sessions auto-end after **30 minutes** of no code activity (`CS_SESSION_INACTIVITY_TIMEOUT_MS`). A periodic check runs every 60 seconds with a **distributed Redis lock** (`SET NX PX`) so only one instance triggers cleanup when scaling horizontally. The same check also catches sessions where one user left and the other's disconnect grace period expired.
+
+#### Execution Timeout Safety Net
+
+Both `code:run` and `code:submit` emit `code:running` to the room (enabling UI spinners), then set a 65-second `setTimeout` alongside the Redis pending key. If the execution service doesn't respond in time, a timeout error is broadcast via `output:updated`, preventing infinite loading states.
+
+#### Socket.IO Heartbeat
+
+Server-side ping/pong is configured with `pingInterval: 25s` and `pingTimeout: 20s`. If a client misses a pong within 20 seconds, Socket.IO fires a `disconnect` event with reason `"ping timeout"`, triggering the presence state machine described above.
+
+#### Health Check
+
+`GET /health` returns `{ status: "ok", service: "collaboration-service" }`. Simple liveness probe -- does not check Redis or RabbitMQ connectivity.
+
+#### Graceful Shutdown
+
+On `SIGTERM`/`SIGINT`, the service shuts down in order within a 10-second hard deadline: stop accepting HTTP connections -> disconnect all sockets (triggering Redis presence cleanup) -> close RabbitMQ consumers -> close Redis adapter pub/sub clients -> delete instance liveness key -> close Redis. A force-exit fires if cleanup hangs past the deadline.
 
 #### Session End
 
