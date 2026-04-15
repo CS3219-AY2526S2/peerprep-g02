@@ -15,6 +15,7 @@ import ProblemDescription from "@/components/collaboration/ProblemDescription";
 import SessionHeader from "@/components/collaboration/SessionHeader";
 import StatusBanners from "@/components/collaboration/StatusBanners";
 import TestCasesPanel, { type TestRow } from "@/components/collaboration/TestCasesPanel";
+import LiveChat from "@/components/message/LiveChat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -208,6 +209,7 @@ export default function CollaborationSessionView() {
                             participants={participants}
                             getDisplayName={getDisplayName}
                         />
+                        <LiveChat collaborationId={collaborationId} />
                     </div>
                 </section>
 
