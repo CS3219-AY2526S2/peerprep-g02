@@ -271,7 +271,7 @@ export async function SearchQuestion(
         const defaultQuestion = await randomQuestion(allQuestions);
 
         if (defaultQuestion == null) return null;
-        if (userA == null || userB == null) return defaultQuestion[0];
+        if (userA == null || userB == null) return defaultQuestion;
 
         // With attempt service
         try {
@@ -322,9 +322,9 @@ export async function SearchQuestion(
                 return randomQuestion(unattemptedEither);
             }
         } catch {
-            return defaultQuestion[0];
+            return defaultQuestion;
         }
-        return defaultQuestion[0];
+        return defaultQuestion;
     } catch (e) {
         console.log(e);
         return null;
@@ -350,7 +350,7 @@ export async function UpdateQuestionPopularityScore(quid: string) {
             "UPDATE questions SET popularity_score = popularity_score + 1 WHERE quid = $1";
         const result = await pool.query(query, [quid]);
 
-        return result.rows == 1 ? 200 : 500;
+        return result.rowCount > 0 ? 200 : 500;
     } catch {
         return 500;
     }
