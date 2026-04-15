@@ -1,12 +1,11 @@
 services:
-  # Frontend
   frontend:
     build: ./frontend
     container_name: peerprep-frontend
     ports:
       - "5173:5173"
     env_file:
-      - ./frontend/.env
+      - ./secrets/frontend/.env
     depends_on:
       - gateway
     networks:
@@ -16,7 +15,6 @@ services:
       - /app/node_modules
     restart: unless-stopped
 
-  # API Gateway (nginx)
   gateway:
     image: nginx:latest
     container_name: api-gateway
@@ -41,7 +39,7 @@ services:
     depends_on:
       - gateway
     env_file:
-      - ./.env
+      - ./secrets/ngrok/.env
     command: http --url=nonjuridical-unflaunting-hudson.ngrok-free.dev gateway:8080
     ports:
       - "4040:4040"
@@ -58,35 +56,16 @@ services:
       - 8888:8080
     depends_on:
       - gateway
-    environment:
-      - DOZZLE_LEVEL=info
+    env_file:
+      - ./secrets/dozzle/.env
 
-  #   # Message Broker (RabbitMQ)
-  #   rabbitmq:
-  #     image: rabbitmq:latest
-  #     container_name: rabbitmq
-  #     hostname: rabbitmq
-  #     networks:
-  #       - gateway-network
-  #     healthcheck:
-  #       test: rabbitmq-diagnostics check_port_connectivity
-  #       interval: 30s
-  #       timeout: 30s
-  #       retries: 10
-  #       start_period: 30s
-  #     restart: unless-stopped
-
-  # User Service
   user-service:
     build:
       context: ./backend/services/userService
       dockerfile: Dockerfile
     container_name: peerprep-user-service
     env_file:
-      - ./backend/services/userService/.env
-    environment:
-      DATABASE_URI: postgresql://postgres:postgres@user-db:5432/peerprep_user
-      PORT: 3001
+      - ./secrets/user-service/.env
     depends_on:
       user-db:
         condition: service_healthy
@@ -100,10 +79,8 @@ services:
   user-db:
     image: postgres:16-alpine
     container_name: peerprep-user-postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: peerprep_user
+    env_file:
+      - ./secrets/user-db/.env
     ports:
       - "5433:5432"
     volumes:
@@ -117,12 +94,11 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # Matching Service
   matching-service:
     build: ./backend/services/matchingService
     container_name: matching-service
     env_file:
-      - ./backend/services/matchingService/.env
+      - ./secrets/matching-service/.env
     depends_on:
       user-service:
         condition: service_started
@@ -138,14 +114,6 @@ services:
       - rabbitmq-network
     ports:
       - "3002:3002"
-    environment:
-      - MS_SERVER_PORT=3002
-      - MS_ENV=development
-      - MS_REDIS_URL=redis://matching-redis:6379
-      - US_INTERNAL_SERVICE_URL=http://user-service:3001
-      - MS_COLLABORATION_SERVICE_URL=http://collaboration-service:3003
-      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/peerprep-pubsub-key.json
-      - RABBITMQ_URL=amqp://rabbitmq:5672
     volumes:
       - ./secrets:/secrets:ro
     restart: unless-stopped
@@ -161,13 +129,11 @@ services:
     build: ./backend/services/questionService
     container_name: questions-service
     env_file:
-      - ./backend/services/questionService/.env
+      - ./secrets/questions-service/.env
     ports:
       - "3005:3005"
     volumes:
-      - ./question-upload-key.json:/secrets/question-upload-key.json:ro
-    environment:
-      - GOOGLE_IMAGE_BUCKET=/secrets/question-upload-key.json
+      - ./secrets/questions-service/question-upload-key.json:/secrets/question-upload-key.json:ro
     depends_on:
       - cloudsql-proxy
     networks:
@@ -180,14 +146,10 @@ services:
     container_name: questions-db
     ports:
       - "5435:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: questions
-
+    env_file:
+      - ./secrets/questions-db/.env
     volumes:
       - questions_data:/var/lib/postgresql
-
     networks:
       - questions-db-network
     restart: unless-stopped
@@ -199,27 +161,16 @@ services:
       - "--port=5432"
       - "cs3219-491608:asia-southeast1:questions-db"
     volumes:
-      - ./gcp-key.json:/secrets/gcp-key.json:ro
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/gcp-key.json
+      - ./secrets/cloudsql-proxy/gcp-key.json:/secrets/gcp-key.json:ro
+    env_file:
+      - ./secrets/cloudsql-proxy/.env
     networks:
       - questions-db-network
-    # ports:
-    #   - "5432:5432"
 
-  # Collaboration Service
   collaboration-service:
     build: ./backend/services/collaborationService
     env_file:
-      - ./backend/services/collaborationService/.env
-    environment:
-      - CS_SERVER_PORT=3003
-      - CS_API_GATEWAY_URL=http://gateway:8080
-      - CS_REDIS_HOST=collaboration-redis
-      - CS_REDIS_PORT=6379
-      - CS_EXECUTION_SERVICE_URL=http://execution-service:3006
-      - CS_ATTEMPT_SERVICE_URL=http://attempts-service:3004
-      - CS_RABBITMQ_URL=amqp://rabbitmq:5672
+      - ./secrets/collaboration-service/.env
     depends_on:
       collaboration-redis:
         condition: service_started
@@ -244,34 +195,25 @@ services:
     networks:
       - collaboration-redis-network
 
-  # Piston Code Execution Engine
   piston:
     image: ghcr.io/engineer-man/piston
     container_name: piston
     privileged: true
+    env_file:
+      - ./secrets/piston/.env
     volumes:
       - piston_data:/piston
-    environment:
-      - PISTON_RUN_TIMEOUT=10000
-      - PISTON_RUN_MEMORY_LIMIT=134217728
-      - PISTON_COMPILE_TIMEOUT=15000
-      - PISTON_DISABLE_NETWORKING=true
-      - PISTON_OUTPUT_MAX_SIZE=65536
     networks:
       - gateway-network
     ports:
       - "2000:2000"
     restart: unless-stopped
 
-  # Execution Service (Piston adapter)
   execution-service:
     build: ./backend/services/executionService
     container_name: execution-service
     env_file:
-      - ./backend/services/executionService/.env
-    environment:
-      - PISTON_URL=http://piston:2000
-      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - ./secrets/execution-service/.env
     depends_on:
       piston:
         condition: service_started
@@ -284,18 +226,13 @@ services:
       - "3006:3006"
     restart: unless-stopped
 
-  # Attempts Service
   attempts-service:
     build:
       context: ./backend/services/attemptService
       dockerfile: Dockerfile
     container_name: attempts-service
     env_file:
-      - ./backend/services/attemptService/.env
-    environment:
-      DATABASE_URI: postgresql://postgres:postgres@attempts-db:5432/peerprep_attempt
-      PORT: 3004
-      USER_SERVICE_URL: http://user-service:3001
+      - ./secrets/attempts-service/.env
     depends_on:
       attempts-db:
         condition: service_healthy
@@ -311,10 +248,8 @@ services:
   attempts-db:
     image: postgres:16-alpine
     container_name: attempts-db
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: peerprep_attempt
+    env_file:
+      - ./secrets/attempts-db/.env
     ports:
       - "5436:5432"
     volumes:
@@ -332,7 +267,7 @@ services:
     build: ./backend/services/messageService
     container_name: message-service
     env_file:
-      - ./backend/services/messageService/.env
+      - ./secrets/message-service/.env
     ports:
       - "3019:3019"
     depends_on:
@@ -342,7 +277,6 @@ services:
       - gateway-network
       - message-network
     restart: unless-stopped
-
 
   message-redis:
     image: redis:latest
