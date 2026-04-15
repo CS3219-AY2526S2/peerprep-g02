@@ -70,6 +70,30 @@ export function calculateScoreDelta(difficulty: AttemptDifficulty, success: bool
     return 50;
 }
 
+function calculateAppliedDeltaFromHistory(
+    attempts: AttemptRecord[],
+    targetAttemptId: string,
+): number | null {
+    let score = 0;
+
+    // listByClerkUserId returns newest-first, so replay from the tail to preserve
+    // the original score progression without re-sorting the full history.
+    for (let index = attempts.length - 1; index >= 0; index -= 1) {
+        const attempt = attempts[index];
+        const theoreticalDelta = calculateScoreDelta(attempt.difficulty, attempt.success);
+        const nextScore = Math.max(0, score + theoreticalDelta);
+        const appliedDelta = nextScore - score;
+
+        if (attempt.id === targetAttemptId) {
+            return appliedDelta;
+        }
+
+        score = nextScore;
+    }
+
+    return null;
+}
+
 export class AttemptService {
     private readonly userScoreService = new UserScoreService();
     private readonly qnPopularScoreService = new QuestionPopularityService();
@@ -116,7 +140,11 @@ export class AttemptService {
         let netDelta = newDelta;
 
         if (existing) {
-            const oldDelta = calculateScoreDelta(existing.difficulty, existing.success);
+            const attempts = await attemptRepository.listByClerkUserId(userId);
+            const oldDelta =
+                calculateAppliedDeltaFromHistory(attempts, existing.id) ??
+                calculateScoreDelta(existing.difficulty, existing.success);
+
             netDelta = newDelta - oldDelta;
             await attemptRepository.deleteByIds([existing.id]);
         }
