@@ -239,6 +239,17 @@ export class RabbitMQManager {
                             );
                         }
 
+                        // Send submission confirmation to the submitter regardless of attempt recording
+                        io.to(userRoom(userId)).emit(
+                            SOCKET_EVENTS.SUBMISSION_COMPLETE,
+                            {
+                                collaborationId,
+                                success: allPassed,
+                                totalTestCases: parsed.result.totalTestCases,
+                                testCasesPassed: parsed.result.testCasesPassed,
+                            },
+                        );
+
                         try {
                             await attemptRecordingService.recordAttempt({
                                 userId,
@@ -252,17 +263,6 @@ export class RabbitMQManager {
                                 totalTestCases: parsed.result.totalTestCases,
                                 testCasesPassed: parsed.result.testCasesPassed,
                             });
-
-                            // Send submission confirmation to the submitter
-                            io.to(userRoom(userId)).emit(
-                                SOCKET_EVENTS.SUBMISSION_COMPLETE,
-                                {
-                                    collaborationId,
-                                    success: allPassed,
-                                    totalTestCases: parsed.result.totalTestCases,
-                                    testCasesPassed: parsed.result.testCasesPassed,
-                                },
-                            );
                         } catch (attemptError) {
                             logger.error(
                                 { err: attemptError, correlationId, collaborationId },

@@ -60,6 +60,6 @@ class MatchingService {
 export const matchingService = new MatchingService();
 
 // FOR DEMO
-// if (typeof window !== "undefined") {
-//     (window as any).matchingService = matchingService;
-// }
+if (typeof window !== "undefined") {
+    (window as any).matchingService = matchingService;
+}
