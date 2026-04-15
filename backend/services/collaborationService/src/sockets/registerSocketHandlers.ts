@@ -738,6 +738,29 @@ export function registerSocketHandlers(io: Server): ReturnType<typeof setInterva
                     );
                 }
             }
+
+            // Check for sessions where one user left and the other's disconnect grace period expired
+            const graceExpiredIds =
+                await collaborationSessionService.getSessionsWithExpiredGrace(env.disconnectGraceMs);
+
+            for (const collaborationId of graceExpiredIds) {
+                const endResult = await collaborationSessionService.endSession(
+                    collaborationId,
+                    "both_users_left",
+                );
+
+                if (endResult) {
+                    io.to(collaborationRoom(collaborationId)).emit(SOCKET_EVENTS.SESSION_ENDED, {
+                        collaborationId,
+                        reason: "both_users_left",
+                    });
+
+                    logger.info(
+                        { collaborationId, reason: "disconnect_grace_expired" },
+                        "Session ended - user left and partner's disconnect grace period expired",
+                    );
+                }
+            }
         } catch (error) {
             logger.error({ err: error }, "Error checking for inactive sessions");
         }

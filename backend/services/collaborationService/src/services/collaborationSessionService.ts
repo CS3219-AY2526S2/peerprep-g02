@@ -514,7 +514,9 @@ export class CollaborationSessionService {
                 assignedUserIds,
             );
 
-            // Also end if this user left and the other is disconnected (not coming back)
+            // Also end if this user left and the other is disconnected with expired grace period.
+            // If the other user is disconnected but still within their reconnection grace period,
+            // defer the session end — the periodic check will clean up if they don't reconnect.
             if (!sessionEnded) {
                 const otherUserId = assignedUserIds.find((id) => id !== userId);
                 if (otherUserId) {
@@ -523,7 +525,27 @@ export class CollaborationSessionService {
                         otherUserId,
                     );
                     if (otherStatus === "disconnected") {
-                        sessionEnded = true;
+                        const rejoinCheck =
+                            await this.redisPresenceRepository.canRejoinWithinGracePeriod(
+                                binding.collaborationId,
+                                otherUserId,
+                                env.disconnectGraceMs,
+                            );
+                        if (!rejoinCheck.canRejoin) {
+                            // Grace period expired — end immediately
+                            sessionEnded = true;
+                        } else {
+                            logger.info(
+                                {
+                                    collaborationId: binding.collaborationId,
+                                    leavingUserId: userId,
+                                    disconnectedUserId: otherUserId,
+                                    remainingGraceMs:
+                                        rejoinCheck.gracePeriodMs - rejoinCheck.disconnectDurationMs,
+                                },
+                                "User left but partner is disconnected within grace period; deferring session end",
+                            );
+                        }
                     }
                 }
             }
@@ -684,6 +706,40 @@ export class CollaborationSessionService {
         }
 
         return inactiveSessionIds;
+    }
+
+    /**
+     * Find sessions where one user has left and the other user's disconnect grace period has expired.
+     * Called by the periodic inactivity check to clean up deferred session ends.
+     */
+    async getSessionsWithExpiredGrace(gracePeriodMs: number): Promise<string[]> {
+        const activeSessions = await this.redisSessionRepository.getActiveSessions();
+        const expiredSessionIds: string[] = [];
+
+        for (const session of activeSessions) {
+            const assignedUserIds = [session.userAId, session.userBId];
+            const participants = await this.redisPresenceRepository.getParticipants(
+                session.collaborationId,
+                assignedUserIds,
+            );
+
+            const leftUser = participants.find((p) => p.status === "left");
+            const disconnectedUser = participants.find((p) => p.status === "disconnected");
+
+            if (leftUser && disconnectedUser) {
+                const rejoinCheck =
+                    await this.redisPresenceRepository.canRejoinWithinGracePeriod(
+                        session.collaborationId,
+                        disconnectedUser.userId,
+                        gracePeriodMs,
+                    );
+                if (!rejoinCheck.canRejoin) {
+                    expiredSessionIds.push(session.collaborationId);
+                }
+            }
+        }
+
+        return expiredSessionIds;
     }
 
     /**
