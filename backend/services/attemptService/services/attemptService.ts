@@ -8,6 +8,7 @@ import {
 } from "@/models/Attempt.js";
 import { UserScoreService } from "@/services/userScoreService.js";
 import { ServiceError } from "@/utils/ResponseHelpers.js";
+
 import { QuestionPopularityService } from "./questionPopularService.js";
 
 export type RecordAttemptInput = {
@@ -136,7 +137,10 @@ export class AttemptService {
         const questionTitle = input.questionTitle.trim();
 
         // Check for existing attempt to handle overwrite + score reversal
-        const existing = await attemptRepository.findByUserAndCollaboration(userId, collaborationId);
+        const existing = await attemptRepository.findByUserAndCollaboration(
+            userId,
+            collaborationId,
+        );
         let netDelta = newDelta;
 
         if (existing) {
@@ -171,7 +175,9 @@ export class AttemptService {
                 { clerkUserId: userId, delta: netDelta },
             ]);
 
-            await this.qnPopularScoreService.updateQuestionPopularityScore({quid: questionId}).catch(err => console.error(err));
+            await this.qnPopularScoreService
+                .updateQuestionPopularityScore({ quid: questionId })
+                .catch((err) => console.error(err));
 
             return {
                 message: "Attempt recorded successfully.",
