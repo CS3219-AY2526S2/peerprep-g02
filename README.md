@@ -984,7 +984,7 @@ The selection algorithm:
 5. All questions have been attempted, return the default random question.
 If there are any errors or failure, rturn the default random question.
 
-
+Diagram 1:
 ```
   Collaboration Service              Question Service              PostgreSQL                    Google Bucket
   =====================              ================              ==========                    ==========
@@ -1018,6 +1018,8 @@ If there are any errors or failure, rturn the default random question.
         |<---------------------------------+                           |                             |
 ```
 
+
+Diagram 2:
 ```
   Collaboration Service              Question Service              PostgreSQL               Attempts Service
   =====================              ================              ==========              ==================
