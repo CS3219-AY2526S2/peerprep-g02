@@ -31,6 +31,7 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
   - [Collaboration Service](#4-collaboration-service)
   - [Execution Service](#5-execution-service)
   - [Attempt Service](#6-attempt-service)
+  - [Message Service](#7-message-service)
 - [Inter-Service Flows](#inter-service-flows--integrations)
 - [CI/CD Pipeline](#cicd-pipeline)
 
@@ -40,7 +41,7 @@ PeerPrep is a real-time collaborative platform designed to help students ace the
 
 ### High-Level Overview
 
-The system follows a **microservices architecture** with an Nginx API gateway, three PostgreSQL databases, two Redis instances, and RabbitMQ for asynchronous messaging.
+The system follows a **microservices architecture** with an Nginx API gateway, three PostgreSQL databases, three Redis instances, and RabbitMQ for asynchronous messaging.
 
 ```
                                     PeerPrep System Architecture
@@ -65,17 +66,20 @@ The system follows a **microservices architecture** with an Nginx API gateway, t
     +--------+--------+-----------+-----------+-----------+
     |        |        |           |           |           |
     v        v        v           v           v           v
-+------+ +------+ +------+  +-------+  +-------+  +-------+
-| User | |Match | | Ques |  |Collab |  |Attempt|  | Exec  |
-| Svc  | | Svc  | | Svc  |  |  Svc  |  |  Svc  |  |  Svc  |
-| :3001| | :3002| | :3005|  | :3003 |  | :3004 |  | :3006 |
-+--+---+ +--+---+ +--+---+  +---+---+  +---+---+  +---+---+
-   |        |        |           |          |           |
-   v        v        v           v          v           v
-+------+ +------+ +------+  +-------+  +-------+  +-------+
-|Postgr| |Redis | |Postgr|  | Redis |  |Postgr |  |Piston |
-| :5433| |      | | :5435|  |       |  | :5436 |  | :2000 |
-+------+ +------+ +------+  +-------+  +-------+  +-------+
++------+ +------+ +------+  +-------+  +-------+  +-------+  +-------+
+| User | |Match | | Ques |  |Collab |  |Attempt|  | Exec  |  |  Msg  |
+| Svc  | | Svc  | | Svc  |  |  Svc  |  |  Svc  |  |  Svc  |  |  Svc  |
+| :3001| | :3002| | :3005|  | :3003 |  | :3004 |  | :3006 |  | :3019 |
++--+---+ +--+---+ +--+---+  +---+---+  +---+---+  +---+---+  +---+---+
+   |        |        |           |          |           |          |
+   v        v        v           v          v           v          v
++------+ +------+ +------+  +-------+  +-------+  +-------+  +-------+
+|Postgr| |Redis | |Postgr|  | Redis |  |Postgr |  |Piston |  | Redis |
+| :5433| |      | | :5435|  |       |  | :5436 |  | :2000 |  |       |
++------+ +------+ +------+  +-------+  +-------+  +-------+  +-------+
+
+    Frontend also connects directly to Message Service via WebSocket
+    (bypasses gateway, :3019, Sec-WebSocket-Protocol auth)
 
                     +-------------------+
                     |     RabbitMQ      |  :5672 (AMQP) / :15672 (UI)
@@ -101,35 +105,45 @@ This diagram shows how each service communicates and what protocols they use.
   |          +--------------------------->| Nginx API Gateway |
   | Frontend |                            +--------+----------+
   |          +--------------------------->|        |
-  +----------+  WebSocket (JWT in auth)   |        |
-                                          |  Routes to services
-                                          |
-     +------------------------------------+------------------------------------+
-     |                |                |                |                |
-     v                v                v                v                v
-+---------+    +-----------+    +-----------+    +----------+     +----------+
-|  User   |    | Matching  |    | Question  |    | Collab   |     | Attempt  |
-| Service |    |  Service  |    |  Service  |    | Service  |     | Service  |
-+---------+    +-----------+    +-----------+    +----------+     +----------+
-     ^              |  ^              ^               |  |  |           ^
-     |              |  |              |               |  |  |           |
-     +--------------+  |              +---------------+  |  +-----------+
-     | x-internal-     |              | x-internal-      |
-     | service-key     |              | service-key      |
-     | (auth context)  |              | (select question) |
-     |                 |                                  |
-     |          +------+------+                    +------+------+
-     |          |  RabbitMQ   |                    |  Execution  |
-     |          | (REQ / RES  |                    |   Service   |
-     |          |   Queues)   |                    +------+------+
-     |          +------+------+                           |
-     |                 |                            +-----+-----+
-     |                 v                            |  Piston   |
-     |          Collaboration Svc                   | (Sandbox) |
-     |          (consumes & responds)               +-----------+
-     |
-     +--- Also called by: Matching Svc, Collab Svc, Attempt Svc
-          (all validate user auth via User Service internally)
+  |          |  WebSocket (JWT in auth)   |        |
+  |          |                            |  Routes to services
+  |          |                            |
+  |          |   +------------------------+------------------------------------+
+  |          |   |                |                |                |           |
+  |          |   v                v                v                v           v
+  |     +---------+    +-----------+    +-----------+    +----------+     +----------+
+  |     |  User   |    | Matching  |    | Question  |    | Collab   |     | Attempt  |
+  |     | Service |    |  Service  |    |  Service  |    | Service  |     | Service  |
+  |     +---------+    +-----------+    +-----------+    +----------+     +----------+
+  |          ^              |  ^              ^               |  |  |           ^
+  |          |              |  |              |               |  |  |           |
+  |          +--------------+  |              +---------------+  |  +-----------+
+  |          | x-internal-     |              | x-internal-      |
+  |          | service-key     |              | service-key      |
+  |          | (auth context)  |              | (select question) |
+  |          |                 |                                  |
+  |          |          +------+------+                    +------+------+
+  |          |          |  RabbitMQ   |                    |  Execution  |
+  |          |          | (REQ / RES  |                    |   Service   |
+  |          |          |   Queues)   |                    +------+------+
+  |          |          +------+------+                           |
+  |          |                 |                            +-----+-----+
+  |          |                 v                            |  Piston   |
+  |          |          Collaboration Svc                   | (Sandbox) |
+  |          |          (consumes & responds)               +-----------+
+  |          |
+  |          +--- Also called by: Matching Svc, Collab Svc, Attempt Svc
+  |               (all validate user auth via User Service internally)
+  |
+  |  WebSocket (direct, bypasses gateway)
+  +------------>+-----------+
+                |  Message  |    Auth via User Service
+                |  Service  +--> (x-internal-service-key)
+                +-----------+
+                     |
+                  +--+---+
+                  |Redis |  (dedicated instance)
+                  +------+
 
 
   Legend:
@@ -214,7 +228,7 @@ peerprep-g02/
 git clone https://github.com/CS3219-AY2526S2/peerprep-g02.git
 cd peerprep-g02
 
-# Build and spin up all 17 containers
+# Build and spin up all 20 containers
 docker-compose up --build
 ```
 
@@ -1557,6 +1571,130 @@ This allows users to improve their score within a session by fixing bugs and re-
 
 ---
 
+### 7. Message Service
+
+Real-time in-session chat for collaboration pairs. Uses native WebSockets (not Socket.IO) with ephemeral Redis-backed message storage. Messages persist for the duration of a session and are automatically cleaned up after participants leave.
+
+**Port:** 3019 | **State:** Redis (no database) | **Real-time:** Native WebSocket (`ws` library)
+
+#### Tech Stack
+
+- **Runtime:** Node.js / TypeScript
+- **Framework:** Express 5 (HTTP server only -- no REST routes)
+- **Real-time:** `ws` 8.x (native WebSocket, not Socket.IO)
+- **State:** Redis (`ioredis`) -- message lists with TTL
+- **Auth:** Clerk JWT validated via User Service
+
+#### Internal Dependencies
+
+| Dependency | URL | Purpose |
+|---|---|---|
+| User Service | `http://user-service:3001` | WebSocket auth (validates JWT via `/users/internal/authz/context`) |
+| Redis | `message-redis:6379` | Message storage (dedicated Redis instance, isolated from collaboration Redis) |
+
+The message service has **no direct dependency** on the Collaboration Service -- the coupling is through the frontend, which passes the `collaborationId` from the collaboration session into the chat component.
+
+#### WebSocket Connection Flow
+
+The frontend connects directly to `ws://localhost:3019`, bypassing the API gateway. Authentication is passed via the `Sec-WebSocket-Protocol` header.
+
+```
+  WebSocket Authentication & Join
+  ================================
+
+  Frontend                    Message Service              User Service
+  ========                    ===============              ============
+     |                              |                           |
+     | ws://localhost:3019          |                           |
+     | Sec-WebSocket-Protocol:      |                           |
+     |   [clerk-token]             |                           |
+     +----------------------------->|                           |
+     |                              |                           |
+     |                     Validate token:                      |
+     |                     GET /users/internal/authz/context    |
+     |                     Authorization: Bearer <token>        |
+     |                     x-internal-service-key: <key>        |
+     |                              +-------------------------->|
+     |                              |   {clerkUserId, status}   |
+     |                              |<--------------------------+
+     |                              |                           |
+     |   {type: "auth"}            |                           |
+     |<-----------------------------+                           |
+     |                              |                           |
+     | {type: "join",              |                           |
+     |  collaborationId, userId}   |                           |
+     +----------------------------->|                           |
+     |                              |                           |
+     |   Previous messages          |  (fetched from Redis     |
+     |   (one per ws.send)          |   LRANGE 0 -1)           |
+     |<-----------------------------+                           |
+     |                              |                           |
+     |   {type: "info",            |                           |
+     |    "Welcome to collab..."}  |                           |
+     |<-----------------------------+                           |
+```
+
+#### WebSocket Message Types
+
+**Client -> Server:**
+
+| type | Fields | Description |
+|---|---|---|
+| `join` | `collaborationId`, `userId`, `messageId` | Join a chat room; server sends back all previous messages from Redis |
+| `message` | `collaborationId`, `userId`, `text`, `messageId`, `replyMessage` | Send a chat message; broadcast to all other room members |
+
+**Server -> Client:**
+
+| type | When | Description |
+|---|---|---|
+| `auth` | After successful token validation | Signals the client to send a `join` message |
+| `info` | After joining a room | Welcome message or duplicate-join notification |
+| _(no type)_ | On incoming chat message | Broadcast message: `{from, message, replyMessage, messageId}` |
+
+#### Message Storage
+
+Messages are stored in **Redis lists**, keyed by `collaborationRoom:{collaborationId}:messages`. Each message is a JSON string:
+
+```
+{
+  from: string         // Clerk userId of sender
+  message: string      // Message text
+  replyMessage: string | null  // Quoted message text (reply feature)
+  messageId: string    // Client-generated UUID
+}
+```
+
+| Behavior | Detail |
+|---|---|
+| Write | `RPUSH` on every new message |
+| Read | `LRANGE 0 -1` on join (all messages at once) |
+| Active room TTL | 2 hours (refreshed on every message) |
+| Empty room TTL | 5 minutes (set when last user disconnects) |
+| Persistence | None -- messages are ephemeral and expire with the Redis key |
+
+#### Reply / Quote Feature
+
+Users can right-click a message to quote it. The `replyMessage` field carries the quoted text (plain text copy, not a reference by message ID). Quoted messages render with a left border and italic styling above the reply.
+
+#### Room Management
+
+Rooms are tracked **in-memory** via a `Map<string, Set<WebSocket>>`. When a WebSocket closes, it is removed from all rooms. If a room becomes empty, the message TTL is reduced to 5 minutes and the in-memory room is deleted.
+
+Message deduplication is **client-side only** -- the frontend maintains a `chatIds` Set to prevent rendering duplicates. The sender does not receive their own broadcast (filtered by `client !== ws`); instead, the message is optimistically added to the local chat state on send.
+
+#### Configuration
+
+| Setting | Default | Source |
+|---|---|---|
+| WebSocket port | 3019 | Hardcoded |
+| Redis host | `message-redis` | Hardcoded |
+| Message TTL (active) | 2 hours | Hardcoded |
+| Message TTL (empty room) | 5 minutes | Hardcoded |
+| User Service URL | `http://user-service:3001` | `USER_SERVICE_URL` env var |
+| Internal API key | shared secret | `INTERNAL_SERVICE_API_KEY` env var |
+
+---
+
 ## Inter-Service Flows & Integrations
 
 ### End-to-End User Journey
@@ -1588,7 +1726,9 @@ This is the complete flow from login to completing a coding session:
   5. COLLABORATIVE CODING
      Frontend --[WebSocket]--> Gateway --> Collaboration Service
        --> OT sync between both clients via Redis
-       --> Code execution: Collaboration Svc --> Execution Svc --> Piston
+       --> Code execution: Collaboration Svc --> RabbitMQ --> Execution Svc --> Piston
+     Frontend --[WebSocket]--> Message Service
+       --> In-session chat via Redis-backed message lists
 
   6. SESSION END
      Collaboration Service
@@ -1673,13 +1813,13 @@ GitHub Actions workflows run on every push and pull request to `main`:
 | **Runtime** | Node.js 24 |
 | **Frontend** | React 19, Vite 7, TailwindCSS, Radix UI, shadcn/ui |
 | **Backend** | Express 4/5, Socket.IO |
-| **Databases** | PostgreSQL 16 (x3), Redis (x2) |
+| **Databases** | PostgreSQL 16 (x3), Redis (x3) |
 | **Message Broker** | RabbitMQ 4.2 |
 | **Auth** | Clerk (JWT-based) |
 | **AI Hints** | Google Gemini 2.5 Flash |
 | **Code Execution** | Piston (sandboxed) |
 | **API Gateway** | Nginx |
-| **Containerization** | Docker, Docker Compose (17 containers) |
+| **Containerization** | Docker, Docker Compose (20 containers) |
 | **CI/CD** | GitHub Actions |
 | **Logging** | Pino |
 | **Validation** | Zod |
