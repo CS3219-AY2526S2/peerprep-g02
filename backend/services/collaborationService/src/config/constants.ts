@@ -33,7 +33,7 @@ export const ERROR_CODES = {
 
 export const DEFAULTS = {
     SERVER_PORT: 3003,
-    SESSION_TTL_MS: 60 * 60 * 1000,
+    SESSION_TTL_MS: 2 * 60 * 60 * 1000,
     DEPENDENCY_TIMEOUT_MS: 5000,
     REDIS_PORT: 6379,
     REDIS_DB: 0,
