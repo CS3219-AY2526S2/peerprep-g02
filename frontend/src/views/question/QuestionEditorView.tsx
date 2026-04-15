@@ -195,10 +195,10 @@ function Admin(props: AdminProp) {
                 </div>
                 <div className="flex">
                     <a
-                        href="/account/profile"
+                        href="/"
                         className="self-center bg-secondary hover:bg-secondary-700 px-[1.1rem] py-2 text-white rounded-2xl font-medium m-[10px] no-underline"
                     >
-                        Back to profile
+                        Back to Home
                     </a>
                 </div>
             </header>
