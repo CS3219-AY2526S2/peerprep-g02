@@ -80,7 +80,7 @@ function TestCases(info: ITestCase) {
                         className="w-full rounded-lg border-2 border-grey-200 pl-[10px] leading-[30px] placeholder:text-grey-400"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                        List of function arguments. For a single array arg, wrap it: [[1,2,3]]
+                        Valid JSON. Array elements become separate arguments.
                     </p>
                 </Field>
             </div>
@@ -94,12 +94,15 @@ function TestCases(info: ITestCase) {
                         required={true}
                         id="output"
                         name="output"
-                        placeholder="3"
+                        placeholder={'e.g. 9 or "hello" or [1, 2, 3]'}
                         value={info.output}
                         onChange={(e) => info.handleChange("output", e.target.value)}
                         rows={5}
                         className="w-full rounded-lg border-2 border-grey-200 pl-[10px] leading-[30px] placeholder:text-grey-400"
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Valid JSON return value. Strings must be quoted: "hello" not hello
+                    </p>
                 </Field>
             </div>
             <Button
@@ -520,6 +523,122 @@ function QuestionForm(props: FormProp): JSX.Element {
                                 Add new test case
                             </Button>
                         </div>
+                        <details
+                            open
+                            className="mt-3 mb-2 rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 text-sm text-gray-700"
+                        >
+                            <summary className="cursor-pointer font-medium text-gray-600 select-none">
+                                How to format test cases
+                            </summary>
+                            <div className="mt-3 space-y-3">
+                                <div>
+                                    <p className="font-semibold text-gray-800">
+                                        Input (function arguments)
+                                    </p>
+                                    <ul className="mt-1 ml-4 list-disc space-y-1 text-gray-600">
+                                        <li>
+                                            Must be <strong>valid JSON</strong>
+                                        </li>
+                                        <li>
+                                            Each array element becomes a separate argument:{" "}
+                                            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                                                [2, 7]
+                                            </code>{" "}
+                                            calls{" "}
+                                            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                                                fn(2, 7)
+                                            </code>
+                                        </li>
+                                        <li>
+                                            To pass a single array as one argument,{" "}
+                                            <strong>double-wrap</strong> it:{" "}
+                                            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                                                [[1,2,3]]
+                                            </code>{" "}
+                                            calls{" "}
+                                            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                                                fn([1,2,3])
+                                            </code>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-gray-800">
+                                        Expected Output (return value)
+                                    </p>
+                                    <ul className="mt-1 ml-4 list-disc space-y-1 text-gray-600">
+                                        <li>
+                                            Must be <strong>valid JSON</strong>
+                                        </li>
+                                        <li>
+                                            Strings must be quoted:{" "}
+                                            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                                                "10101"
+                                            </code>{" "}
+                                            not{" "}
+                                            <code className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                                                10101
+                                            </code>
+                                        </li>
+                                        <li>Compared via JSON deep equality</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-gray-800">Examples</p>
+                                    <div className="mt-1 overflow-x-auto">
+                                        <table className="w-full text-xs">
+                                            <thead>
+                                                <tr className="border-b border-gray-300 text-left text-gray-500">
+                                                    <th className="pb-1 pr-3 font-medium">
+                                                        Input
+                                                    </th>
+                                                    <th className="pb-1 pr-3 font-medium">
+                                                        Output
+                                                    </th>
+                                                    <th className="pb-1 font-medium">Meaning</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="font-mono">
+                                                <tr className="border-b border-gray-100">
+                                                    <td className="py-1 pr-3">[2, 7]</td>
+                                                    <td className="py-1 pr-3">9</td>
+                                                    <td className="py-1 font-sans text-gray-500">
+                                                        2 args: numbers
+                                                    </td>
+                                                </tr>
+                                                <tr className="border-b border-gray-100">
+                                                    <td className="py-1 pr-3">
+                                                        [["h","e","l","l","o"]]
+                                                    </td>
+                                                    <td className="py-1 pr-3">
+                                                        ["o","l","l","e","h"]
+                                                    </td>
+                                                    <td className="py-1 font-sans text-gray-500">
+                                                        1 arg: array (double-wrapped)
+                                                    </td>
+                                                </tr>
+                                                <tr className="border-b border-gray-100">
+                                                    <td className="py-1 pr-3">
+                                                        ["1010", "1011"]
+                                                    </td>
+                                                    <td className="py-1 pr-3">"10101"</td>
+                                                    <td className="py-1 font-sans text-gray-500">
+                                                        2 args: strings; output is a string
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-1 pr-3">[3]</td>
+                                                    <td className="py-1 pr-3">2</td>
+                                                    <td className="py-1 font-sans text-gray-500">
+                                                        1 arg: number
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
                         {formData.testCase.map((tc, index) => (
                             <TestCases
                                 key={index.toString() + "case"}
