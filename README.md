@@ -1125,7 +1125,8 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
                   |  +-------------+                        |
                   |                                         |
                   +----- if other user is also              |
-                         LEFT or DISCONNECTED: -------------+
+                         LEFT or DISCONNECTED               |
+                         (with grace expired): -------------+
                                     |
                                     v
                               +-----------+
@@ -1139,7 +1140,7 @@ Operation history is capped at 50 entries. Server uses `priority: "right"` (exis
 | Rejoin? | Yes (within 3 min grace period) | No (permanent) |
 | Active session index | Kept (user sees rejoin prompt) | Cleared |
 | Other user sees | `user:disconnected` | `user:left` |
-| Session ends? | No (stays active) | Yes, if partner is LEFT or DISCONNECTED |
+| Session ends? | No (stays active) | Yes, if partner is LEFT or DISCONNECTED with expired grace period. If partner is DISCONNECTED within grace, session stays alive until grace expires (periodic check cleans up). |
 
 **Multi-tab synchronization:** Each browser tab opens a separate Socket.IO connection. All sockets for the same user in the same session share presence state in Redis. OT operations, execution results, and hints are broadcast to the Socket.IO room, so every tab receives them. A user is only marked `DISCONNECTED` when **all** their sockets close (socketCount reaches 0). `session:leave` only removes the triggering socket -- the user is only marked `LEFT` when their last socket triggers it. This means closing one tab doesn't disrupt the session if other tabs remain open.
 
@@ -1169,7 +1170,7 @@ The prompt has two modes: if code exists, it analyzes for bugs/missing logic; if
 
 #### Session End
 
-Sessions end via: **both users left**, **inactivity timeout** (30min, checked every 60s with a Redis distributed lock for horizontal scaling), or **manual** `endSession` call. On end: session marked inactive, user active-session indices cleared, all Redis data cleaned up (session, presence, OT doc, output, hints), `session:ended` emitted.
+Sessions end via: **both users left**, **one left + partner's disconnect grace period expired** (deferred end -- the periodic check cleans up once the 3-min grace expires, giving the disconnected user a chance to reconnect), **inactivity timeout** (30min, checked every 60s with a Redis distributed lock for horizontal scaling), or **manual** `endSession` call. On end: session marked inactive, user active-session indices cleared, all Redis data cleaned up (session, presence, OT doc, output, hints), `session:ended` emitted.
 
 #### Graceful Shutdown
 

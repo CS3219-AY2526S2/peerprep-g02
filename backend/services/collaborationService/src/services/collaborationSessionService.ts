@@ -514,7 +514,9 @@ export class CollaborationSessionService {
                 assignedUserIds,
             );
 
-            // Also end if this user left and the other is disconnected (not coming back)
+            // Also end if this user left and the other is disconnected with expired grace period.
+            // If the other user is disconnected but still within their reconnection grace period,
+            // defer the session end — the periodic check will clean up if they don't reconnect.
             if (!sessionEnded) {
                 const otherUserId = assignedUserIds.find((id) => id !== userId);
                 if (otherUserId) {
@@ -523,7 +525,27 @@ export class CollaborationSessionService {
                         otherUserId,
                     );
                     if (otherStatus === "disconnected") {
-                        sessionEnded = true;
+                        const rejoinCheck =
+                            await this.redisPresenceRepository.canRejoinWithinGracePeriod(
+                                binding.collaborationId,
+                                otherUserId,
+                                env.disconnectGraceMs,
+                            );
+                        if (!rejoinCheck.canRejoin) {
+                            // Grace period expired — end immediately
+                            sessionEnded = true;
+                        } else {
+                            logger.info(
+                                {
+                                    collaborationId: binding.collaborationId,
+                                    leavingUserId: userId,
+                                    disconnectedUserId: otherUserId,
+                                    remainingGraceMs:
+                                        rejoinCheck.gracePeriodMs - rejoinCheck.disconnectDurationMs,
+                                },
+                                "User left but partner is disconnected within grace period; deferring session end",
+                            );
+                        }
                     }
                 }
             }
@@ -667,11 +689,17 @@ export class CollaborationSessionService {
     }
 
     /**
-     * F4.8.3 - Check for inactive sessions
+     * F4.8.3 - Single-pass cleanup check for inactive and grace-expired sessions.
+     * Scans active sessions once and checks both inactivity and grace-expiry conditions,
+     * reducing Redis load compared to two separate scans.
      */
-    async getInactiveSessions(inactivityTimeoutMs: number): Promise<string[]> {
+    async getSessionsToCleanup(
+        inactivityTimeoutMs: number,
+        gracePeriodMs: number,
+    ): Promise<{ inactiveIds: string[]; graceExpiredIds: string[] }> {
         const activeSessions = await this.redisSessionRepository.getActiveSessions();
-        const inactiveSessionIds: string[] = [];
+        const inactiveIds: string[] = [];
+        const graceExpiredIds: string[] = [];
 
         for (const session of activeSessions) {
             const isInactive = await this.redisPresenceRepository.isSessionInactive(
@@ -679,11 +707,33 @@ export class CollaborationSessionService {
                 inactivityTimeoutMs,
             );
             if (isInactive) {
-                inactiveSessionIds.push(session.collaborationId);
+                inactiveIds.push(session.collaborationId);
+                continue;
+            }
+
+            const assignedUserIds = [session.userAId, session.userBId];
+            const participants = await this.redisPresenceRepository.getParticipants(
+                session.collaborationId,
+                assignedUserIds,
+            );
+
+            const leftUser = participants.find((p) => p.status === "left");
+            const disconnectedUser = participants.find((p) => p.status === "disconnected");
+
+            if (leftUser && disconnectedUser) {
+                const rejoinCheck =
+                    await this.redisPresenceRepository.canRejoinWithinGracePeriod(
+                        session.collaborationId,
+                        disconnectedUser.userId,
+                        gracePeriodMs,
+                    );
+                if (!rejoinCheck.canRejoin) {
+                    graceExpiredIds.push(session.collaborationId);
+                }
             }
         }
 
-        return inactiveSessionIds;
+        return { inactiveIds, graceExpiredIds };
     }
 
     /**
