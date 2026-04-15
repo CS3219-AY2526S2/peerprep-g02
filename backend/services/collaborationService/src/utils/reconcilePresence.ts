@@ -150,9 +150,16 @@ export async function reconcileOrphanedSockets(): Promise<void> {
             }
         }
 
+        const statusPipeline = redis.pipeline();
         for (const userId of userIds) {
+            statusPipeline.hget(`presence:${collaborationId}:${userId}`, "status");
+        }
+        const statusResults = await statusPipeline.exec();
+
+        for (let i = 0; i < userIds.length; i++) {
+            const userId = userIds[i];
             const presenceKey = `presence:${collaborationId}:${userId}`;
-            const currentStatus = await redis.hget(presenceKey, "status");
+            const currentStatus = (statusResults[i] as [Error | null, string | null])?.[1];
 
             // Only fix users who still appear "connected" — don't touch "left" users
             if (currentStatus === "connected") {
