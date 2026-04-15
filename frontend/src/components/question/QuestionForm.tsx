@@ -1,4 +1,4 @@
-// Reference: 
+// Reference:
 // - https://stackoverflow.com/questions/78401672/how-to-hide-the-x-at-the-top-of-the-shadcn-dialog-box
 // to hide dialog box default x.
 

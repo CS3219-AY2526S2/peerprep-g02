@@ -58,7 +58,20 @@ export async function getLeetCodeTotal(topic: string) {
     return data.data.problemsetQuestionList;
 }
 
+function getRandomQuestionIndexes(questionsLength: number) {
+    const selected = new Set<number>();
+
+    while (selected.size < 5) {
+        const randomIndex = Math.floor(Math.random() * questionsLength);
+        if (!selected.has(randomIndex)) {
+            selected.add(randomIndex);
+        }
+    }
+    return Array.from(selected);
+}
+
 export async function getLeetCode(topic: string) {
+    
     const queryVars = {
         skip: 0,
         topic: topic,
@@ -72,7 +85,13 @@ export async function getLeetCode(topic: string) {
     });
 
     const data = await response.json();
-    return data.data.problemsetQuestionList;
+    const topicQuestions = data.data.problemsetQuestionList.questions;
+    const selectedQuestionsNumber: number[] = getRandomQuestionIndexes(topicQuestions.length);
+    const selectedQuestions = topicQuestions.filter((_: any, index: number) =>
+        selectedQuestionsNumber.includes(index),
+    );
+
+    return selectedQuestions;
 }
 
 export async function getLeetCodeAuto() {

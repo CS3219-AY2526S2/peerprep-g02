@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { UUID } from "crypto";
 
-import QuestionSearch from "@/components/question/QuestionSearchComponent";
+import QuestionSearch, { LeetcodeSearch } from "@/components/question/QuestionSearchComponent";
 import TopicEdit from "@/components/question/TopicForm";
 import { Badge } from "@/components/ui/badge";
 import { BorderedDiv } from "@/components/ui/bordered-div";
@@ -33,14 +33,17 @@ function Question(props: QuestionProp) {
         >
             <div className="flex grow-[3] content-center">
                 <p className="font-bold self-center">{props.questionDetails.title}</p>
-                {props.questionDetails.topics.map((topic) => (
-                    <Badge
-                        key={props.questionDetails.title + topic}
-                        className="bg-secondary-200 text-secondary px-3 py-1 rounded-full font-semibold ml-1"
-                    >
-                        {topics[topic]}
-                    </Badge>
-                ))}
+                {props.questionDetails.topics.map(
+                    (topic) =>
+                        topics[topic] && (
+                            <Badge
+                                key={props.questionDetails.title + topic}
+                                className="bg-secondary-200 text-secondary px-3 py-1 rounded-full font-semibold ml-1"
+                            >
+                                {topics[topic]}
+                            </Badge>
+                        ),
+                )}
             </div>
             <div className="flex grow justify-end content-center">
                 <p
@@ -271,7 +274,10 @@ function Admin(props: AdminProp) {
                 {/* Additional */}
                 <div className="flex m-8 gap-5">
                     <BorderedDiv className="m-0 box-content flex-grow-[3]">
-                        <h3 className="font-bold">Questions you might like to add</h3>
+                        <div className="flex">
+                            <h3 className="font-bold">Questions you might like to add</h3>
+                            <LeetcodeSearch updateQuestionList={setLeetcodeQuestions} />
+                        </div>
                         <div>
                             {leetcodeQuestions.map((question, index) => (
                                 <LeetcodeQuestion

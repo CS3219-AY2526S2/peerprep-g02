@@ -74,7 +74,7 @@ export function TopicEdit() {
     function hasDuplicates() {
         const seenTopics = new Set();
         console.log(topicInfos);
-        
+
         for (let i = 0; i < topicInfos.length; i++) {
             const topicName = topicInfos[i].topic.trim();
             console.log(topicName);
