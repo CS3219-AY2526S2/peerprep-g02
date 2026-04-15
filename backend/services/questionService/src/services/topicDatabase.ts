@@ -5,6 +5,7 @@ import pool from "../database";
 type TopicInfo = {
     tid: UUID;
     topic: string;
+    version: Number;
 };
 
 export async function GetTopics() {
@@ -34,19 +35,34 @@ export async function AddTopic(data: TopicInfo[]) {
 }
 
 export async function EditTopic(data: TopicInfo[]) {
-    const update = "UPDATE topics SET topic = $2 WHERE tid = $1 RETURNING tid";
+    console.log(data);
+    const update = "UPDATE topics SET topic = $2, version = version + 1 WHERE tid = $1 AND version = $3 RETURNING tid";
+
+    const client = await pool.connect();
     try {
-        const result = await Promise.all(
-            data.map((topicInfo: TopicInfo) =>
-                pool.query(update, [topicInfo.tid, topicInfo.topic]),
-            ),
-        );
-        return result;
+        await client.query('BEGIN');
+        for (let i: number = 0; i < data.length; i++) {
+            const topicInfo = data[i];
+            const result = await client.query(update, [topicInfo.tid, topicInfo.topic, topicInfo.version]);
+            console.log(result);
+            if (result.rowCount < 1) {
+                throw new Error("Wrong version detected");
+            }
+        }
+        await client.query('COMMIT');
+        
+        return 1;
     } catch (e) {
+        await client.query('ROLLBACK');
+        if ((e as Error).message == "Wrong version detected") {
+            return -1
+        }
         console.log(e);
+    } finally {
+        client.release();
     }
 
-    return null;
+    return 0;
 }
 
 export async function DeleteTopic(tid: UUID) {
@@ -62,8 +78,8 @@ export async function DeleteTopic(tid: UUID) {
                 const result = await client.query("SELECT topics FROM questions WHERE quid = $1", [
                     row.quid,
                 ]);
-                console.log(result.rows);
-                if (result.rows.length > 0) {
+                console.log(result.rowCount);
+                if (result.rowCount > 0) {
                     const currentTopics: UUID[] = result.rows[0].topics;
                     console.log(currentTopics);
                     console.log(result.rows[0].topics);

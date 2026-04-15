@@ -227,9 +227,13 @@ router.post("/topics", async (req, res) => {
 router.put("/topics", async (req, res) => {
     const result = await EditTopic(req.body);
 
-    if (!result) {
+    if (result == 0) {
         return res.status(400).json({
             message: "Unable to update topic in database.",
+        });
+    } else if (result == -1) {
+        return res.status(409).json({
+            message: "Unable to update topics in database due to version conflict.",
         });
     }
 

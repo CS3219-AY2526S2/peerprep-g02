@@ -30,7 +30,7 @@ import { useTopics } from "@/context/useTopic";
 import { createTopic, deleteTopic, editTopic } from "@/services/question/topicService";
 
 export function TopicEdit() {
-    const { topics, refreshTopics } = useTopics();
+    const { topics, refreshTopics, fullTopicInfo } = useTopics();
     //const [topicInfos, updateTopicInfos] = useState<TopicInfo[]>([]);
     const [topicInfos, updateTopicInfos] = useState<TopicInfo[]>(() => {
         if (!topics) return [];
@@ -73,14 +73,12 @@ export function TopicEdit() {
 
     function hasDuplicates() {
         const seenTopics = new Set();
-        console.log(topicInfos);
 
         for (let i = 0; i < topicInfos.length; i++) {
             const topicName = topicInfos[i].topic.trim();
-            console.log(topicName);
+
             if (topicName.length !== 0) {
                 if (seenTopics.has(topicName)) {
-                    console.log("how???");
                     return true;
                 } else {
                     seenTopics.add(topicName);
@@ -101,7 +99,7 @@ export function TopicEdit() {
         }
 
         const duplicateTopics = hasDuplicates();
-        console.log(duplicateTopics);
+        
         if (duplicateTopics) {
             displayErrorPopup("You cannot have duplicate topic names");
             return;
@@ -118,7 +116,18 @@ export function TopicEdit() {
             return topics![item.tid] !== undefined && topics![item.tid] != item.topic;
         });
         if (changedTopicNames.length > 0) {
-            const result = await editTopic(changedTopicNames);
+            const detailedChanged = fullTopicInfo.filter((topicInfo) =>
+                changedTopicNames.some((changed) => changed.tid === topicInfo.tid),
+            );
+
+            const detailedChangedUpdate = detailedChanged.map((topicInfo) => {
+                const mappedTopic = changedTopicNames.find(
+                    (changed) => changed.tid === topicInfo.tid,
+                );
+                return { ...topicInfo, topic: mappedTopic!.topic };
+            });
+
+            const result = await editTopic(detailedChangedUpdate);
             if (result !== 200) {
                 displayErrorPopup("Topic edits cannot be saved, please try again.");
             }
@@ -163,8 +172,7 @@ export function TopicEdit() {
         const backup: TopicInfo | undefined = topicInfos.find((item) => item.tid === target);
         updateTopicInfos((prev) => prev.filter((item) => item.tid !== target));
         const result = await deleteTopic(target as UUID);
-        console.log("here");
-        console.log(result);
+
         if (result !== 200 && backup !== undefined) {
             updateTopicInfos((prev) => [...prev, backup]);
             displayErrorPopup(

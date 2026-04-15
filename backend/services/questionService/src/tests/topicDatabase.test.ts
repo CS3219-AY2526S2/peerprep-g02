@@ -7,6 +7,7 @@ import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDa
 type TopicInfo = {
     tid: UUID;
     topic: string;
+    version: Number;
 };
 
 vi.mock("../database", () => ({
@@ -39,8 +40,9 @@ describe("Topic Service Functions", () => {
 
     it("should add topics successfully", async () => {
         const mockData: TopicInfo[] = [
-            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array" },
-            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545", topic: "String" },
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array", version: 1 },
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545", topic: "String", version: 1 },
+            
         ];
         const mockResult = { rowCount: 2 };
 
@@ -57,7 +59,7 @@ describe("Topic Service Functions", () => {
 
     it("should edit topics successfully", async () => {
         const mockData: TopicInfo[] = [
-            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array" },
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array", version: 1},
         ];
         const mockResult = [{ rowCount: 1 }];
 

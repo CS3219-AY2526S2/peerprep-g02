@@ -62,6 +62,7 @@ export type TopicContextType = {
     topics: TopicMap;
     setTopics: React.Dispatch<React.SetStateAction<TopicMap>>;
     refreshTopics: () => Promise<void>;
+    fullTopicInfo: TopicInfoDetailed[];
 };
 
 export type UseCaseContextType = {
@@ -72,6 +73,12 @@ export type UseCaseContextType = {
 export type TopicInfo = {
     tid: UUID | null;
     topic: string;
+};
+
+export type TopicInfoDetailed = {
+    tid: UUID | null;
+    topic: string;
+    version: number;
 };
 
 export type TopicTag = {
