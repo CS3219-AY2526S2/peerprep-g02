@@ -1228,6 +1228,7 @@ Key design decisions:
 | `user:joined` | Room (excl. sender) | User joined/reconnected |
 | `presence:updated` | Room (all) | Updated participant list |
 | `code:change` | Room (excl. sender) | Broadcast OT operations |
+| `code:ack` | Sender | OT operation acknowledged with new revision |
 | `code:sync` | Sender | Full doc sync (recovery fallback) |
 | `user:disconnected` | Room (all) | User's last connection dropped |
 | `user:left` | Room (all) | User intentionally left |
@@ -1241,7 +1242,7 @@ Key design decisions:
 
 | Setting | Default | Env Variable |
 |---|---|---|
-| Session TTL | 1 hour | `CS_SESSION_TTL_MS` |
+| Session TTL | 2 hours | `CS_SESSION_TTL_MS` |
 | Disconnect grace | 3 minutes | `CS_DISCONNECT_GRACE_MS` |
 | Inactivity timeout | 30 minutes | `CS_SESSION_INACTIVITY_TIMEOUT_MS` |
 | Heartbeat interval | 25 seconds | `CS_HEARTBEAT_INTERVAL_MS` |
