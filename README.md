@@ -207,19 +207,28 @@ Docker Compose defines **7 isolated bridge networks** to enforce strict service 
 
 ### Environment Setup
 
-Each service requires its own `.env` file. Reference the `.env.example` files where available:
+Each service requires its own `.env` file. All environment files live in the `secrets/` folder at the project root. Copy the `.env.example` in each subfolder to `.env` and fill in the values:
 
 ```
-peerprep-g02/
-  .env                                      # NGROK_AUTHTOKEN
-  frontend/.env                             # VITE_GATEWAY_ENDPOINT, VITE_CLERK_PUBLISHABLE_KEY
-  backend/services/userService/.env         # Clerk keys, DB config
-  backend/services/matchingService/.env     # Redis, RabbitMQ, GCP Pub/Sub config
-  backend/services/questionService/.env     # DB config, internal service keys
-  backend/services/collaborationService/.env # Redis, RabbitMQ, session config
-  backend/services/executionService/.env    # Piston config
-  backend/services/attemptService/.env      # DB config, User Service URL
+secrets/
+  attempts-db/.env          # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+  attempts-service/.env     # INTERNAL_SERVICE_API_KEY, DATABASE_URI, PORT, USER_SERVICE_URL
+  cloudsql-proxy/.env       # GOOGLE_APPLICATION_CREDENTIALS (also requires gcp-key.json)
+  collaboration-service/.env # CS_SERVER_PORT, CS_REDIS_HOST, CS_RABBITMQ_URL, CS_GEMINI_API_KEY, ...
+  dozzle/.env               # DOZZLE_LEVEL
+  execution-service/.env    # PORT, INTERNAL_SERVICE_API_KEY, PISTON_URL, RABBITMQ_URL
+  frontend/.env             # VITE_CLERK_PUBLISHABLE_KEY, VITE_GATEWAY_ENDPOINT
+  matching-service/.env     # MS_REDIS_URL, RABBITMQ_URL, US_INTERNAL_SERVICE_URL, ...
+  message-service/.env      # INTERNAL_SERVICE_API_KEY, USER_SERVICE_URL, ALLOWED_ORIGINS
+  ngrok/.env                # NGROK_AUTHTOKEN
+  piston/.env               # PISTON_RUN_TIMEOUT, PISTON_RUN_MEMORY_LIMIT, ...
+  questions-db/.env         # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+  questions-service/.env    # DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, INTERNAL_SERVICE_API_KEY, ...
+  user-db/.env              # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+  user-service/.env         # CLERK_SECRET_KEY, CLERK_PUBLISHABLE_KEY, DATABASE_URI, ...
 ```
+
+> **Note:** The `secrets/` folder is `.gitignore`'d. Each subfolder contains a `.env.example` with placeholder values. Some services also require credential files (e.g., `cloudsql-proxy/gcp-key.json`, `questions-service/question-upload-key.json`).
 
 ### Running the System
 
@@ -1019,11 +1028,7 @@ All inter-service HTTP calls use `x-internal-service-key` header auth and native
 
 #### Session Creation
 
-Sessions are created via **two paths**, both calling the same `createSession` logic:
-
-1. **RabbitMQ consumer** (primary) -- Consumes from `collab_create_req_queue` (published by matching service). On success, publishes result to `collab_create_res_queue`. Failures retry with exponential backoff (2s, 4s, 8s, 16s, 32s) via a delay queue with dead-letter routing. Non-retryable errors (user invalid, question not found, active session conflict) are discarded immediately.
-
-2. **HTTP endpoint** -- `POST /sessions` with internal service auth. Returns the session directly.
+Sessions are created via **RabbitMQ** -- consumes from `collab_create_req_queue` (published by matching service). On success, publishes result to `collab_create_res_queue`. Failures retry with exponential backoff (2s, 4s, 8s, 16s, 32s) via a delay queue with dead-letter routing. Non-retryable errors (user invalid, question not found, active session conflict) are discarded immediately.
 
 Creation steps: validate both users (User Service) -> select question (Question Service) -> create session in Redis -> initialize OT document with language-specific code template (e.g., `class Solution { twoSum() {} }`). Duplicate requests with the same matchId return the existing session (idempotent).
 
