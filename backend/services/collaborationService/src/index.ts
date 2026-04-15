@@ -125,9 +125,13 @@ async function shutdown(signal: string): Promise<void> {
         }
 
         // 3. Disconnect all sockets — fires disconnect handlers that
-        //    clean up socket:* and presence:* Redis keys
+        //    clean up socket:* and presence:* Redis keys.
+        //    Socket.IO's close() is callback-based, so wrap it in a Promise
+        //    to ensure disconnect handlers finish before Redis teardown.
         if (ioServer) {
-            await ioServer.close();
+            await new Promise<void>((resolve) => {
+                ioServer!.close(() => resolve());
+            });
             logger.info("Socket.IO server closed");
         }
 

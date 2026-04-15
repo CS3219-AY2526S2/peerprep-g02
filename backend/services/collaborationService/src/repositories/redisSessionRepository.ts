@@ -243,7 +243,7 @@ export class RedisSessionRepository {
             "functionName",
             "qnImage",
         );
-        if (!questionTitle && !testCases && !functionName) {
+        if (!questionTitle || !testCases) {
             return null;
         }
         return {

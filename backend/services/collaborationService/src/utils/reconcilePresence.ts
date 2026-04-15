@@ -75,13 +75,20 @@ export async function reconcileOrphanedSockets(): Promise<void> {
         byInstance.get(ownerInstanceId)!.push(socketId);
     }
 
-    // Check liveness for each unique instanceId, collect orphaned sockets
-    const orphanedSocketIds: string[] = [];
+    // Batch-check liveness for all unique instanceIds in a single pipeline
+    const instanceIds = [...byInstance.keys()];
+    const livenessPipeline = redis.pipeline();
+    for (const id of instanceIds) {
+        livenessPipeline.get(`instance:${id}`);
+    }
+    const livenessResults = await livenessPipeline.exec();
 
-    for (const [ownerInstanceId, socketIds] of byInstance) {
-        const alive = await redis.exists(`instance:${ownerInstanceId}`);
-        if (alive === 0) {
-            orphanedSocketIds.push(...socketIds);
+    const orphanedSocketIds: string[] = [];
+    for (let i = 0; i < instanceIds.length; i++) {
+        const result = livenessResults[i] as [Error | null, string | null];
+        const alive = result?.[1] !== null;
+        if (!alive) {
+            orphanedSocketIds.push(...byInstance.get(instanceIds[i])!);
         }
     }
 
