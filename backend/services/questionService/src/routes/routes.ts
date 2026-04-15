@@ -132,6 +132,10 @@ router.post("", async (req, res) => {
         return res.status(400).json({
             message: "Unable to add question to the database.",
         });
+    } else if (result == -1) {
+        return res.status(409).json({
+            message: "Duplicate title, try again.",
+        });
     }
 
     return res.status(200).json({
@@ -148,7 +152,7 @@ router.put("", async (req, res) => {
             message: "Unable to update question in database.",
         });
     } else if (result == -1) {
-        return res.status(500).json({
+        return res.status(409).json({
             message: "Question version conflict.",
         });
     }
@@ -239,8 +243,14 @@ router.delete("/topics/:id", async (req, res) => {
     const result = await DeleteTopic(req.params.id as UUID);
 
     if (result == 0) {
-        return res.status(400).json({
+        return res.status(500).json({
             message: "Unable to delete topic from database.",
+        });
+    }
+
+    if (result == -1) {
+        return res.status(409).json({
+            message: "There are questions solely dependent on this topic.",
         });
     }
 

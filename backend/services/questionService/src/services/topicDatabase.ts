@@ -50,18 +50,48 @@ export async function EditTopic(data: TopicInfo[]) {
 }
 
 export async function DeleteTopic(tid: UUID) {
+    console.log("called");
+    const client = await pool.connect();
     try {
-        const allQuid = await pool.query("SELECT quid FROM qn_topics WHERE tid = $1", [tid]);
+        await client.query("BEGIN");
+        const allQuid = await client.query("SELECT quid FROM qn_topics WHERE tid = $1", [tid]);
+        console.log(allQuid);
+        await client.query("DELETE FROM qn_topics WHERE tid = $1", [tid]);
         await Promise.all(
-            allQuid.rows.map((row: any) =>
-                pool.query("DELETE FROM questions WHERE quid = $1", [row.quid]),
-            ),
+            allQuid.rows.map(async (row: any) => {
+                const result = await client.query("SELECT topics FROM questions WHERE quid = $1", [
+                    row.quid,
+                ]);
+                console.log(result.rows);
+                if (result.rows.length > 0) {
+                    const currentTopics: UUID[] = result.rows[0].topics;
+                    console.log(currentTopics);
+                    console.log(result.rows[0].topics);
+                    if (currentTopics.length == 1) {
+                        throw new Error("Question is dependent on this topic");
+                    }
+
+                    const updatedTopics = currentTopics.filter((topic: UUID) => topic !== tid);
+
+                    await client.query("UPDATE questions SET topics = $1 WHERE quid = $2", [
+                        updatedTopics,
+                        row.quid,
+                    ]);
+                }
+            }),
         );
-        const result = await pool.query("DELETE FROM topics WHERE tid = $1", [tid]);
+        const result = await client.query("DELETE FROM topics WHERE tid = $1", [tid]);
+        await client.query("COMMIT");
         return result.rowCount;
     } catch (e) {
         console.log(e);
+        await client.query("ROLLBACK");
+        if ((e as Error).message == "Question is dependent on this topic") {
+            return -1;
+        }
+        console.log(e);
+        return 0;
+    } finally {
+        client.release();
     }
-
-    return 0;
 }

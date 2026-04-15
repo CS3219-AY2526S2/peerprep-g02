@@ -21,7 +21,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { TopicInfo } from "@/models/question/questionType";
+import { ErrorPopupInfo, TopicInfo } from "@/models/question/questionType";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -43,18 +43,7 @@ export function TopicEdit() {
     const [openConfirm, setOpenConfirm] = useState<boolean>(false);
     const [target, setTarget] = useState<UUID | null>(null);
     const [openForm, setOpenForm] = useState<boolean>(false);
-
-    // useEffect(() => {
-    //     if (topics == null) return;
-    //     if (!topics || initialized) return;
-    //     const initTopicInfo: TopicInfo[] = Object.entries(topics).map(([tid, topic]) => {
-    //         return { tid: tid as UUID, topic };
-    //     });
-    //     if (initTopicInfo.length > 0) {
-    //         updateTopicInfos(initTopicInfo);
-    //     }
-    //     setInitialized(true);
-    // }, [topics, initialized]);
+    const [errorPopup, setErrorPopup] = useState<ErrorPopupInfo>({ showPopup: false, error: "" });
 
     const handleTopicChange = (index: number, value: string) => {
         if (value === "") {
@@ -78,7 +67,46 @@ export function TopicEdit() {
         updateTopicInfos((prev) => [...prev, { tid: null, topic: "" }]);
     };
 
+    function displayErrorPopup(error: string) {
+        setErrorPopup({ showPopup: true, error: error });
+    }
+
+    function hasDuplicates() {
+        const seenTopics = new Set();
+        console.log(topicInfos);
+        
+        for (let i = 0; i < topicInfos.length; i++) {
+            const topicName = topicInfos[i].topic.trim();
+            console.log(topicName);
+            if (topicName.length !== 0) {
+                if (seenTopics.has(topicName)) {
+                    console.log("how???");
+                    return true;
+                } else {
+                    seenTopics.add(topicName);
+                }
+            }
+        }
+
+        return false;
+    }
+
     async function saveChanges() {
+        const invalidEdits: TopicInfo[] = topicInfos.filter(
+            (item) => item.topic.trim().length == 0 && item.tid !== null,
+        );
+        if (invalidEdits.length > 0) {
+            displayErrorPopup("You cannot have blank topics");
+            return;
+        }
+
+        const duplicateTopics = hasDuplicates();
+        console.log(duplicateTopics);
+        if (duplicateTopics) {
+            displayErrorPopup("You cannot have duplicate topic names");
+            return;
+        }
+
         //Remove blanks
         const validTopics: TopicInfo[] = topicInfos.filter(
             (item) => item.topic.trim().length !== 0,
@@ -90,13 +118,19 @@ export function TopicEdit() {
             return topics![item.tid] !== undefined && topics![item.tid] != item.topic;
         });
         if (changedTopicNames.length > 0) {
-            await editTopic(changedTopicNames);
+            const result = await editTopic(changedTopicNames);
+            if (result !== 200) {
+                displayErrorPopup("Topic edits cannot be saved, please try again.");
+            }
         }
 
         //Get the newly added topics
         const newTopics = validTopics.filter((item) => item.tid == null);
         if (newTopics.length > 0) {
-            await createTopic(newTopics);
+            const result = await createTopic(newTopics);
+            if (result !== 200) {
+                displayErrorPopup("Topic edits cannot be saved, please try again.");
+            }
         }
 
         updateTopicInfos(validTopics);
@@ -129,8 +163,14 @@ export function TopicEdit() {
         const backup: TopicInfo | undefined = topicInfos.find((item) => item.tid === target);
         updateTopicInfos((prev) => prev.filter((item) => item.tid !== target));
         const result = await deleteTopic(target as UUID);
+        console.log("here");
+        console.log(result);
         if (result !== 200 && backup !== undefined) {
             updateTopicInfos((prev) => [...prev, backup]);
+            displayErrorPopup(
+                "There are questions that are solely dependent on this topic. Please edit them and try again.",
+            );
+            setOpenForm(false);
         }
     }
 
@@ -164,6 +204,22 @@ export function TopicEdit() {
                         >
                             Delete
                         </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={errorPopup.showPopup}>
+                <AlertDialogContent className="bg-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Error:</AlertDialogTitle>
+                        <AlertDialogDescription>{errorPopup.error}</AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel
+                            onClick={() => setErrorPopup({ showPopup: false, error: "" })}
+                        >
+                            Close
+                        </AlertDialogCancel>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

@@ -28,6 +28,11 @@ export interface FormData {
     version: number;
 }
 
+export interface ErrorPopupInfo {
+    showPopup: boolean;
+    error: string;
+}
+
 export interface TestCase {
     input: string;
     output: string;

@@ -1,6 +1,9 @@
 import pool from "../database";
 
-//https://www.postman.com/flight-geoscientist-10690765/leetcode/request/2x0uquu/question-number?sideView=agentMode
+//Reference links to understand hwo the query worked:
+// - https://www.postman.com/flight-geoscientist-10690765/leetcode/request/2x0uquu/question-number?sideView=agentMode
+// - https://stackoverflow.com/questions/65861041/how-to-filter-list-objects-by-field-value-in-graphql
+// - https://github.com/yerass11/Leetcode-Stats-API
 //reference for query
 const query = `
   query problemsetQuestionList(

@@ -1,3 +1,7 @@
+// Reference: 
+// - https://stackoverflow.com/questions/78401672/how-to-hide-the-x-at-the-top-of-the-shadcn-dialog-box
+// to hide dialog box default x.
+
 import { ChangeEvent, JSX, useEffect, useMemo, useState } from "react";
 
 import { UUID } from "crypto";
@@ -36,6 +40,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+import { pushToast } from "@/utils/toast";
 
 import { Difficulty, FormData } from "../../models/question/questionType";
 import { Badge } from "../ui/badge";
@@ -315,6 +321,15 @@ function QuestionForm(props: FormProp): JSX.Element {
             formData.testCase.length == 0 ||
             (file !== null && file.size > 1024 * 1024)
         ) {
+            pushToast({
+                tone: "error",
+                message:
+                    formData.qnTopics.length == 0
+                        ? "Question must have at least one topic"
+                        : formData.testCase.length == 0
+                          ? "Question must have at least one test case"
+                          : "Uploaded image have exceeded the amximum allowed file size",
+            });
             return;
         }
         setUploading(true);
@@ -433,10 +448,13 @@ function QuestionForm(props: FormProp): JSX.Element {
             <Dialog open={isDisplayError} onOpenChange={setDisplayError}>
                 <DialogOverlay>
                     <DialogContent className="flex flex-col items-center bg-white">
-                        <DialogTitle>An error has occurred</DialogTitle>
+                        <DialogTitle>A conflict has occurred</DialogTitle>
                         <DialogDescription className="text-center">
-                            This question may have been updated elsewhere. Please reload the form to
-                            get the latest version, then try again.
+                            This question may have been updated elsewhere by another admin.
+                            Alternatively, you might have created a question previously with the
+                            same title. Please note that duplicated question title is not allowed.
+                            Please reload the form to get the latest version, or rename the title,
+                            before trying again.
                         </DialogDescription>
                     </DialogContent>
                 </DialogOverlay>
