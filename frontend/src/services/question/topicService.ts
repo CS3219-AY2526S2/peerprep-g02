@@ -2,9 +2,12 @@ import { UUID } from "crypto";
 
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { apiFetch } from "@/utils/apiClient";
-import { TopicInfo, TopicMap } from "@/models/question/questionType";
+import { TopicInfo, TopicInfoDetailed, TopicMap } from "@/models/question/questionType";
 
-export const getTopics = async (): Promise<TopicMap | null> => {
+export const getTopics = async (): Promise<{
+    topicMap: TopicMap | null;
+    fullInfo: TopicInfoDetailed[];
+} | null> => {
     try {
         const res = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS, {
             method: "GET",
@@ -19,7 +22,7 @@ export const getTopics = async (): Promise<TopicMap | null> => {
             if (item.tid !== null) mapping[item.tid] = item.topic;
             return mapping;
         }, {});
-        return topics;
+        return { topicMap: topics, fullInfo: data.body };
     } catch {
         return null;
     }
@@ -34,7 +37,7 @@ export const createTopic = async (data: TopicInfo[]): Promise<number> => {
     return res.status;
 };
 
-export const editTopic = async (data: TopicInfo[]): Promise<number> => {
+export const editTopic = async (data: TopicInfoDetailed[]): Promise<number> => {
     const res = await apiFetch(API_ENDPOINTS.QUESTIONS.TOPICS, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

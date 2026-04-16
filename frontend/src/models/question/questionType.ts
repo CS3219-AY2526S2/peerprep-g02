@@ -28,6 +28,11 @@ export interface FormData {
     version: number;
 }
 
+export interface ErrorPopupInfo {
+    showPopup: boolean;
+    error: string;
+}
+
 export interface TestCase {
     input: string;
     output: string;
@@ -57,6 +62,7 @@ export type TopicContextType = {
     topics: TopicMap;
     setTopics: React.Dispatch<React.SetStateAction<TopicMap>>;
     refreshTopics: () => Promise<void>;
+    fullTopicInfo: TopicInfoDetailed[];
 };
 
 export type UseCaseContextType = {
@@ -67,6 +73,12 @@ export type UseCaseContextType = {
 export type TopicInfo = {
     tid: UUID | null;
     topic: string;
+};
+
+export type TopicInfoDetailed = {
+    tid: UUID | null;
+    topic: string;
+    version: number;
 };
 
 export type TopicTag = {

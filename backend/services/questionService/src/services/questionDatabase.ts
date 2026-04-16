@@ -111,6 +111,18 @@ export async function CreateQuestion(data: QuestionData) {
         data.qnImage,
         functionName,
     ];
+
+    const duplicates = await pool.query("SELECT title FROM questions WHERE title = $1", [
+        data.qnTitle,
+    ]);
+    if (duplicates.rowCount > 0) {
+        if (data.qnImage !== undefined && data.qnImage !== null) {
+            // Image was already uploaded in frontend, need to delete since the creation did not go through
+            await deleteImage(data.qnImage).catch((e) => console.log(e));
+        }
+        return -1;
+    }
+
     const client = await pool.connect();
 
     try {

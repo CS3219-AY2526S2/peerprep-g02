@@ -144,7 +144,7 @@ export const deleteQuestion = async (id: UUID): Promise<number> => {
     return res.status;
 };
 
-export const getLeetcodeQuestionsManual = async (): Promise<LeetcodeInfo[] | null> => {
+export const getLeetcodeQuestionsManual = async (topic: string): Promise<LeetcodeInfo[] | null> => {
     try {
         const res = await apiFetch(API_ENDPOINTS.QUESTIONS.LEETCODE, {
             method: "POST",
@@ -152,9 +152,11 @@ export const getLeetcodeQuestionsManual = async (): Promise<LeetcodeInfo[] | nul
                 "Content-Type": "application/json",
                 "cache-control": "no-cache",
             },
-            body: JSON.stringify({ topic: "String" }),
+            body: JSON.stringify({ topic: topic }),
         });
+
         const data = await res.json();
+
         const questions: LeetcodeInfo[] = data.body.map((item: LeetcodeApiItem) => ({
             quid: item.quid,
             title: item.title,
@@ -162,6 +164,7 @@ export const getLeetcodeQuestionsManual = async (): Promise<LeetcodeInfo[] | nul
             topics: item.topicTags.map((topic) => topic.name),
             difficulty: item.difficulty,
         }));
+
         return questions;
     } catch {
         return null;

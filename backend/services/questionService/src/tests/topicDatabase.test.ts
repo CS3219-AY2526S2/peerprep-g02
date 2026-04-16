@@ -1,12 +1,17 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (model: GPT‑4 Turbo), date: 2026‑04-16
+// Scope: Generated scaffolding for setting up test cases, and mocking database
+// Author review: I added test cases to ensure key queries were executed
 import { UUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import pool from "../database";
-import { AddTopic, DeleteTopic, EditTopic, GetTopics } from "../services/topicDatabase";
+import { AddTopic, EditTopic, GetTopics } from "../services/topicDatabase";
 
 type TopicInfo = {
     tid: UUID;
     topic: string;
+    version: number;
 };
 
 vi.mock("../database", () => ({
@@ -20,7 +25,6 @@ describe("Topic Service Functions", () => {
         vi.clearAllMocks();
     });
 
-    // Test for GetTopics
     it("should fetch topics successfully", async () => {
         const mockResult = {
             rows: [
@@ -39,8 +43,8 @@ describe("Topic Service Functions", () => {
 
     it("should add topics successfully", async () => {
         const mockData: TopicInfo[] = [
-            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array" },
-            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545", topic: "String" },
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array", version: 1 },
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545", topic: "String", version: 1 },
         ];
         const mockResult = { rowCount: 2 };
 
@@ -57,7 +61,7 @@ describe("Topic Service Functions", () => {
 
     it("should edit topics successfully", async () => {
         const mockData: TopicInfo[] = [
-            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array" },
+            { tid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544", topic: "Array", version: 1 },
         ];
         const mockResult = [{ rowCount: 1 }];
 
@@ -69,27 +73,5 @@ describe("Topic Service Functions", () => {
             expect.stringContaining("UPDATE topics SET topic = $2 WHERE tid = $1"),
             expect.arrayContaining([mockData[0].tid, mockData[0].topic]),
         );
-    });
-
-    it("should delete topic and related questions successfully", async () => {
-        const mockTid = "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0544";
-        const mockQuids = [{ quid: "5752a2a8-d4a6-4cc9-8fcf-bb4dfe3a0545" }];
-        const mockDeleteResult = { rowCount: 1 };
-
-        pool.query
-            .mockResolvedValueOnce({ rows: mockQuids })
-            .mockResolvedValueOnce(mockDeleteResult)
-            .mockResolvedValueOnce(mockDeleteResult);
-
-        const result = await DeleteTopic(mockTid);
-
-        expect(pool.query).toHaveBeenCalledWith("SELECT quid FROM qn_topics WHERE tid = $1", [
-            mockTid,
-        ]);
-        expect(pool.query).toHaveBeenCalledWith("DELETE FROM questions WHERE quid = $1", [
-            mockQuids[0].quid,
-        ]);
-        expect(pool.query).toHaveBeenCalledWith("DELETE FROM topics WHERE tid = $1", [mockTid]);
-        expect(result).toBe(mockDeleteResult.rowCount);
     });
 });
