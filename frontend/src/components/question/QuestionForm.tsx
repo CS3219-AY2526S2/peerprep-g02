@@ -590,7 +590,9 @@ function QuestionForm(props: FormProp): JSX.Element {
                                             <thead>
                                                 <tr className="border-b border-gray-300 text-left text-gray-500">
                                                     <th className="pb-1 pr-3 font-medium">Input</th>
-                                                    <th className="pb-1 pr-3 font-medium">Output</th>
+                                                    <th className="pb-1 pr-3 font-medium">
+                                                        Output
+                                                    </th>
                                                     <th className="pb-1 font-medium">Meaning</th>
                                                 </tr>
                                             </thead>
