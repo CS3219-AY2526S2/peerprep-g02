@@ -1,0 +1,99 @@
+export const HTTP_STATUS = {
+    OK: 200,
+    CREATED: 201,
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
+    CONFLICT: 409,
+    FAILED_DEPENDENCY: 424,
+    INTERNAL_SERVER_ERROR: 500,
+    SERVICE_UNAVAILABLE: 503,
+} as const;
+
+export const ERROR_CODES = {
+    INVALID_SESSION_REQUEST: "INVALID_SESSION_REQUEST",
+    UNAUTHORIZED_INTERNAL_REQUEST: "UNAUTHORIZED_INTERNAL_REQUEST",
+    ACTIVE_SESSION_CONFLICT: "ACTIVE_SESSION_CONFLICT",
+    USER_VALIDATION_FAILED: "USER_VALIDATION_FAILED",
+    USER_SERVICE_UNAVAILABLE: "USER_SERVICE_UNAVAILABLE",
+    QUESTION_NOT_FOUND: "QUESTION_NOT_FOUND",
+    QUESTION_SERVICE_UNAVAILABLE: "QUESTION_SERVICE_UNAVAILABLE",
+    SESSION_CREATION_FAILED: "SESSION_CREATION_FAILED",
+    SOCKET_AUTHENTICATION_FAILED: "SOCKET_AUTHENTICATION_FAILED",
+    SESSION_NOT_FOUND: "SESSION_NOT_FOUND",
+    SESSION_INACTIVE: "SESSION_INACTIVE",
+    SESSION_ACCESS_DENIED: "SESSION_ACCESS_DENIED",
+    SESSION_CAPACITY_REACHED: "SESSION_CAPACITY_REACHED",
+    INVALID_JOIN_REQUEST: "INVALID_JOIN_REQUEST",
+    REJOIN_GRACE_PERIOD_EXPIRED: "REJOIN_GRACE_PERIOD_EXPIRED",
+    HINT_LIMIT_REACHED: "HINT_LIMIT_REACHED",
+    HINT_GENERATION_FAILED: "HINT_GENERATION_FAILED",
+} as const;
+
+export const DEFAULTS = {
+    SERVER_PORT: 3003,
+    SESSION_TTL_MS: 2 * 60 * 60 * 1000,
+    DEPENDENCY_TIMEOUT_MS: 5000,
+    REDIS_PORT: 6379,
+    REDIS_DB: 0,
+    STUB_QUESTION_PREFIX: "stub",
+    DISCONNECT_GRACE_MS: 3 * 60 * 1000, // 3 minutes grace period for reconnection
+    HEARTBEAT_INTERVAL_MS: 25 * 1000, // Socket.IO pingInterval
+    HEARTBEAT_TIMEOUT_MS: 20 * 1000, // Socket.IO pingTimeout
+    SESSION_INACTIVITY_TIMEOUT_MS: 30 * 60 * 1000, // 30 minutes inactivity timeout
+    INACTIVITY_CHECK_INTERVAL_MS: 60 * 1000, // Check every minute
+    MAX_HINTS_PER_USER: 2, // Maximum AI hints per user per session
+} as const;
+
+export const NON_RETRYABLE_ERROR_CODES: Set<string> = new Set([
+    ERROR_CODES.ACTIVE_SESSION_CONFLICT,
+    ERROR_CODES.USER_VALIDATION_FAILED,
+    ERROR_CODES.QUESTION_NOT_FOUND,
+    ERROR_CODES.INVALID_SESSION_REQUEST,
+]);
+
+export const RABBITMQ_DEFAULTS = {
+    MAX_RETRIES: 5,
+    RECONNECT_DELAY_MS: 5000,
+    PREFETCH_COUNT: 1,
+    /** Base delay for exponential backoff on retries (delay = base * 2^retryCount). */
+    RETRY_BASE_DELAY_MS: 2000,
+} as const;
+
+export const SOCKET_EVENTS = {
+    // Connection events
+    CONNECTION_READY: "connection:ready",
+
+    // Session events
+    SESSION_JOIN: "session:join",
+    SESSION_LEAVE: "session:leave",
+    SESSION_ENDED: "session:ended",
+    SESSION_CHECK_ACTIVE: "session:check-active",
+
+    // Presence events
+    PRESENCE_UPDATED: "presence:updated",
+    USER_JOINED: "user:joined",
+    USER_DISCONNECTED: "user:disconnected",
+    USER_LEFT: "user:left",
+
+    // Code editor events (OT-based)
+    CODE_CHANGE: "code:change",
+    CODE_ACK: "code:ack",
+    CODE_SYNC: "code:sync",
+
+    // Code execution events
+    CODE_RUN: "code:run",
+    CODE_SUBMIT: "code:submit",
+    CODE_RUNNING: "code:running",
+
+    // Output events
+    OUTPUT_UPDATED: "output:updated",
+
+    // Submission events
+    SUBMISSION_COMPLETE: "submission:complete",
+
+    // AI hint events
+    HINT_REQUEST: "hint:request",
+    HINT_UPDATED: "hint:updated",
+} as const;
