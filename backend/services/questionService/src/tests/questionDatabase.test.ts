@@ -1,3 +1,7 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (model: GPT‑4 Turbo), date: 2026‑04-16
+// Scope: Generated scaffolding for setting up test cases, and mocking database and client
+// Author review: I added test cases to ensure key queries were executed
 import { UUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

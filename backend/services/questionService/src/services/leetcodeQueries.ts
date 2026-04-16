@@ -1,7 +1,11 @@
 import pool from "../database";
 
-//https://www.postman.com/flight-geoscientist-10690765/leetcode/request/2x0uquu/question-number?sideView=agentMode
-//reference for query
+//Reference links I used to understand how the query worked and the structure:
+// - https://www.postman.com/flight-geoscientist-10690765/leetcode/request/2x0uquu/question-number?sideView=agentMode
+// - https://stackoverflow.com/questions/65861041/how-to-filter-list-objects-by-field-value-in-graphql
+// - https://github.com/yerass11/Leetcode-Stats-API
+// copied the structure of how the leetcode graphql should be called [const query below]
+
 const query = `
   query problemsetQuestionList(
     $skip: Int,
@@ -55,6 +59,18 @@ export async function getLeetCodeTotal(topic: string) {
     return data.data.problemsetQuestionList;
 }
 
+function getRandomQuestionIndexes(questionsLength: number) {
+    const selected = new Set<number>();
+
+    while (selected.size < 5) {
+        const randomIndex = Math.floor(Math.random() * questionsLength);
+        if (!selected.has(randomIndex)) {
+            selected.add(randomIndex);
+        }
+    }
+    return Array.from(selected);
+}
+
 export async function getLeetCode(topic: string) {
     const queryVars = {
         skip: 0,
@@ -69,7 +85,13 @@ export async function getLeetCode(topic: string) {
     });
 
     const data = await response.json();
-    return data.data.problemsetQuestionList;
+    const topicQuestions = data.data.problemsetQuestionList.questions;
+    const selectedQuestionsNumber: number[] = getRandomQuestionIndexes(topicQuestions.length);
+    const selectedQuestions = topicQuestions.filter((_: any, index: number) =>
+        selectedQuestionsNumber.includes(index),
+    );
+
+    return selectedQuestions;
 }
 
 export async function getLeetCodeAuto() {

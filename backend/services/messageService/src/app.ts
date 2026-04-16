@@ -1,3 +1,8 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (model: GPT‑4 Turbo), date: 2026‑04-10
+// Scope: Generated scaffolding for setting up websocket, redis and express [w.on("connection" / "message" / "close") etc]
+// Author review: I added the functionalities and edited the cors
+
 import cors from "cors";
 import express from "express";
 import http from "http";

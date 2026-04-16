@@ -1,3 +1,10 @@
+// AI Assistance Disclosure:
+// Tool: ChatGPT (model: GPT‑4 Turbo), date: 2026‑04-16
+// Scope: Generated appropriate signed url options for generateUploadUrl
+// Author review: I validated that the options were correct
+// reference:
+// - https://docs.cloud.google.com/storage/docs/samples/storage-generate-signed-url-v4#storage_generate_signed_url_v4-nodejs
+// I copied the example from the official documentations for the getSignedUrl function, only changed the bucket name.
 import { Storage } from "@google-cloud/storage";
 
 const storage = new Storage({
